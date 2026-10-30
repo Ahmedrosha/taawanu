@@ -51,6 +51,9 @@ describe('المستخدمين', () => {
       name: 'جديد', locale: 'ar', createdAt: serverTimestamp(),
     }));
   });
+  test('المستخدم يسجل أجهزته للإشعارات', async () => {
+    await assertSucceeds(updateDoc(doc(as('m1'), 'users/m1'), { fcmTokens: ['token-1'] }));
+  });
   test('المستخدم ميقدرش يدّي نفسه نقاط', async () => {
     await assertFails(updateDoc(doc(as('m1'), 'users/m1'), { points: 9999 }));
   });
@@ -75,73 +78,46 @@ describe('المجموعات', () => {
   test('محدش ينشئ مجموعة من التطبيق مباشرة', async () => {
     await assertFails(setDoc(doc(as('m1'), 'groups/new'), { name: 'x', type: 'public' }));
   });
-  test('المساعد يغير مدة الدورة', async () => {
-    await assertSucceeds(updateDoc(doc(as('asst'), 'groups/g1'), { cycleCount: 2, cycleUnit: 'day' }));
-  });
-  test('العضو العادي ميغيرش الإعدادات', async () => {
-    await assertFails(updateDoc(doc(as('m1'), 'groups/g1'), { cycleCount: 2 }));
-  });
-  test('حتى الأدمن ميغيرش الورد', async () => {
+  test('حتى الأدمن ميعدلش المجموعة مباشرة (عن طريق السيرفر بس)', async () => {
+    await assertFails(updateDoc(doc(as('admin'), 'groups/g1'), { cycleCount: 2 }));
     await assertFails(updateDoc(doc(as('admin'), 'groups/g1'), { wardQuarters: 4 }));
-  });
-  test('مدة الدورة لازم من ١ لـ٣٠', async () => {
-    await assertFails(updateDoc(doc(as('admin'), 'groups/g1'), { cycleCount: 31 }));
   });
 });
 
 describe('الأعضاء', () => {
+  test('أعضاء المجموعة يشوفوا بعض', async () => {
+    await assertSucceeds(getDoc(doc(as('m1'), 'groups/g1/members/admin')));
+  });
+  test('غير الأعضاء ميشوفوش الأعضاء', async () => {
+    await assertFails(getDoc(doc(as('stranger'), 'groups/g1/members/admin')));
+  });
   test('محدش يضيف نفسه لمجموعة', async () => {
     await assertFails(setDoc(doc(as('stranger'), 'groups/g1/members/stranger'), { role: 'member', slot: 5 }));
   });
-  test('الأدمن يرقّي عضو لمساعد', async () => {
-    await assertSucceeds(updateDoc(doc(as('admin'), 'groups/g1/members/m1'), { role: 'assistant' }));
-  });
-  test('المساعد ميرقّيش حد', async () => {
-    await assertFails(updateDoc(doc(as('asst'), 'groups/g1/members/m1'), { role: 'assistant' }));
-  });
-  test('محدش يخلي نفسه أدمن', async () => {
+  test('محدش يغير دوره أو دور غيره مباشرة', async () => {
     await assertFails(updateDoc(doc(as('asst'), 'groups/g1/members/asst'), { role: 'admin' }));
+    await assertFails(updateDoc(doc(as('admin'), 'groups/g1/members/m1'), { role: 'assistant' }));
   });
-  test('العضو يخرج من المجموعة', async () => {
-    await assertSucceeds(deleteDoc(doc(as('m1'), 'groups/g1/members/m1')));
-  });
-  test('الأدمن ميخرجش من غير ما ينقل الأدمنية', async () => {
-    await assertFails(deleteDoc(doc(as('admin'), 'groups/g1/members/admin')));
-  });
-  test('المساعد يطرد عضو عادي', async () => {
-    await assertSucceeds(deleteDoc(doc(as('asst'), 'groups/g1/members/m1')));
-  });
-  test('المساعد ميطردش الأدمن', async () => {
-    await assertFails(deleteDoc(doc(as('asst'), 'groups/g1/members/admin')));
+  test('محدش يمسح عضو مباشرة', async () => {
+    await assertFails(deleteDoc(doc(as('m1'), 'groups/g1/members/m1')));
   });
 });
 
 describe('الأوراد', () => {
   const path = 'groups/g1/cycles/c1/assignments/m1';
-  test('صاحب الورد يسجل تقدمه', async () => {
-    await assertSucceeds(updateDoc(doc(as('m1'), path), { quartersRead: 3, status: 'in_progress' }));
-  });
-  test('صاحب الورد يعلّم إنه خلص', async () => {
-    await assertSucceeds(updateDoc(doc(as('m1'), path), {
-      quartersRead: 8, status: 'done', completedAt: serverTimestamp(),
-    }));
-  });
-  test('ميقدرش يقول خلصت قبل ما يقرا كل الأرباع', async () => {
-    await assertFails(updateDoc(doc(as('m1'), path), {
-      quartersRead: 5, status: 'done', completedAt: serverTimestamp(),
-    }));
-  });
-  test('ميقدرش يغير حدود ورده', async () => {
-    await assertFails(updateDoc(doc(as('m1'), path), { fromQuarter: 1 }));
-  });
-  test('محدش يسجل في ورد حد تاني', async () => {
-    await assertFails(updateDoc(doc(as('asst'), path), { quartersRead: 8 }));
-  });
   test('أعضاء المجموعة يشوفوا الأوراد', async () => {
     await assertSucceeds(getDoc(doc(as('asst'), path)));
   });
   test('غير الأعضاء ميشوفوش الأوراد', async () => {
     await assertFails(getDoc(doc(as('stranger'), path)));
+  });
+  test('حتى صاحب الورد ميسجلش مباشرة (عن طريق السيرفر عشان النقاط)', async () => {
+    await assertFails(updateDoc(doc(as('m1'), path), { quartersRead: 8, status: 'done', completedAt: serverTimestamp() }));
+  });
+  test('الأوراد الإضافية للأعضاء بس، ومحدش يكتب فيها', async () => {
+    await assertSucceeds(getDoc(doc(as('m1'), 'groups/g1/portions/p1')));
+    await assertFails(getDoc(doc(as('stranger'), 'groups/g1/portions/p1')));
+    await assertFails(setDoc(doc(as('m1'), 'groups/g1/portions/p1'), { assignee: 'm1' }));
   });
 });
 

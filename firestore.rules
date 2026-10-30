@@ -59,8 +59,10 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time;
 
       allow update: if isSelf(uid)
-        && changedOnly(['name', 'photoUrl', 'locale', 'settings'])
+        && changedOnly(['name', 'photoUrl', 'locale', 'settings', 'fcmTokens'])
         && (!('name' in request.resource.data) || isShortText(request.resource.data.name, 60))
+        && (!('fcmTokens' in request.resource.data)
+            || (request.resource.data.fcmTokens is list && request.resource.data.fcmTokens.size() <= 10))
         && (!('locale' in request.resource.data) || request.resource.data.locale in ['ar', 'en']);
 
       allow delete: if false;
@@ -82,65 +84,31 @@ service cloud.firestore {
       // الإنشاء والحذف عن طريق Cloud Functions.
       allow create, delete: if false;
 
-      // الأدمن والمساعد يعدلوا الإعدادات المسموحة بس.
-      // الورد وعدد الخانات والنوع مبيتغيروش.
-      allow update: if isManager(groupId)
-        && changedOnly([
-             'name', 'cycleCount', 'cycleUnit', 'cycleStartDay',
-             'cycleStartHour', 'cycleStartDayOfMonth', 'lateDefault', 'isOpen'
-           ])
-        && isShortText(request.resource.data.name, 60)
-        && request.resource.data.cycleCount is int
-        && request.resource.data.cycleCount >= 1
-        && request.resource.data.cycleCount <= 30
-        && request.resource.data.cycleUnit in ['day', 'week', 'month']
-        && request.resource.data.lateDefault in ['ask', 'carry', 'distribute', 'volunteer'];
+      // كل التعديلات (الإعدادات، والأعضاء، والأدوار، والتقدم، والأوراد الإضافية)
+      // بتعدي على Cloud Functions، عشان النقاط والفهارس تفضل متسقة.
+      allow update: if false;
 
-      // ----- الأعضاء -----
       match /members/{memberId} {
         allow read: if isMember(groupId);
-
-        // الانضمام عن طريق Cloud Function بس (بعد التأكد من الدعوة والخانة).
-        allow create: if false;
-
-        // الأدمن بس يرقّي عضو لمساعد أو يرجّعه عضو.
-        allow update: if isAdmin(groupId)
-          && memberId != request.auth.uid
-          && changedOnly(['role'])
-          && resource.data.role in ['assistant', 'member']
-          && request.resource.data.role in ['assistant', 'member'];
-
-        // العضو يخرج بنفسه (إلا الأدمن)، والأدمن أو المساعد يطرد عضو عادي.
-        allow delete: if signedIn() && (
-          (memberId == request.auth.uid && resource.data.role != 'admin')
-          || (isManager(groupId) && resource.data.role == 'member')
-          || (isAdmin(groupId) && resource.data.role == 'assistant')
-        );
+        allow write: if false;
       }
 
-      // ----- الدورات وأوراد الأعضاء -----
       match /cycles/{cycleId} {
         allow read: if isMember(groupId);
         allow write: if false;
 
         match /assignments/{memberId} {
           allow read: if isMember(groupId);
-          allow create, delete: if false;
-
-          // صاحب الورد بس، وفي التقدم بس.
-          allow update: if isSelf(memberId)
-            && changedOnly(['quartersRead', 'status', 'completedAt'])
-            && request.resource.data.quartersRead is int
-            && request.resource.data.quartersRead >= 0
-            && request.resource.data.quartersRead <= resource.data.quarterCount
-            && request.resource.data.status in ['pending', 'in_progress', 'done']
-            && (request.resource.data.status != 'done'
-                || (request.resource.data.quartersRead == resource.data.quarterCount
-                    && request.resource.data.completedAt == request.time));
+          allow write: if false;
         }
       }
 
-      // ----- سجل الختمات المكتملة -----
+      // الأوراد الإضافية: متأخرة، أو موزعة، أو خانات فاضية متاحة للتطوع.
+      match /portions/{portionId} {
+        allow read: if isMember(groupId);
+        allow write: if false;
+      }
+
       match /khatmas/{khatmaId} {
         allow read: if isMember(groupId);
         allow write: if false;
