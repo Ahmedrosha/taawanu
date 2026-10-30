@@ -7,8 +7,8 @@ import { parseNewGroup, ValidationError } from './validation';
 
 initializeApp();
 
-// نفس منطقة قاعدة البيانات (الدمام)، وحد أقصى للنسخ عشان التكلفة تفضل تحت السيطرة.
-setGlobalOptions({ region: 'me-central2', maxInstances: 10 });
+// الدوحة: أقرب منطقة لقاعدة البيانات (الدمام) متاحة لـCloud Functions في المشروع، وحد أقصى للنسخ عشان التكلفة تفضل تحت السيطرة.
+setGlobalOptions({ region: 'me-central1', maxInstances: 10 });
 
 const db = getFirestore();
 
