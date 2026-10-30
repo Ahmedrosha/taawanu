@@ -83,7 +83,8 @@ jobs:
             > export.log 2>&1
           code=$?
           if [ $code -ne 0 ]; then
-            msg=$(grep -iE "error|failed|denied" export.log | sort -u | tail -6 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')
+            tail -60 export.log
+            msg=$(grep -iE "error:|Error Domain|NSLocalizedDescription|NSLocalizedFailureReason|permission|certificate|profile|not authorized|forbidden" export.log | grep -v "^\s*$" | awk '!seen[$0]++' | tail -10 | cut -c1-400 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')
             echo "::error title=Upload failed::$msg"
           else
             echo "::notice title=Uploaded::Build ${{ github.run_number }} uploaded to App Store Connect"
