@@ -1,11 +1,14 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.taawanu.taawanu",
       "sha256_cert_fingerprints": [
-        "F1:DA:A2:45:4E:32:E6:FF:13:C6:13:56:8C:BD:BA:04:7C:9C:EE:EF:48:9B:23:AF:24:48:F0:F3:3E:3A:7D:BB"
+        "F1:DA:A2:45:4E:32:E6:FF:13:C6:13:56:8C:BD:BA:04:7C:9C:EE:EF:48:9B:23:AF:24:48:F0:F3:3E:3A:7D:BB",
+        "29:32:5D:0B:95:42:A2:EE:2A:2E:45:38:B2:6F:9B:7E:09:08:21:DF:65:80:AC:E6:55:71:2E:F4:B0:38:F8:38"
       ]
     }
   }
