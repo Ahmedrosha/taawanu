@@ -159,6 +159,7 @@ class Assignment {
     required this.quartersRead,
     required this.status,
     required this.closed,
+    this.recordedBy,
   });
 
   final int fromQuarter;
@@ -167,6 +168,8 @@ class Assignment {
   final int quartersRead;
   final String status;
   final bool closed;
+  /// لو الأدمن أو المساعد هو اللي سجّل التقدم.
+  final String? recordedBy;
 
   bool get isDone => status == 'done';
   double get progress => quarterCount == 0 ? 0 : quartersRead / quarterCount;
@@ -180,6 +183,7 @@ class Assignment {
       quartersRead: _int(d['quartersRead']),
       status: (d['status'] as String?) ?? 'pending',
       closed: (d['closed'] as bool?) ?? false,
+      recordedBy: d['recordedBy'] as String?,
     );
   }
 }

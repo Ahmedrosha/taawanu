@@ -7,5 +7,5 @@ export {
   createInvite, revokeInvite, previewInvite, previewPublicGroup, joinGroup, joinPublicGroup,
 } from './invites';
 export {
-  startKhatma, cycleTick, updateProgress, claimPortion, assignPortion, completePortion,
+  startKhatma, cycleTick, updateProgress, claimPortion, assignPortion, completePortion, recordProgress,
 } from './cycles';

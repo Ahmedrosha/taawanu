@@ -35,6 +35,8 @@ interface AssignmentDoc extends QuarterRange {
   status: 'pending' | 'in_progress' | 'done' | 'late';
   closed: boolean;
   completedAt?: Timestamp;
+  /** لو الأدمن أو المساعد هو اللي سجّل: من غير نقاط، ومش بيتحسب في الالتزام. */
+  recordedBy?: string | null;
 }
 
 interface CycleDoc {
@@ -194,7 +196,7 @@ async function closeCycle(groupId: string, g: GroupDoc): Promise<void> {
     assignments.docs
       .filter((d) => {
         const a = d.data() as AssignmentDoc;
-        return a.status === 'done' && a.completedAt && a.completedAt.toDate() <= endsAt;
+        return a.status === 'done' && !a.recordedBy && a.completedAt && a.completedAt.toDate() <= endsAt;
       })
       .map((d) => d.id),
   );
@@ -345,7 +347,7 @@ export const updateProgress = onCall(async (request) => {
     const segments = c.segments.map((s) => (s.seg === a.segment ? { ...s, status: done ? 'done' : quartersRead > 0 ? 'in_progress' : 'pending' } : s));
 
     if (!done) {
-      tx.update(aRef, { quartersRead, status: quartersRead > 0 ? 'in_progress' : 'pending' });
+      tx.update(aRef, { quartersRead, status: quartersRead > 0 ? 'in_progress' : 'pending', recordedBy: null });
       tx.update(cRef, { segments });
       return { done: false, points: 0, first: false };
     }
@@ -355,7 +357,7 @@ export const updateProgress = onCall(async (request) => {
     const early = now <= c.midAt.toDate();
     const points = regularPoints(a.quarterCount, onTime, early);
     const first = !c.firstFinisher;
-    tx.update(aRef, { quartersRead, status: 'done', completedAt: FieldValue.serverTimestamp() });
+    tx.update(aRef, { quartersRead, status: 'done', completedAt: FieldValue.serverTimestamp(), recordedBy: null });
     tx.update(cRef, {
       segments,
       remainingQuarters: FieldValue.increment(-a.quarterCount),
@@ -459,6 +461,96 @@ export const completePortion = onCall(async (request) => {
   }, { merge: true });
   await maybeCompleteKhatma(groupId, p.cycle);
   return { points };
+});
+
+// ---------------------------------------------------------------------------
+// الأدمن أو المساعد بيسجّل ورد عضو قراه برة التطبيق: من غير نقاط ولا أوسمة،
+// ومش بيتحسب في الالتزام والسلسلة. والعضو يقدر يسجّل بنفسه بعدها عادي.
+
+export const recordProgress = onCall(async (request) => {
+  const managerUid = requireUid(request);
+  const groupId = requireString(request.data?.groupId, 'groupId');
+  await requireManager(groupId, managerUid);
+  const g = groupData(await groupRef(groupId).get());
+  if (g.status !== 'active') throw new HttpsError('failed-precondition', 'Khatma not started.');
+  const portionId = typeof request.data?.portionId === 'string' ? request.data.portionId : null;
+
+  let notifyUid: string | null = null;
+  let cycleNo = g.currentCycle;
+  let nowDone = false;
+
+  if (portionId) {
+    // ورد إضافي: يا خلص يا لأ.
+    const done = request.data?.done === true;
+    const pRef = portionsCol(groupId).doc(portionId);
+    const r = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(pRef);
+      const p = snap.data() as (PortionDoc & { recordedBy?: string | null }) | undefined;
+      if (!p) throw new HttpsError('not-found', 'Portion not found.');
+      const cRef = cycleRef(groupId, p.cycle);
+      const c = (await tx.get(cRef)).data() as CycleDoc | undefined;
+      if (done) {
+        if (p.status === 'done') return null;
+        tx.update(pRef, { status: 'done', completedAt: FieldValue.serverTimestamp(), recordedBy: managerUid });
+        tx.update(cRef, { remainingQuarters: FieldValue.increment(-p.quarterCount) });
+      } else {
+        if (p.status !== 'done') return null;
+        if (!p.recordedBy) throw new HttpsError('failed-precondition', 'Recorded by the member.');
+        if (c?.khatmaComplete) throw new HttpsError('failed-precondition', 'Khatma already complete.');
+        tx.update(pRef, { status: p.assignee ? 'assigned' : 'open', completedAt: null, recordedBy: null });
+        tx.update(cRef, { remainingQuarters: FieldValue.increment(p.quarterCount) });
+      }
+      return p;
+    });
+    if (!r) return { ok: true };
+    notifyUid = r.assignee;
+    cycleNo = r.cycle;
+    nowDone = done;
+  } else {
+    // ورد الدورة الحالية لعضو.
+    const target = requireString(request.data?.uid, 'uid');
+    await requireMember(groupId, target);
+    const quartersRead = request.data?.quartersRead;
+    if (typeof quartersRead !== 'number' || !Number.isInteger(quartersRead) || quartersRead < 0) {
+      throw new HttpsError('invalid-argument', 'quartersRead must be a non-negative integer');
+    }
+    const aRef = assignmentRef(groupId, cycleNo, target);
+    const cRef = cycleRef(groupId, cycleNo);
+    await db.runTransaction(async (tx) => {
+      const [aSnap, cSnap] = await Promise.all([tx.get(aRef), tx.get(cRef)]);
+      if (!aSnap.exists) throw new HttpsError('not-found', 'No portion this cycle.');
+      const a = aSnap.data() as AssignmentDoc;
+      const c = cSnap.data() as CycleDoc;
+      if (a.closed) throw new HttpsError('failed-precondition', 'Portion already closed.');
+      if (quartersRead > a.quarterCount) throw new HttpsError('invalid-argument', 'Too many quarters.');
+      const wasDone = a.status === 'done';
+      // العضو سجّل وخد نقاطه: منلغيش ده.
+      if (wasDone && !a.recordedBy) throw new HttpsError('failed-precondition', 'Recorded by the member.');
+      const done = quartersRead === a.quarterCount;
+      if (wasDone && !done && c.khatmaComplete) throw new HttpsError('failed-precondition', 'Khatma already complete.');
+      const status = done ? 'done' : quartersRead > 0 ? 'in_progress' : 'pending';
+      tx.update(aRef, {
+        quartersRead, status, recordedBy: managerUid,
+        completedAt: done ? (wasDone ? a.completedAt ?? FieldValue.serverTimestamp() : FieldValue.serverTimestamp()) : null,
+      });
+      const delta = (done && !wasDone) ? -a.quarterCount : (!done && wasDone) ? a.quarterCount : 0;
+      tx.update(cRef, {
+        segments: c.segments.map((s) => (s.seg === a.segment ? { ...s, status } : s)),
+        ...(delta ? { remainingQuarters: FieldValue.increment(delta) } : {}),
+      });
+      nowDone = done && !wasDone;
+    });
+    notifyUid = target;
+  }
+
+  if (nowDone) await maybeCompleteKhatma(groupId, cycleNo);
+  if (notifyUid && notifyUid !== managerUid) {
+    await notifyUsers([notifyUid], () => ({
+      ar: { title: g.name, body: 'الأدمن حدّث تقدم وردك.' },
+      en: { title: g.name, body: 'An admin updated your portion progress.' },
+    }), { groupId, type: 'recorded' });
+  }
+  return { ok: true };
 });
 
 // ---------------------------------------------------------------------------

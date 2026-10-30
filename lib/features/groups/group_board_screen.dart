@@ -9,6 +9,7 @@ import '../../services/groups_service.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/segment_picker.dart';
+import 'record_progress_sheet.dart';
 import '../../widgets/ui.dart';
 
 /// لوحة المجموعة: الدورة الحالية، وخريطة الختمة، ووردي، والأوراد الإضافية، والأعضاء.
@@ -190,7 +191,7 @@ class _ActiveCycle extends StatelessWidget {
               builder: (context, aSnap) => _MyPortionCard(group: group, assignment: aSnap.data, loading: !aSnap.hasData && aSnap.connectionState == ConnectionState.waiting),
             ),
             const SizedBox(height: 16),
-            if (cycle != null) _KhatmaMap(group: group, cycle: cycle, members: members),
+            if (cycle != null) _KhatmaMap(group: group, cycle: cycle, members: members, me: me),
             StreamBuilder<List<Portion>>(
               stream: portionsStream,
               builder: (context, pSnap) {
@@ -241,6 +242,11 @@ class _MyPortionCard extends StatelessWidget {
               if (a.isDone) StatusPill(label: t.portionDone, color: AppColors.statusDone),
             ],
           ),
+          if (a.recordedBy != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(t.recordedByAdminNote, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+            ),
           RangeAyahsText(from: a.fromQuarter, to: a.toQuarter),
           const SizedBox(height: 12),
           ProgressLine(value: a.progress),
@@ -314,11 +320,12 @@ Color segmentTextColor(String status) => switch (status) {
     };
 
 class _KhatmaMap extends StatelessWidget {
-  const _KhatmaMap({required this.group, required this.cycle, required this.members});
+  const _KhatmaMap({required this.group, required this.cycle, required this.members, required this.me});
 
   final Group group;
   final Cycle cycle;
   final List<Member> members;
+  final Member? me;
 
   @override
   Widget build(BuildContext context) {
@@ -327,11 +334,16 @@ class _KhatmaMap extends StatelessWidget {
     final columns = n <= 6 ? 3 : n <= 10 ? 5 : n <= 30 ? 6 : n <= 60 ? 10 : n <= 120 ? 12 : 16;
     final showNumbers = n <= 60;
     final names = {for (final m in members) m.uid: m.name};
+    final canRecord = me?.isManager ?? false;
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(t.khatmaMap, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+          if (canRecord) ...[
+            const SizedBox(height: 2),
+            Text(t.tapToRecordHint, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          ],
           const SizedBox(height: 12),
           GridView.count(
             crossAxisCount: columns,
@@ -345,16 +357,22 @@ class _KhatmaMap extends StatelessWidget {
                 Tooltip(
                   message: '${rangeLabel(t, s.seg * group.wardQuarters + 1, (s.seg + 1) * group.wardQuarters)}'
                       ' · ${segmentStatusLabel(t, s.status)}${s.uid != null ? ' · ${names[s.uid] ?? ''}' : ''}',
-                  child: Container(
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: segmentColor(s.status),
-                      borderRadius: BorderRadius.circular(showNumbers ? 8 : 3),
-                      border: s.status == 'open' ? Border.all(color: const Color(0xFF94A3B8)) : null,
-                    ),
-                    child: showNumbers
-                        ? Text('${s.seg + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: segmentTextColor(s.status)))
+                  child: GestureDetector(
+                    // الأدمن والمساعد: الضغط على خانة عضو بيفتح تسجيل ورده.
+                    onTap: canRecord && s.uid != null && s.status != 'late'
+                        ? () => showRecordProgress(context, group: group, memberUid: s.uid!, memberName: names[s.uid] ?? '—')
                         : null,
+                    child: Container(
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: segmentColor(s.status),
+                        borderRadius: BorderRadius.circular(showNumbers ? 8 : 3),
+                        border: s.status == 'open' ? Border.all(color: const Color(0xFF94A3B8)) : null,
+                      ),
+                      child: showNumbers
+                          ? Text('${s.seg + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: segmentTextColor(s.status)))
+                          : null,
+                    ),
                   ),
                 ),
             ],
@@ -463,6 +481,7 @@ class _ExtraPortions extends StatelessWidget {
         child: ListView(
           shrinkWrap: true,
           children: [
+            ListTile(leading: const Icon(Icons.check_circle_outline, color: AppColors.statusDone), title: Text(t.markPortionDoneByAdmin), onTap: () => Navigator.pop(context, '#done')),
             ListTile(leading: const Icon(Icons.volunteer_activism_outlined), title: Text(t.makeOpen), onTap: () => Navigator.pop(context, '')),
             const Divider(height: 1),
             for (final m in members)
@@ -472,6 +491,12 @@ class _ExtraPortions extends StatelessWidget {
       ),
     );
     if (choice == null || !context.mounted) return;
+    if (choice == '#done') {
+      if (await confirmDialog(context, title: t.markPortionDoneByAdmin, body: t.recordProgressNote) && context.mounted) {
+        await runAction(context, () => GroupsService.instance.recordPortion(group.id, p.id, done: true));
+      }
+      return;
+    }
     await runAction(context, () => GroupsService.instance.assignPortion(group.id, p.id, choice.isEmpty ? null : choice));
   }
 }
@@ -536,6 +561,8 @@ class _MembersList extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(title: Text(target.name, style: const TextStyle(fontWeight: FontWeight.w700))),
+            if (group.isActive)
+              ListTile(leading: const Icon(Icons.edit_note), title: Text(t.recordProgress), onTap: () => Navigator.pop(context, 'record')),
             ListTile(leading: const Icon(Icons.swap_vert), title: Text(t.changePortion), onTap: () => Navigator.pop(context, 'move')),
             if (canManage && isAdmin && target.role == 'member')
               ListTile(leading: const Icon(Icons.shield_outlined), title: Text(t.makeAssistant), onTap: () => Navigator.pop(context, 'assistant')),
@@ -555,6 +582,8 @@ class _MembersList extends StatelessWidget {
     );
     if (action == null || !context.mounted) return;
     switch (action) {
+      case 'record':
+        await showRecordProgress(context, group: group, memberUid: target.uid, memberName: target.name);
       case 'move':
         await _move(context, target);
       case 'assistant':

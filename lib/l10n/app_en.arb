@@ -406,5 +406,27 @@
   "reviewerSignIn": "Reviewer sign-in",
   "email": "Email",
   "password": "Password",
-  "signIn": "Sign in"
+  "signIn": "Sign in",
+  "recordProgress": "Record progress",
+  "recordProgressTitle": "{name}'s portion",
+  "recordProgressNote": "Progress recorded by an admin or assistant gives the member no points and doesn't count toward commitment.",
+  "markWholeDone": "Mark whole portion done",
+  "recordedBySelf": "{name} recorded this portion themselves, so it can't be changed.",
+  "tapToRecordHint": "Tap a member's cell to record their progress.",
+  "markPortionDoneByAdmin": "Mark as read (admin)",
+  "recordedByAdminNote": "Recorded by an admin",
+  "@recordProgressTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@recordedBySelf": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }

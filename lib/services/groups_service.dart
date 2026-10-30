@@ -82,6 +82,12 @@ class GroupsService {
       .snapshots()
       .map((d) => d.exists ? Cycle.fromDoc(d) : null);
 
+  /// ورد عضو معين في دورة (للأدمن والمساعد).
+  Future<Assignment?> memberAssignment(String groupId, int cycle, String memberUid) async {
+    final d = await _group(groupId).collection('cycles').doc('$cycle').collection('assignments').doc(memberUid).get();
+    return d.exists ? Assignment.fromDoc(d) : null;
+  }
+
   Stream<Assignment?> myAssignment(String groupId, int cycle) {
     final id = uid;
     if (id == null || cycle < 1) return Stream.value(null);
@@ -156,6 +162,13 @@ class GroupsService {
 
   Future<void> setRole(String groupId, String memberUid, String role) =>
       _call('setRole', {'groupId': groupId, 'uid': memberUid, 'role': role});
+
+  /// الأدمن أو المساعد بيسجّل ورد عضو (من غير نقاط).
+  Future<void> recordProgress(String groupId, String memberUid, int quartersRead) =>
+      _call('recordProgress', {'groupId': groupId, 'uid': memberUid, 'quartersRead': quartersRead});
+
+  Future<void> recordPortion(String groupId, String portionId, {required bool done}) =>
+      _call('recordProgress', {'groupId': groupId, 'portionId': portionId, 'done': done});
 
   /// تغيير جزء عضو (لو مع حد تاني بيتبادلوا).
   Future<void> moveMember(String groupId, String memberUid, int segment) =>

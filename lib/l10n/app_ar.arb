@@ -194,5 +194,13 @@
   "reviewerSignIn": "دخول المراجعين",
   "email": "الإيميل",
   "password": "كلمة السر",
-  "signIn": "دخول"
+  "signIn": "دخول",
+  "recordProgress": "سجّل الورد",
+  "recordProgressTitle": "ورد {name}",
+  "recordProgressNote": "التسجيل من الأدمن أو المساعد مش بيدّي العضو نقاط، ومش بيتحسب في الالتزام.",
+  "markWholeDone": "خلص الورد كله",
+  "recordedBySelf": "{name} سجّل الورد ده بنفسه، فمينفعش يتعدّل.",
+  "tapToRecordHint": "اضغط على خانة أي عضو عشان تسجّل ورده.",
+  "markPortionDoneByAdmin": "اتقرا (تسجيل من الأدمن)",
+  "recordedByAdminNote": "سجّله الأدمن"
 }
