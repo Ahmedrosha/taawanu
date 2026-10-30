@@ -62,13 +62,37 @@ jobs:
         with:
           name: taawanu-play-${{ github.run_number }}
           path: build/app/outputs/bundle/release/app-release.aab
+      # المفتاح لو اتنسخ من الموبايل ممكن سطوره تتكسر؛ بنصلحه قبل الاستخدام.
+      - name: Play service account key
+        if: inputs.track != 'none'
+        env:
+          PLAY_KEY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          raw = os.environ.get('PLAY_KEY', '').strip()
+          if not raw:
+              print('::error::PLAY_SERVICE_ACCOUNT_JSON secret is missing.')
+              raise SystemExit(1)
+          try:
+              key = json.loads(raw, strict=False)
+          except Exception as e:
+              print(f'::error::PLAY_SERVICE_ACCOUNT_JSON is not valid JSON: {e}')
+              raise SystemExit(1)
+          path = os.path.join(os.environ['RUNNER_TEMP'], 'play.json')
+          with open(path, 'w') as f:
+              json.dump(key, f)
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write(f'PLAY_KEY_FILE={path}\n')
+          print('::notice title=Play key::' + key.get('client_email', '?'))
+          PY
       - name: Upload to Google Play
         if: inputs.track != 'none'
         uses: r0adkll/upload-google-play@v1
         with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          serviceAccountJson: ${{ env.PLAY_KEY_FILE }}
           packageName: com.taawanu.taawanu
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
-          track: ${{ inputs.track }}
+          tracks: ${{ inputs.track }}
           status: completed
           whatsNewDirectory: distribution/whatsnew
