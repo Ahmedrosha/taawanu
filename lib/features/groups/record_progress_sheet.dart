@@ -13,6 +13,7 @@ Future<void> showRecordProgress(
   required Group group,
   required String memberUid,
   required String memberName,
+  int? segmentFromQuarter,
 }) async {
   final t = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
@@ -26,6 +27,11 @@ Future<void> showRecordProgress(
   if (!context.mounted) return;
   if (a == null || a.closed) {
     messenger.showSnackBar(SnackBar(content: Text(t.noPortionThisCycle)));
+    return;
+  }
+  // الخانة دي ورد إضافي مع العضو، مش ورده الأساسي: بيتسجّل من الأوراد الإضافية.
+  if (segmentFromQuarter != null && a.fromQuarter != segmentFromQuarter) {
+    messenger.showSnackBar(SnackBar(content: Text(t.recordFromExtraPortions)));
     return;
   }
   // العضو خلّص بنفسه وخد نقاطه: مفيش تعديل.

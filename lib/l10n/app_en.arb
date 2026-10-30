@@ -519,5 +519,6 @@
         "type": "int"
       }
     }
-  }
+  },
+  "recordFromExtraPortions": "This cell is an extra portion. Record it from the ⋮ menu under Extra portions."
 }

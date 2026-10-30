@@ -360,7 +360,13 @@ class _KhatmaMap extends StatelessWidget {
                   child: GestureDetector(
                     // الأدمن والمساعد: الضغط على خانة عضو بيفتح تسجيل ورده.
                     onTap: canRecord && s.uid != null && s.status != 'late'
-                        ? () => showRecordProgress(context, group: group, memberUid: s.uid!, memberName: names[s.uid] ?? '—')
+                        ? () => showRecordProgress(
+                              context,
+                              group: group,
+                              memberUid: s.uid!,
+                              memberName: names[s.uid] ?? '—',
+                              segmentFromQuarter: s.seg * group.wardQuarters + 1,
+                            )
                         : null,
                     child: Container(
                       alignment: Alignment.center,

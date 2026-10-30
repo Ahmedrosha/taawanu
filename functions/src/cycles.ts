@@ -391,6 +391,22 @@ export const updateProgress = onCall(async (request) => {
 // ---------------------------------------------------------------------------
 // الأوراد الإضافية: متأخرة، أو موزعة، أو خانات فاضية
 
+/**
+ * الخانة الفاضية (empty) أو اللي صاحبها خرج (left) لون خانتها على الخريطة بيتبع الورد الإضافي.
+ * بنقرا قبل أي كتابة في الـtransaction، وبنرجّع دالة تكتب التحديث.
+ */
+async function segmentUpdater(tx: Transaction, groupId: string, p: PortionDoc) {
+  if (p.origin !== 'empty' && p.origin !== 'left') return () => {};
+  const g = groupData(await tx.get(groupRef(groupId)));
+  const cRef = cycleRef(groupId, p.cycle);
+  const c = (await tx.get(cRef)).data() as CycleDoc | undefined;
+  if (!c) return () => {};
+  const seg = Math.floor((p.fromQuarter - 1) / g.wardQuarters);
+  return (patch: Partial<Segment>) => {
+    tx.update(cRef, { segments: c.segments.map((s) => (s.seg === seg ? { ...s, ...patch } : s)) });
+  };
+}
+
 export const claimPortion = onCall(async (request) => {
   const uid = requireUid(request);
   const groupId = requireString(request.data?.groupId, 'groupId');
@@ -402,7 +418,9 @@ export const claimPortion = onCall(async (request) => {
     const p = snap.data() as PortionDoc | undefined;
     if (!p) throw new HttpsError('not-found', 'Portion not found.');
     if (p.status !== 'open') throw new HttpsError('failed-precondition', 'Portion already taken.');
+    const setSegment = await segmentUpdater(tx, groupId, p);
     tx.update(pRef, { assignee: uid, status: 'assigned', claimedAt: FieldValue.serverTimestamp() });
+    setSegment({ uid, status: 'pending' });
   });
   return { ok: true };
 });
@@ -421,7 +439,9 @@ export const assignPortion = onCall(async (request) => {
     const p = snap.data() as PortionDoc | undefined;
     if (!p) throw new HttpsError('not-found', 'Portion not found.');
     if (p.status === 'done') throw new HttpsError('failed-precondition', 'Portion already done.');
+    const setSegment = await segmentUpdater(tx, groupId, p);
     tx.update(pRef, target ? { assignee: target, status: 'assigned' } : { assignee: null, status: 'open' });
+    setSegment(target ? { uid: target, status: 'pending' } : { uid: null, status: 'open' });
   });
   if (target) {
     const g = groupData(await groupRef(groupId).get());
@@ -446,6 +466,8 @@ export const completePortion = onCall(async (request) => {
     if (portion.assignee !== uid || portion.status !== 'assigned') {
       throw new HttpsError('permission-denied', 'Not your portion.');
     }
+    const setSegment = await segmentUpdater(tx, groupId, portion);
+    setSegment({ uid, status: 'done' });
     tx.update(pRef, { status: 'done', completedAt: FieldValue.serverTimestamp() });
     tx.update(cycleRef(groupId, portion.cycle), { remainingQuarters: FieldValue.increment(-portion.quarterCount) });
     return portion;
@@ -489,15 +511,18 @@ export const recordProgress = onCall(async (request) => {
       if (!p) throw new HttpsError('not-found', 'Portion not found.');
       const cRef = cycleRef(groupId, p.cycle);
       const c = (await tx.get(cRef)).data() as CycleDoc | undefined;
+      const setSegment = await segmentUpdater(tx, groupId, p);
       if (done) {
         if (p.status === 'done') return null;
         tx.update(pRef, { status: 'done', completedAt: FieldValue.serverTimestamp(), recordedBy: managerUid });
+        setSegment({ status: 'done' });
         tx.update(cRef, { remainingQuarters: FieldValue.increment(-p.quarterCount) });
       } else {
         if (p.status !== 'done') return null;
         if (!p.recordedBy) throw new HttpsError('failed-precondition', 'Recorded by the member.');
         if (c?.khatmaComplete) throw new HttpsError('failed-precondition', 'Khatma already complete.');
         tx.update(pRef, { status: p.assignee ? 'assigned' : 'open', completedAt: null, recordedBy: null });
+        setSegment(p.assignee ? { status: 'pending' } : { uid: null, status: 'open' });
         tx.update(cRef, { remainingQuarters: FieldValue.increment(p.quarterCount) });
       }
       return p;
