@@ -17,7 +17,11 @@ jobs:
       - run: flutter --version
       - run: flutter pub get
       - name: Resolved package versions
-        run: grep -A3 -E "^  (firebase_core|go_router|google_fonts):" pubspec.lock | grep -E "^  [a-z_]+:|version:"
+        run: |
+          for p in firebase_core go_router google_fonts; do
+            v=$(awk -v p="  $p:" '$0==p{f=1} f&&/version:/{gsub(/"/,"",$2); print $2; exit}' pubspec.lock)
+            echo "::notice title=$p::$v"
+          done
       - run: flutter gen-l10n
       - run: flutter analyze
       - name: Tests
