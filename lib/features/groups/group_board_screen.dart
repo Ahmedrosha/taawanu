@@ -434,6 +434,8 @@ class _ExtraPortions extends StatelessWidget {
                     )
                   else if (p.assignee == svc.uid)
                     FilledButton.tonal(
+                      // الثيم بيخلي الزرار بعرض الشاشة، وهنا جوه صف فلازم عرض محدود.
+                      style: FilledButton.styleFrom(minimumSize: const Size(0, 40), padding: const EdgeInsets.symmetric(horizontal: 16)),
                       onPressed: () => context.push('/read', extra: ReadRequest.portion(group: group, portion: p)),
                       child: Text(t.readNow),
                     ),
