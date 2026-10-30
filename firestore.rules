@@ -51,7 +51,8 @@ service cloud.firestore {
     // النقاط والسلسلة والإحصائيات يكتبها السيرفر بس.
 
     match /users/{uid} {
-      allow read: if signedIn();
+      // كل واحد يقرا ملفه بس. أسماء وصور الأعضاء موجودة في أعضاء كل مجموعة.
+      allow read: if isSelf(uid);
 
       allow create: if isSelf(uid)
         && request.resource.data.keys().hasOnly(['name', 'photoUrl', 'locale', 'createdAt'])

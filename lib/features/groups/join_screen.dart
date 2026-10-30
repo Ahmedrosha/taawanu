@@ -38,7 +38,10 @@ class _JoinScreenState extends State<JoinScreen> {
     });
     if (!mounted) return;
     setState(() => _busy = false);
-    if (ok && groupId != null) context.go('/group/$groupId');
+    if (ok && groupId != null) {
+      context.go('/groups');
+      context.push('/group/$groupId');
+    }
   }
 
   @override
@@ -110,7 +113,13 @@ class _JoinScreenState extends State<JoinScreen> {
                       if (p.alreadyMember) ...[
                         Text(t.alreadyMember, style: const TextStyle(color: AppColors.textMuted)),
                         const SizedBox(height: 12),
-                        FilledButton(onPressed: () => context.go('/group/${p.groupId}'), child: Text(t.openGroup)),
+                        FilledButton(
+                          onPressed: () {
+                            context.go('/groups');
+                            context.push('/group/${p.groupId}');
+                          },
+                          child: Text(t.openGroup),
+                        ),
                       ] else if (p.memberCount >= p.slots)
                         Text(t.groupFull, style: const TextStyle(color: AppColors.statusLate, fontWeight: FontWeight.w600))
                       else

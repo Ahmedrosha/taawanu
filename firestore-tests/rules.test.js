@@ -63,6 +63,10 @@ describe('المستخدمين', () => {
   test('غير المسجّل ميقراش', async () => {
     await assertFails(getDoc(doc(anon(), 'users/m1')));
   });
+  test('المستخدم يقرا ملفه، ومحدش يقرا ملف حد تاني', async () => {
+    await assertSucceeds(getDoc(doc(as('m1'), 'users/m1')));
+    await assertFails(getDoc(doc(as('m2'), 'users/m1')));
+  });
 });
 
 describe('المجموعات', () => {

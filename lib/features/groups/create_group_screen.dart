@@ -41,7 +41,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
     try {
-      await GroupsService.instance.createGroup(
+      final groupId = await GroupsService.instance.createGroup(
         name: _name.text.trim(),
         isPrivate: _isPrivate,
         wardQuarters: _ward,
@@ -53,7 +53,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         lateDefault: _late,
       );
       messenger.showSnackBar(SnackBar(content: Text(t.groupCreated)));
-      if (mounted) context.pop();
+      if (mounted) context.pushReplacement('/group/$groupId');
     } on FirebaseFunctionsException catch (e) {
       debugPrint('createGroup failed: ${e.code} ${e.message}');
       messenger.showSnackBar(SnackBar(content: Text(t.createFailed)));
