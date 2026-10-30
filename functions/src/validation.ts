@@ -79,3 +79,9 @@ export function parseNewGroup(raw: unknown): NewGroupInput {
     lateDefault: oneOf(d.lateDefault ?? 'ask', LATE_POLICIES, 'lateDefault'),
   };
 }
+
+/** رقم القطعة (اختياري): من ٠ لعدد الخانات − ١. */
+export function parseSegment(raw: unknown, slots: number): number | null {
+  if (raw === undefined || raw === null) return null;
+  return intInRange(raw, 0, slots - 1, 'segment');
+}

@@ -8,7 +8,8 @@ import {
   requireString, requireUid, Role, userDisplay, userGroupIndexRef,
 } from './common';
 import { releaseMemberWork } from './cycles';
-import { CYCLE_UNITS, LATE_POLICIES, parseNewGroup, ValidationError } from './validation';
+import { pickCycle, slotForSegment } from './rotation';
+import { CYCLE_UNITS, LATE_POLICIES, parseNewGroup, parseSegment, ValidationError } from './validation';
 
 /** حد أقصى لعدد المجموعات اللي المستخدم الواحد يقدر يعملها، ضد الإساءة. */
 const MAX_GROUPS_CREATED_PER_USER = 20;
@@ -21,8 +22,11 @@ function asInvalid(e: unknown): never {
 export const createGroup = onCall(async (request) => {
   const uid = requireUid(request);
   let input;
+  let startSegment = 0;
   try {
     input = parseNewGroup(request.data);
+    // الأدمن بيختار الجزء اللي هيبدأ بيه (مثلًا لو جاي من ختمة شغالة على الواتساب).
+    startSegment = parseSegment(request.data?.startSegment, input.slots) ?? 0;
   } catch (e) {
     asInvalid(e);
   }
@@ -48,7 +52,7 @@ export const createGroup = onCall(async (request) => {
     createdAt: now,
   });
   batch.set(ref.collection('members').doc(uid), {
-    role: 'admin', slot: 0, joinedAt: now, name: me.name, points: 0, readCount: 0,
+    role: 'admin', slot: slotForSegment(startSegment, 1, input.slots), joinedAt: now, name: me.name, points: 0, readCount: 0,
     ...(me.photoUrl ? { photoUrl: me.photoUrl } : {}),
   });
   batch.set(userGroupIndexRef(uid, ref.id), {
@@ -157,6 +161,39 @@ export const setRole = onCall(async (request) => {
   batch.update(memberRef(groupId, target), { role });
   batch.set(userGroupIndexRef(target, groupId), { role }, { merge: true });
   await batch.commit();
+  return { ok: true };
+});
+
+/**
+ * الأدمن أو المساعد بيغيّر الجزء بتاع عضو. لو الجزء مع عضو تاني بيتبادلوا.
+ * قبل البداية: من الدورة الأولى. بعد البداية: من الدورة الجاية.
+ */
+export const moveMember = onCall(async (request) => {
+  const uid = requireUid(request);
+  const groupId = requireString(request.data?.groupId, 'groupId');
+  const target = requireString(request.data?.uid, 'uid');
+  await requireManager(groupId, uid);
+  const gRef = groupRef(groupId);
+  await db.runTransaction(async (tx) => {
+    const g = groupData(await tx.get(gRef));
+    let segment: number;
+    try {
+      segment = parseSegment(request.data?.segment, g.slots) ?? -1;
+    } catch (e) {
+      asInvalid(e);
+    }
+    if (segment < 0) throw new HttpsError('invalid-argument', 'segment is required');
+    const cycle = pickCycle(g.status, g.currentCycle, true);
+    const newSlot = slotForSegment(segment, cycle, g.slots);
+    const members = await tx.get(gRef.collection('members'));
+    const mine = members.docs.find((d) => d.id === target);
+    if (!mine) throw new HttpsError('not-found', 'Not a member.');
+    const oldSlot = mine.get('slot') as number;
+    if (oldSlot === newSlot) return;
+    const other = members.docs.find((d) => d.get('slot') === newSlot);
+    tx.update(mine.ref, { slot: newSlot });
+    if (other) tx.update(other.ref, { slot: oldSlot });
+  });
   return { ok: true };
 });
 

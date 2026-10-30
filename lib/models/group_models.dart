@@ -237,6 +237,8 @@ class GroupPreview {
     required this.status,
     required this.adminName,
     required this.alreadyMember,
+    required this.pickCycle,
+    required this.takenSegments,
     this.code,
   });
 
@@ -252,7 +254,18 @@ class GroupPreview {
   final String status;
   final String adminName;
   final bool alreadyMember;
+  /// الدورة اللي الأجزاء المحجوزة محسوبة عليها.
+  final int pickCycle;
+  final Set<int> takenSegments;
   final String? code;
+
+  /// أول جزء فاضي (الاختيار الافتراضي).
+  int? get firstFreeSegment {
+    for (var s = 0; s < slots; s++) {
+      if (!takenSegments.contains(s)) return s;
+    }
+    return null;
+  }
 
   factory GroupPreview.fromMap(Map<String, dynamic> d) => GroupPreview(
         groupId: d['groupId'] as String,
@@ -267,6 +280,8 @@ class GroupPreview {
         status: (d['status'] as String?) ?? 'forming',
         adminName: (d['adminName'] as String?) ?? '',
         alreadyMember: (d['alreadyMember'] as bool?) ?? false,
+        pickCycle: _int(d['pickCycle'], 1),
+        takenSegments: {for (final s in (d['takenSegments'] as List?) ?? const []) _int(s)},
         code: d['code'] as String?,
       );
 }

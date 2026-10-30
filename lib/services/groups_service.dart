@@ -126,8 +126,10 @@ class GroupsService {
     required int cycleStartHour,
     required int cycleStartDayOfMonth,
     required LatePolicy lateDefault,
+    int startSegment = 0,
   }) async {
     final data = await _call('createGroup', {
+      'startSegment': startSegment,
       'name': name,
       'type': isPrivate ? 'private' : 'public',
       'wardQuarters': wardQuarters,
@@ -155,6 +157,10 @@ class GroupsService {
   Future<void> setRole(String groupId, String memberUid, String role) =>
       _call('setRole', {'groupId': groupId, 'uid': memberUid, 'role': role});
 
+  /// تغيير جزء عضو (لو مع حد تاني بيتبادلوا).
+  Future<void> moveMember(String groupId, String memberUid, int segment) =>
+      _call('moveMember', {'groupId': groupId, 'uid': memberUid, 'segment': segment});
+
   Future<void> transferAdmin(String groupId, String memberUid) =>
       _call('transferAdmin', {'groupId': groupId, 'uid': memberUid});
 
@@ -174,11 +180,11 @@ class GroupsService {
   Future<GroupPreview> previewPublic(String groupId) async =>
       GroupPreview.fromMap(await _call('previewPublicGroup', {'groupId': groupId}));
 
-  Future<String> join(String codeOrLink) async =>
-      (await _call('joinGroup', {'code': codeOrLink}))['groupId'] as String;
+  Future<String> join(String codeOrLink, {int? segment}) async =>
+      (await _call('joinGroup', {'code': codeOrLink, 'segment': segment}))['groupId'] as String;
 
-  Future<String> joinPublic(String groupId) async =>
-      (await _call('joinPublicGroup', {'groupId': groupId}))['groupId'] as String;
+  Future<String> joinPublic(String groupId, {int? segment}) async =>
+      (await _call('joinPublicGroup', {'groupId': groupId, 'segment': segment}))['groupId'] as String;
 
   // ---------- القراءة والتقدم ----------
 

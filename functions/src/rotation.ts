@@ -68,3 +68,18 @@ export function rangeLabel(r: QuarterRange, locale: string): string {
   if (count === 1) return ar ? `الربع ${r.fromQuarter}` : `Quarter ${r.fromQuarter}`;
   return ar ? `الأرباع ${r.fromQuarter}–${r.toQuarter}` : `Quarters ${r.fromQuarter}–${r.toQuarter}`;
 }
+
+/**
+ * الدورة اللي اختيار الجزء بيتحسب عليها.
+ * قبل البداية: الدورة ١. وبعدها: الانضمام بيبقى للدورة الحالية (بياخد الورد الفاضي على طول)،
+ * والنقل بيبقى من الدورة الجاية (عشان أوراد الدورة الحالية متوزعة خلاص).
+ */
+export function pickCycle(status: string, currentCycle: number, forMove: boolean): number {
+  if (status !== 'active') return 1;
+  return forMove ? currentCycle + 1 : currentCycle;
+}
+
+/** القطع المحجوزة في دورة معينة، من خانات الأعضاء. */
+export function takenSegments(memberSlots: number[], cycle: number, slots: number): number[] {
+  return memberSlots.map((s) => segmentFor(s, cycle, slots)).sort((a, b) => a - b);
+}

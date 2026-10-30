@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +8,7 @@ import '../../models/group_options.dart';
 import '../../services/groups_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/logo_mark.dart';
+import '../../widgets/segment_picker.dart';
 import '../../widgets/ui.dart';
 
 /// الانضمام: برابط دعوة (code) لمجموعة خاصة، أو بمعرّف مجموعة عامة (publicGroupId).
@@ -23,19 +25,54 @@ class JoinScreen extends StatefulWidget {
 class _JoinScreenState extends State<JoinScreen> {
   late Future<GroupPreview> _preview = _load();
   bool _busy = false;
+  /// الجزء اللي العضو اختاره (null = أول جزء فاضي).
+  int? _segment;
 
   Future<GroupPreview> _load() {
     final svc = GroupsService.instance;
     return widget.publicGroupId != null ? svc.previewPublic(widget.publicGroupId!) : svc.previewInvite(widget.code!);
   }
 
+  Future<void> _pick(GroupPreview p) async {
+    final seg = await showSegmentPicker(
+      context,
+      wardQuarters: p.wardQuarters,
+      slots: p.slots,
+      selected: _segment ?? p.firstFreeSegment,
+      taken: p.takenSegments,
+    );
+    if (seg != null && mounted) setState(() => _segment = seg);
+  }
+
   Future<void> _join(GroupPreview p) async {
+    final t = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final segment = _segment ?? p.firstFreeSegment;
     setState(() => _busy = true);
     String? groupId;
-    final ok = await runAction(context, () async {
+    var ok = false;
+    try {
       final svc = GroupsService.instance;
-      groupId = widget.publicGroupId != null ? await svc.joinPublic(p.groupId) : await svc.join(widget.code!);
-    });
+      groupId = widget.publicGroupId != null
+          ? await svc.joinPublic(p.groupId, segment: segment)
+          : await svc.join(widget.code!, segment: segment);
+      ok = true;
+    } on FirebaseFunctionsException catch (e) {
+      if (e.code == 'already-exists') {
+        // حد سبقه للجزء ده: نحدّث المحجوز ويختار تاني.
+        messenger.showSnackBar(SnackBar(content: Text(t.segmentTaken)));
+        if (mounted) {
+          setState(() {
+            _segment = null;
+            _preview = _load();
+          });
+        }
+      } else {
+        messenger.showSnackBar(SnackBar(content: Text(t.actionFailed)));
+      }
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(t.actionFailed)));
+    }
     if (!mounted) return;
     setState(() => _busy = false);
     if (ok && groupId != null) {
@@ -109,6 +146,26 @@ class _JoinScreenState extends State<JoinScreen> {
                           Expanded(child: AppCard(child: StatTile(value: '${p.memberCount}/${p.slots}', label: t.membersWord))),
                         ],
                       ),
+                      if (!p.alreadyMember && p.memberCount < p.slots) ...[
+                        const SizedBox(height: 20),
+                        Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(t.yourStartLabel, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        ),
+                        const SizedBox(height: 4),
+                        Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(
+                            p.status == 'active' ? t.yourStartHintActive : t.yourStartHint,
+                            style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SegmentChoiceTile(
+                          label: segmentLabel(t, _segment ?? p.firstFreeSegment ?? 0, p.wardQuarters),
+                          onTap: _busy ? null : () => _pick(p),
+                        ),
+                      ],
                       const Spacer(),
                       if (p.alreadyMember) ...[
                         Text(t.alreadyMember, style: const TextStyle(color: AppColors.textMuted)),

@@ -7,6 +7,7 @@ import '../../l10n/gen/app_localizations.dart';
 import '../../models/group_options.dart';
 import '../../services/groups_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/segment_picker.dart';
 
 class CreateGroupScreen extends StatefulWidget {
   const CreateGroupScreen({super.key});
@@ -21,6 +22,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
   bool _isPrivate = true;
   int _ward = 8; // جزء
+  int _startSegment = 0; // الأدمن بيبدأ بأنهي جزء
   int _cycleCount = 1;
   CycleUnit _unit = CycleUnit.week;
   int _startDay = 5; // الجمعة (٠ = الأحد)
@@ -51,6 +53,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         cycleStartHour: _startHour,
         cycleStartDayOfMonth: _startDayOfMonth,
         lateDefault: _late,
+        startSegment: _startSegment,
       );
       messenger.showSnackBar(SnackBar(content: Text(t.groupCreated)));
       if (mounted) context.pushReplacement('/group/$groupId');
@@ -126,7 +129,10 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                     showCheckmark: false,
                     selectedColor: AppColors.navy,
                     labelStyle: TextStyle(color: _ward == w ? Colors.white : AppColors.text),
-                    onSelected: (_) => setState(() => _ward = w),
+                    onSelected: (_) => setState(() {
+                      _ward = w;
+                      _startSegment = 0;
+                    }),
                   ),
               ],
             ),
@@ -134,6 +140,24 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             Text(
               t.slotsInfo(totalQuarters ~/ _ward),
               style: text.bodySmall?.copyWith(color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 20),
+
+            Text(t.yourStartLabel, style: label),
+            const SizedBox(height: 4),
+            Text(t.yourStartHint, style: text.bodySmall?.copyWith(color: AppColors.textMuted)),
+            const SizedBox(height: 8),
+            SegmentChoiceTile(
+              label: segmentLabel(t, _startSegment, _ward),
+              onTap: () async {
+                final seg = await showSegmentPicker(
+                  context,
+                  wardQuarters: _ward,
+                  slots: totalQuarters ~/ _ward,
+                  selected: _startSegment,
+                );
+                if (seg != null && mounted) setState(() => _startSegment = seg);
+              },
             ),
             const SizedBox(height: 20),
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { parseNewGroup, ValidationError } from './validation';
+import { parseNewGroup, parseSegment, ValidationError } from './validation';
 
 const base = { name: 'ختمة الأصحاب', type: 'private', wardQuarters: 8 };
 
@@ -42,5 +42,22 @@ describe('parseNewGroup', () => {
   test('نوع المجموعة ووحدة الدورة لازم من القيم المسموحة', () => {
     assert.throws(() => parseNewGroup({ ...base, type: 'secret' }), ValidationError);
     assert.throws(() => parseNewGroup({ ...base, cycleUnit: 'year' }), ValidationError);
+  });
+});
+
+describe('parseSegment', () => {
+  test('اختياري', () => {
+    assert.equal(parseSegment(undefined, 30), null);
+    assert.equal(parseSegment(null, 30), null);
+  });
+  test('في الحدود', () => {
+    assert.equal(parseSegment(0, 30), 0);
+    assert.equal(parseSegment(29, 30), 29);
+  });
+  test('بره الحدود أو مش رقم صحيح', () => {
+    assert.throws(() => parseSegment(30, 30), ValidationError);
+    assert.throws(() => parseSegment(-1, 30), ValidationError);
+    assert.throws(() => parseSegment(2.5, 30), ValidationError);
+    assert.throws(() => parseSegment('3', 30), ValidationError);
   });
 });

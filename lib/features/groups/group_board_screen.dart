@@ -8,6 +8,7 @@ import '../../models/group_options.dart';
 import '../../services/groups_service.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/segment_picker.dart';
 import '../../widgets/ui.dart';
 
 /// لوحة المجموعة: الدورة الحالية، وخريطة الختمة، ووردي، والأوراد الإضافية، والأعضاء.
@@ -498,16 +499,22 @@ class _MembersList extends StatelessWidget {
                 members[i].uid == me?.uid ? '${members[i].name} ${t.you}' : members[i].name,
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
-              subtitle: Text(roleLabel(t, members[i].role), style: const TextStyle(fontSize: 12)),
+              subtitle: Text(
+                '${segmentLabel(t, segmentForSlot(members[i].slot, group.isActive ? group.currentCycle : 1, group.slots), group.wardQuarters)} · ${roleLabel(t, members[i].role)}',
+                style: const TextStyle(fontSize: 12),
+              ),
               trailing: Text(t.pointsN(members[i].points), style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w700)),
-              onLongPress: _canManage(members[i]) ? () => _manage(context, members[i]) : null,
-              onTap: _canManage(members[i]) ? () => _manage(context, members[i]) : null,
+              onLongPress: _canOpen(members[i]) ? () => _manage(context, members[i]) : null,
+              onTap: _canOpen(members[i]) ? () => _manage(context, members[i]) : null,
             ),
           ],
         ],
       ),
     );
   }
+
+  /// المدير يقدر يغيّر جزء أي حد (حتى نفسه والأدمن)، والأدوار حسب _canManage.
+  bool _canOpen(Member target) => (me?.isManager ?? false) || _canManage(target);
 
   bool _canManage(Member target) {
     final m = me;
@@ -520,6 +527,7 @@ class _MembersList extends StatelessWidget {
     final t = AppLocalizations.of(context);
     final svc = GroupsService.instance;
     final isAdmin = me?.isAdmin ?? false;
+    final canManage = _canManage(target);
     final action = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
@@ -528,13 +536,15 @@ class _MembersList extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(title: Text(target.name, style: const TextStyle(fontWeight: FontWeight.w700))),
-            if (isAdmin && target.role == 'member')
+            ListTile(leading: const Icon(Icons.swap_vert), title: Text(t.changePortion), onTap: () => Navigator.pop(context, 'move')),
+            if (canManage && isAdmin && target.role == 'member')
               ListTile(leading: const Icon(Icons.shield_outlined), title: Text(t.makeAssistant), onTap: () => Navigator.pop(context, 'assistant')),
-            if (isAdmin && target.role == 'assistant')
+            if (canManage && isAdmin && target.role == 'assistant')
               ListTile(leading: const Icon(Icons.person_outline), title: Text(t.makeMember), onTap: () => Navigator.pop(context, 'member')),
-            if (isAdmin)
+            if (canManage && isAdmin)
               ListTile(leading: const Icon(Icons.star_outline), title: Text(t.makeAdmin), onTap: () => Navigator.pop(context, 'admin')),
-            ListTile(
+            if (canManage)
+              ListTile(
               leading: const Icon(Icons.person_remove_outlined, color: AppColors.statusLate),
               title: Text(t.removeFromGroup, style: const TextStyle(color: AppColors.statusLate)),
               onTap: () => Navigator.pop(context, 'remove'),
@@ -545,6 +555,8 @@ class _MembersList extends StatelessWidget {
     );
     if (action == null || !context.mounted) return;
     switch (action) {
+      case 'move':
+        await _move(context, target);
       case 'assistant':
       case 'member':
         await runAction(context, () => svc.setRole(group.id, target.uid, action));
@@ -557,6 +569,26 @@ class _MembersList extends StatelessWidget {
           await runAction(context, () => svc.removeMember(group.id, target.uid));
         }
     }
+  }
+}
+
+extension on _MembersList {
+  /// اختيار جزء جديد للعضو. لو الجزء مع حد تاني بيتبادلوا.
+  Future<void> _move(BuildContext context, Member target) async {
+    final t = AppLocalizations.of(context);
+    // قبل البداية: الدورة الأولى. بعدها: التغيير بيبدأ من الدورة الجاية.
+    final cycle = group.isActive ? group.currentCycle + 1 : 1;
+    final holders = {for (final m in members) segmentForSlot(m.slot, cycle, group.slots): m.name};
+    final seg = await showSegmentPicker(
+      context,
+      wardQuarters: group.wardQuarters,
+      slots: group.slots,
+      selected: segmentForSlot(target.slot, cycle, group.slots),
+      holders: holders,
+      note: group.isActive ? t.changePortionNoteActive : t.changePortionNote,
+    );
+    if (seg == null || !context.mounted) return;
+    await runAction(context, () => GroupsService.instance.moveMember(group.id, target.uid, seg));
   }
 }
 

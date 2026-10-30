@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
 import { regularPoints } from './points';
-import { rangeLabel, segmentFor, segmentRange, slotForSegment, splitRange } from './rotation';
+import { pickCycle, rangeLabel, segmentFor, segmentRange, slotForSegment, splitRange, takenSegments } from './rotation';
 import { CycleSettings, firstCycleEnd, nextBoundary, nextCycleEnd } from './schedule';
 
 describe('التدوير', () => {
@@ -87,5 +87,26 @@ describe('النقاط', () => {
     assert.equal(regularPoints(8, true, true), 110);
     assert.equal(regularPoints(8, true, false), 100);
     assert.equal(regularPoints(8, false, true), 80);
+  });
+});
+
+describe('اختيار الجزء', () => {
+  test('قبل البداية: اللي اختار الجزء ٧ يقراه في الدورة الأولى وبعده ٨', () => {
+    const slot = slotForSegment(6, pickCycle('forming', 0, false), 30);
+    assert.equal(segmentFor(slot, 1, 30), 6);
+    assert.equal(segmentFor(slot, 2, 30), 7);
+  });
+  test('بعد البداية: المنضم ياخد الجزء في الدورة الحالية', () => {
+    const cycle = pickCycle('active', 4, false);
+    assert.equal(cycle, 4);
+    assert.equal(segmentFor(slotForSegment(10, cycle, 30), 4, 30), 10);
+  });
+  test('النقل بعد البداية بيبدأ من الدورة الجاية', () => {
+    assert.equal(pickCycle('active', 4, true), 5);
+    assert.equal(pickCycle('forming', 0, true), 1);
+  });
+  test('الأجزاء المحجوزة محسوبة على الدورة', () => {
+    assert.deepEqual(takenSegments([0, 5], 1, 30), [0, 5]);
+    assert.deepEqual(takenSegments([0, 29], 2, 30), [0, 1]);
   });
 });

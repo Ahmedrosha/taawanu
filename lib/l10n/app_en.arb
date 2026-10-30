@@ -393,5 +393,14 @@
   "yourPortion": "Your portion",
   "yourPortions": "Your portions",
   "deleteAccount": "Delete account",
-  "deleteAccountConfirm": "Delete your account and all your data? You'll leave all your groups. This can't be undone."
+  "deleteAccountConfirm": "Delete your account and all your data? You'll leave all your groups. This can't be undone.",
+  "yourStartLabel": "Which portion do you start with?",
+  "yourStartHint": "Moving a khatma from WhatsApp? Pick the portion you're currently on.",
+  "yourStartHintActive": "Pick a free portion. You'll read it this cycle, then continue in order.",
+  "chooseStartTitle": "Choose a portion",
+  "chooseStartBody": "Numbers follow the order of the Quran. Taken portions are greyed out.",
+  "segmentTaken": "Someone just took that portion. Please pick another.",
+  "changePortion": "Change portion",
+  "changePortionNote": "Pick the new portion. If someone has it, they'll swap.",
+  "changePortionNoteActive": "This applies from the next cycle. If someone has that portion, they'll swap."
 }

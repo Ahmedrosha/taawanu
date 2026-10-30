@@ -1,7 +1,7 @@
 // نقطة الدخول: كل الـFunctions اللي بتترفع على Firebase.
 // المنطقة والإعدادات العامة في common.ts.
 export {
-  createGroup, updateGroupSettings, leaveGroup, removeMember, setRole, transferAdmin, deleteGroup, deleteAccount,
+  createGroup, updateGroupSettings, leaveGroup, removeMember, setRole, moveMember, transferAdmin, deleteGroup, deleteAccount,
 } from './groups';
 export {
   createInvite, revokeInvite, previewInvite, previewPublicGroup, joinGroup, joinPublicGroup,

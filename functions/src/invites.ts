@@ -10,7 +10,8 @@ import {
 } from './common';
 import { adoptEmptySegment } from './cycles';
 import { notifyUsers } from './notify';
-import { segmentFor, segmentRange } from './rotation';
+import { pickCycle, segmentFor, segmentRange, slotForSegment, takenSegments } from './rotation';
+import { parseSegment, ValidationError } from './validation';
 
 /** دومين التطبيق: الرابط بيفتح التطبيق مباشرة، أو صفحة تشرح وتوديك للمتجر. */
 export const INVITE_BASE_URL = 'https://taawanu.app/j/';
@@ -85,6 +86,9 @@ function checkInvite(inv: InviteDoc | undefined): InviteDoc {
 async function groupSummary(groupId: string, g: GroupDoc, forUid: string) {
   const admin = await userDisplay(g.adminId);
   const alreadyMember = (await memberRef(groupId, forUid).get()).exists;
+  // الأجزاء المحجوزة، عشان العضو الجديد يختار من الفاضي.
+  const pick = pickCycle(g.status, g.currentCycle, false);
+  const slots = (await groupRef(groupId).collection('members').select('slot').get()).docs.map((d) => d.get('slot') as number);
   return {
     groupId,
     name: g.name,
@@ -99,6 +103,8 @@ async function groupSummary(groupId: string, g: GroupDoc, forUid: string) {
     currentCycle: g.currentCycle,
     adminName: admin.name,
     alreadyMember,
+    pickCycle: pick,
+    takenSegments: takenSegments(slots, pick, g.slots),
   };
 }
 
@@ -119,8 +125,20 @@ export const previewPublicGroup = onCall(async (request) => {
   return await groupSummary(groupId, g, uid);
 });
 
-/** بيضيف المستخدم في أول خانة فاضية. بيرجّع رقم الخانة. */
-async function addMember(groupId: string, uid: string, inviteCode: string | null): Promise<number> {
+function readSegment(raw: unknown, slots: number): number | null {
+  try {
+    return parseSegment(raw, slots);
+  } catch (e) {
+    if (e instanceof ValidationError) throw new HttpsError('invalid-argument', e.message);
+    throw e;
+  }
+}
+
+/**
+ * بيضيف المستخدم في الجزء اللي اختاره، أو في أول خانة فاضية لو ماختارش.
+ * بيرجّع رقم الخانة.
+ */
+async function addMember(groupId: string, uid: string, inviteCode: string | null, rawSegment: unknown): Promise<number> {
   const me = await userDisplay(uid);
   const gRef = groupRef(groupId);
   const slot = await db.runTransaction(async (tx) => {
@@ -140,8 +158,15 @@ async function addMember(groupId: string, uid: string, inviteCode: string | null
 
     const members = await tx.get(gRef.collection('members'));
     const taken = new Set(members.docs.map((d) => (d.data() as MemberDoc).slot));
-    let free = 0;
-    while (taken.has(free)) free++;
+    const segment = readSegment(rawSegment, g.slots);
+    let free: number;
+    if (segment !== null) {
+      free = slotForSegment(segment, pickCycle(g.status, g.currentCycle, false), g.slots);
+      if (taken.has(free)) throw new HttpsError('already-exists', 'Segment taken.');
+    } else {
+      free = 0;
+      while (taken.has(free)) free++;
+    }
 
     const now = FieldValue.serverTimestamp();
     tx.set(memberRef(groupId, uid), {
@@ -170,7 +195,7 @@ export const joinGroup = onCall(async (request) => {
   const uid = requireUid(request);
   const code = normalizeCode(request.data?.code);
   const inv = checkInvite((await db.collection('invites').doc(code).get()).data() as InviteDoc | undefined);
-  const slot = await addMember(inv.groupId, uid, code);
+  const slot = await addMember(inv.groupId, uid, code, request.data?.segment);
   return { groupId: inv.groupId, slot };
 });
 
@@ -179,7 +204,7 @@ export const joinPublicGroup = onCall(async (request) => {
   const groupId = requireString(request.data?.groupId, 'groupId');
   const g = groupData(await groupRef(groupId).get());
   if (g.type !== 'public') throw new HttpsError('permission-denied', 'Private group: invite required.');
-  const slot = await addMember(groupId, uid, null);
+  const slot = await addMember(groupId, uid, null, request.data?.segment);
   return { groupId, slot };
 });
 
