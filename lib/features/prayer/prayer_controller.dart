@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:hijri/hijri_calendar.dart';
 
 import '../../services/prefs.dart';
 import 'prayer_times.dart';
@@ -34,8 +35,23 @@ class PrayerController extends ChangeNotifier {
 
   bool get asrHanafi => _prefs.asrHanafi;
 
-  PrayerDay timesFor(DateTime day) =>
-      computePrayerTimes(date: day, lat: lat, lng: lng, method: method, asrHanafi: asrHanafi);
+  PrayerDay timesFor(DateTime day) => computePrayerTimes(
+        date: day,
+        lat: lat,
+        lng: lng,
+        method: method,
+        asrHanafi: asrHanafi,
+        ramadan: isRamadan(day),
+      );
+
+  /// رمضان حسب تقويم أم القرى.
+  static bool isRamadan(DateTime day) {
+    try {
+      return HijriCalendar.fromDate(DateTime(day.year, day.month, day.day)).hMonth == 9;
+    } catch (_) {
+      return false;
+    }
+  }
 
   /// الصلاة الجاية (من غير الشروق) ووقتها.
   (Prayer, DateTime) next(DateTime now) {

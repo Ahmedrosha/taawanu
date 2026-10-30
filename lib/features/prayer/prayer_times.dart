@@ -98,6 +98,7 @@ PrayerDay computePrayerTimes({
   required double lng,
   required PrayerMethodId method,
   bool asrHanafi = false,
+  bool ramadan = false,
 }) {
   final m = prayerMethods[method]!;
   final jd = _julian(date.year, date.month, date.day) - lng / (15 * 24);
@@ -127,7 +128,9 @@ PrayerDay computePrayerTimes({
   final dhuhr = midDay(12 / 24);
   final asr = asrTime(asrHanafi ? 2 : 1, 13 / 24);
   final sunset = sunAngleTime(riseSet, 18 / 24);
-  var isha = m.ishaMinutes != null ? sunset + m.ishaMinutes! / 60 : sunAngleTime(m.ishaAngle!, 18 / 24);
+  // أم القرى: العشاء بعد المغرب بساعتين في رمضان بدل ساعة ونص.
+  final ishaMinutes = m.ishaMinutes == null ? null : (ramadan && method == PrayerMethodId.ummAlQura ? 120 : m.ishaMinutes!);
+  var isha = ishaMinutes != null ? sunset + ishaMinutes / 60 : sunAngleTime(m.ishaAngle!, 18 / 24);
 
   // خطوط العرض العالية: طريقة الزاوية (جزء من الليل).
   final night = _fixHour(sunrise - sunset);

@@ -32,6 +32,16 @@ void main() {
       expect(d[Prayer.isha].difference(d[Prayer.maghrib]).inMinutes, 90);
     });
 
+    test('أم القرى في رمضان: العشاء بعد المغرب بساعتين', () {
+      final d = computePrayerTimes(date: DateTime(2027, 2, 15), lat: 21.4225, lng: 39.8262, method: PrayerMethodId.ummAlQura, ramadan: true);
+      expect(d[Prayer.isha].difference(d[Prayer.maghrib]).inMinutes, 120);
+    });
+
+    test('قاعدة رمضان لأم القرى بس', () {
+      final d = computePrayerTimes(date: DateTime(2027, 2, 15), lat: 25.28, lng: 51.53, method: PrayerMethodId.qatar, ramadan: true);
+      expect(d[Prayer.isha].difference(d[Prayer.maghrib]).inMinutes, 90);
+    });
+
     test('العصر الحنفي بعد العصر العادي', () {
       final a = computePrayerTimes(date: DateTime(2026, 10, 31), lat: 30.0444, lng: 31.2357, method: PrayerMethodId.egypt);
       final h = computePrayerTimes(date: DateTime(2026, 10, 31), lat: 30.0444, lng: 31.2357, method: PrayerMethodId.egypt, asrHanafi: true);
