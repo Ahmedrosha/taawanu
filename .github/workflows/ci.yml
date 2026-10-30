@@ -16,6 +16,8 @@ jobs:
           cache: true
       - run: flutter --version
       - run: flutter pub get
+      - name: Resolved package versions
+        run: grep -A3 -E "^  (firebase_core|go_router|google_fonts):" pubspec.lock | grep -E "^  [a-z_]+:|version:"
       - run: flutter gen-l10n
       - run: flutter analyze
       - name: Tests

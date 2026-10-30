@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "880661928235",
+    "project_id": "taawanu-4ca70",
+    "storage_bucket": "taawanu-4ca70.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:880661928235:android:d65c206996abb276208d6e",
+        "android_client_info": {
+          "package_name": "com.taawanu.taawanu"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "880661928235-5km2p3tfl3tqd3j0udp4fu868iv9v3ig.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2EZUmBhCsK-UwfQYaHorTbcKE5GZYKko"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "880661928235-5km2p3tfl3tqd3j0udp4fu868iv9v3ig.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
