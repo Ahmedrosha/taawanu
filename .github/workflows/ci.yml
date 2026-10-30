@@ -1,0 +1,23 @@
+name: CI
+
+# فحص الكود بس (من غير بناء) مع كل push أو pull request.
+on:
+  push:
+  pull_request:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter --version
+      - run: flutter pub get
+      - run: flutter gen-l10n
+      - run: flutter analyze
+      - name: Tests
+        run: |
+          if [ -d test ]; then flutter test; else echo "No tests yet"; fi

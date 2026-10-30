@@ -1,0 +1,13 @@
+{
+  "@@locale": "en",
+  "appName": "Taawanu",
+  "tabHome": "Home",
+  "tabGroups": "My groups",
+  "tabAdhkar": "Adhkar",
+  "tabProfile": "Profile",
+  "greeting": "Assalamu alaikum",
+  "comingSoon": "Coming soon",
+  "language": "Language",
+  "arabic": "العربية",
+  "english": "English"
+}
