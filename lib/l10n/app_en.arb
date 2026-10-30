@@ -428,5 +428,96 @@
         "type": "String"
       }
     }
+  },
+  "tabPrayer": "Prayer",
+  "prayerFajr": "Fajr",
+  "prayerSunrise": "Sunrise",
+  "prayerDhuhr": "Dhuhr",
+  "prayerAsr": "Asr",
+  "prayerMaghrib": "Maghrib",
+  "prayerIsha": "Isha",
+  "methodUmmAlQura": "Umm al-Qura",
+  "methodEgypt": "Egyptian General Authority of Survey",
+  "methodGulf": "Gulf (UAE)",
+  "methodKuwait": "Kuwait",
+  "methodQatar": "Qatar",
+  "methodMwl": "Muslim World League",
+  "methodKarachi": "University of Islamic Sciences, Karachi",
+  "methodIsna": "North America (ISNA)",
+  "methodTurkey": "Turkey",
+  "methodSingapore": "Singapore, Malaysia, Indonesia",
+  "methodAuto": "Automatic ({method})",
+  "inMinutes": "in {n} min",
+  "inHoursMinutes": "in {h} h {m} min",
+  "nextPrayer": "Next prayer",
+  "prayerSettings": "Prayer time settings",
+  "calculationMethod": "Calculation method",
+  "asrMethod": "Asr time",
+  "asrStandard": "Standard",
+  "asrHanafi": "Hanafi",
+  "currentLocation": "Your location",
+  "useMyLocation": "Use my location",
+  "chooseCity": "Choose a city",
+  "prayerNeedLocation": "To calculate prayer times and the Qibla direction, we need your location.",
+  "locationPrivacyNote": "Your location stays on your phone and is never sent anywhere.",
+  "locationServiceOff": "Location services are off. Turn them on in your phone settings, or choose a city.",
+  "locationDenied": "Location permission wasn't granted. You can choose your city instead.",
+  "locationDeniedForever": "Location permission is blocked. Enable it in settings, or choose a city.",
+  "locationFailed": "Couldn't find your location. Try again, or choose a city.",
+  "openSettings": "Settings",
+  "qiblaDirection": "Qibla direction",
+  "qiblaBearing": "{deg}° from north",
+  "noCompass": "This phone has no compass. The Qibla is {deg}° from north.",
+  "facingQibla": "You're facing the Qibla",
+  "turnRight": "Turn right",
+  "turnLeft": "Turn left",
+  "distanceToMakkah": "Distance to Makkah: {km} km",
+  "calibrateCompass": "The compass needs calibrating: move your phone in a figure 8.",
+  "qiblaTip": "Hold the phone flat, away from metal and magnets.",
+  "setupPrayerTimes": "Set your location to see prayer times",
+  "@methodAuto": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "@inMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "@inHoursMinutes": {
+    "placeholders": {
+      "h": {
+        "type": "int"
+      },
+      "m": {
+        "type": "int"
+      }
+    }
+  },
+  "@qiblaBearing": {
+    "placeholders": {
+      "deg": {
+        "type": "int"
+      }
+    }
+  },
+  "@noCompass": {
+    "placeholders": {
+      "deg": {
+        "type": "int"
+      }
+    }
+  },
+  "@distanceToMakkah": {
+    "placeholders": {
+      "km": {
+        "type": "int"
+      }
+    }
   }
 }

@@ -11,6 +11,7 @@ import '../../services/user_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/ui.dart';
 import '../groups/group_board_screen.dart' show ReadRequest, TimeLeftChip;
+import '../prayer/next_prayer_tile.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -53,6 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
+            const SizedBox(height: 12),
+            const NextPrayerTile(),
             const SizedBox(height: 20),
             Row(
               children: [

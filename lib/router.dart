@@ -10,6 +10,7 @@ import 'features/groups/groups_screen.dart';
 import 'features/groups/invite_screen.dart';
 import 'features/groups/join_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/prayer/prayer_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/reader/reader_screen.dart';
 import 'features/shell/home_shell.dart';
@@ -78,6 +79,9 @@ final appRouter = GoRouter(
         ]),
         StatefulShellBranch(routes: [
           GoRoute(path: '/groups', builder: (context, state) => const GroupsScreen()),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/prayer', builder: (context, state) => const PrayerScreen()),
         ]),
         StatefulShellBranch(routes: [
           GoRoute(path: '/adhkar', builder: (context, state) => const AdhkarScreen()),

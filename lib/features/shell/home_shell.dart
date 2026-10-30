@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../l10n/gen/app_localizations.dart';
 
-/// الهيكل الرئيسي بالتبويبات الأربعة تحت.
+/// الهيكل الرئيسي بالتبويبات تحت.
 class HomeShell extends StatelessWidget {
   const HomeShell({super.key, required this.navigationShell});
 
@@ -30,6 +30,11 @@ class HomeShell extends StatelessWidget {
             icon: const Icon(Icons.groups_outlined),
             selectedIcon: const Icon(Icons.groups),
             label: t.tabGroups,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.mosque_outlined),
+            selectedIcon: const Icon(Icons.mosque),
+            label: t.tabPrayer,
           ),
           NavigationDestination(
             icon: const Icon(Icons.auto_awesome_outlined),

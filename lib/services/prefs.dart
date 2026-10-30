@@ -33,4 +33,36 @@ class Prefs {
     await _p.setString('adhkarDay', day);
     await _p.setStringList('adhkarCounts', [for (final e in counts.entries) '${e.key}=${e.value}']);
   }
+
+  // ---------- الصلاة ----------
+  // الموقع بيتحفظ على الجهاز بس، ومبيتبعتش للسيرفر.
+
+  double? get prayerLat => _p.getDouble('prayerLat');
+  double? get prayerLng => _p.getDouble('prayerLng');
+
+  /// اسم المكان (بالعربي والإنجليزي) لو اتحدد من القائمة أو لقينا مدينة قريبة.
+  String? get prayerPlaceAr => _p.getString('prayerPlaceAr');
+  String? get prayerPlaceEn => _p.getString('prayerPlaceEn');
+
+  Future<void> setPrayerLocation(double lat, double lng, {String? placeAr, String? placeEn}) async {
+    await _p.setDouble('prayerLat', lat);
+    await _p.setDouble('prayerLng', lng);
+    if (placeAr != null) {
+      await _p.setString('prayerPlaceAr', placeAr);
+    } else {
+      await _p.remove('prayerPlaceAr');
+    }
+    if (placeEn != null) {
+      await _p.setString('prayerPlaceEn', placeEn);
+    } else {
+      await _p.remove('prayerPlaceEn');
+    }
+  }
+
+  /// طريقة الحساب (null = تلقائي حسب المكان).
+  String? get prayerMethod => _p.getString('prayerMethod');
+  Future<void> setPrayerMethod(String? v) => v == null ? _p.remove('prayerMethod') : _p.setString('prayerMethod', v);
+
+  bool get asrHanafi => _p.getBool('asrHanafi') ?? false;
+  Future<void> setAsrHanafi(bool v) => _p.setBool('asrHanafi', v);
 }
