@@ -9,5 +9,11 @@
   "comingSoon": "قريبًا",
   "language": "اللغة",
   "arabic": "العربية",
-  "english": "English"
+  "english": "English",
+  "tagline": "نختم القرآن مع بعض، كل واحد بورده",
+  "signInWithGoogle": "الدخول بحساب جوجل",
+  "signInWithApple": "الدخول بحساب Apple",
+  "signInFailed": "تسجيل الدخول مكملش. جرب تاني.",
+  "signOut": "تسجيل الخروج",
+  "defaultUserName": "قارئ"
 }

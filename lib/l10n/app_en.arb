@@ -9,5 +9,11 @@
   "comingSoon": "Coming soon",
   "language": "Language",
   "arabic": "العربية",
-  "english": "English"
+  "english": "English",
+  "tagline": "Complete the Quran together, a portion at a time",
+  "signInWithGoogle": "Continue with Google",
+  "signInWithApple": "Continue with Apple",
+  "signInFailed": "Sign-in didn't complete. Please try again.",
+  "signOut": "Sign out",
+  "defaultUserName": "Reader"
 }
