@@ -64,6 +64,12 @@ service cloud.firestore {
         && (!('locale' in request.resource.data) || request.resource.data.locale in ['ar', 'en']);
 
       allow delete: if false;
+
+      // فهرس "مجموعاتي": السيرفر بيكتبه، وصاحبه بس يقراه.
+      match /groups/{groupId} {
+        allow read: if isSelf(uid);
+        allow write: if false;
+      }
     }
 
     // ---------- المجموعات ----------

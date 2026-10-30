@@ -1,0 +1,20 @@
+{
+  "name": "taawanu-functions",
+  "private": true,
+  "main": "lib/index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test 'lib/**/*.test.js'"
+  },
+  "dependencies": {
+    "firebase-admin": "latest",
+    "firebase-functions": "latest"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "@types/node": "^22.0.0"
+  }
+}

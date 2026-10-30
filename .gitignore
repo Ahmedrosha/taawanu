@@ -34,3 +34,5 @@ android/app/upload.jks
 # Node
 node_modules/
 firestore-debug.log
+
+functions/lib/

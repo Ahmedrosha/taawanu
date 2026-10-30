@@ -145,6 +145,18 @@ describe('الأوراد', () => {
   });
 });
 
+describe('فهرس مجموعاتي', () => {
+  test('المستخدم يقرا قايمة مجموعاته', async () => {
+    await assertSucceeds(getDoc(doc(as('m1'), 'users/m1/groups/g1')));
+  });
+  test('محدش يقرا قايمة مجموعات حد تاني', async () => {
+    await assertFails(getDoc(doc(as('m2'), 'users/m1/groups/g1')));
+  });
+  test('المستخدم ميضيفش مجموعة لقايمته بنفسه', async () => {
+    await assertFails(setDoc(doc(as('m1'), 'users/m1/groups/g9'), { name: 'x', role: 'admin' }));
+  });
+});
+
 describe('الدعوات', () => {
   test('محدش يقرا أكواد الدعوات من التطبيق', async () => {
     await assertFails(getDoc(doc(as('admin'), 'invites/ABC123')));
