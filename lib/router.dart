@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 
 import 'features/adhkar/adhkar_screen.dart';
 import 'features/auth/login_screen.dart';
+import 'features/groups/create_group_screen.dart';
 import 'features/groups/groups_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/profile/profile_screen.dart';
@@ -21,6 +22,8 @@ final appRouter = GoRouter(
   },
   routes: [
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+    // شاشة كاملة فوق التبويبات.
+    GoRoute(path: '/create-group', builder: (context, state) => const CreateGroupScreen()),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) => HomeShell(navigationShell: navigationShell),
       branches: [

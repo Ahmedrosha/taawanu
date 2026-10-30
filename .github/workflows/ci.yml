@@ -18,7 +18,7 @@ jobs:
       - run: flutter pub get
       - name: Resolved package versions
         run: |
-          for p in firebase_core firebase_auth cloud_firestore google_sign_in go_router google_fonts; do
+          for p in firebase_core firebase_auth cloud_firestore cloud_functions google_sign_in go_router google_fonts; do
             v=$(awk -v p="  $p:" '$0==p{f=1} f&&/version:/{gsub(/"/,"",$2); print $2; exit}' pubspec.lock)
             echo "::notice title=$p::$p $v"
           done
