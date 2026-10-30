@@ -1,0 +1,155 @@
+rules_version = '2';
+
+// قواعد أمان تعاونوا.
+// المبدأ: التطبيق بيعدل تقدم المستخدم وبياناته الشخصية بس.
+// إنشاء المجموعات، والانضمام، والدعوات، والتدوير، والنقاط: Cloud Functions بس
+// (الـFunctions بتتخطى القواعد دي لأنها بتشتغل بصلاحيات السيرفر).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- دوال مساعدة ----------
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function memberPath(groupId, uid) {
+      return /databases/$(database)/documents/groups/$(groupId)/members/$(uid);
+    }
+
+    function isMember(groupId) {
+      return signedIn() && exists(memberPath(groupId, request.auth.uid));
+    }
+
+    function roleOf(groupId) {
+      return get(memberPath(groupId, request.auth.uid)).data.role;
+    }
+
+    function isAdmin(groupId) {
+      return isMember(groupId) && roleOf(groupId) == 'admin';
+    }
+
+    function isManager(groupId) {
+      return isMember(groupId) && roleOf(groupId) in ['admin', 'assistant'];
+    }
+
+    function changedOnly(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    function isShortText(value, maxLen) {
+      return value is string && value.size() > 0 && value.size() <= maxLen;
+    }
+
+    // ---------- المستخدمين ----------
+    // الاسم والصورة والإعدادات يعدلهم صاحبهم.
+    // النقاط والسلسلة والإحصائيات يكتبها السيرفر بس.
+
+    match /users/{uid} {
+      allow read: if signedIn();
+
+      allow create: if isSelf(uid)
+        && request.resource.data.keys().hasOnly(['name', 'photoUrl', 'locale', 'createdAt'])
+        && isShortText(request.resource.data.name, 60)
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if isSelf(uid)
+        && changedOnly(['name', 'photoUrl', 'locale', 'settings'])
+        && (!('name' in request.resource.data) || isShortText(request.resource.data.name, 60))
+        && (!('locale' in request.resource.data) || request.resource.data.locale in ['ar', 'en']);
+
+      allow delete: if false;
+    }
+
+    // ---------- المجموعات ----------
+
+    match /groups/{groupId} {
+      // العامة يشوفها أي حد مسجّل، والخاصة أعضاءها بس.
+      allow read: if signedIn()
+        && (resource.data.type == 'public' || isMember(groupId));
+
+      // الإنشاء والحذف عن طريق Cloud Functions.
+      allow create, delete: if false;
+
+      // الأدمن والمساعد يعدلوا الإعدادات المسموحة بس.
+      // الورد وعدد الخانات والنوع مبيتغيروش.
+      allow update: if isManager(groupId)
+        && changedOnly([
+             'name', 'cycleCount', 'cycleUnit', 'cycleStartDay',
+             'cycleStartHour', 'cycleStartDayOfMonth', 'lateDefault', 'isOpen'
+           ])
+        && isShortText(request.resource.data.name, 60)
+        && request.resource.data.cycleCount is int
+        && request.resource.data.cycleCount >= 1
+        && request.resource.data.cycleCount <= 30
+        && request.resource.data.cycleUnit in ['day', 'week', 'month']
+        && request.resource.data.lateDefault in ['ask', 'carry', 'distribute', 'volunteer'];
+
+      // ----- الأعضاء -----
+      match /members/{memberId} {
+        allow read: if isMember(groupId);
+
+        // الانضمام عن طريق Cloud Function بس (بعد التأكد من الدعوة والخانة).
+        allow create: if false;
+
+        // الأدمن بس يرقّي عضو لمساعد أو يرجّعه عضو.
+        allow update: if isAdmin(groupId)
+          && memberId != request.auth.uid
+          && changedOnly(['role'])
+          && resource.data.role in ['assistant', 'member']
+          && request.resource.data.role in ['assistant', 'member'];
+
+        // العضو يخرج بنفسه (إلا الأدمن)، والأدمن أو المساعد يطرد عضو عادي.
+        allow delete: if signedIn() && (
+          (memberId == request.auth.uid && resource.data.role != 'admin')
+          || (isManager(groupId) && resource.data.role == 'member')
+          || (isAdmin(groupId) && resource.data.role == 'assistant')
+        );
+      }
+
+      // ----- الدورات وأوراد الأعضاء -----
+      match /cycles/{cycleId} {
+        allow read: if isMember(groupId);
+        allow write: if false;
+
+        match /assignments/{memberId} {
+          allow read: if isMember(groupId);
+          allow create, delete: if false;
+
+          // صاحب الورد بس، وفي التقدم بس.
+          allow update: if isSelf(memberId)
+            && changedOnly(['quartersRead', 'status', 'completedAt'])
+            && request.resource.data.quartersRead is int
+            && request.resource.data.quartersRead >= 0
+            && request.resource.data.quartersRead <= resource.data.quarterCount
+            && request.resource.data.status in ['pending', 'in_progress', 'done']
+            && (request.resource.data.status != 'done'
+                || (request.resource.data.quartersRead == resource.data.quarterCount
+                    && request.resource.data.completedAt == request.time));
+        }
+      }
+
+      // ----- سجل الختمات المكتملة -----
+      match /khatmas/{khatmaId} {
+        allow read: if isMember(groupId);
+        allow write: if false;
+      }
+    }
+
+    // ---------- الدعوات ----------
+    // بتتعمل وبتتقري عن طريق Cloud Functions بس، عشان الأكواد متتسربش.
+    match /invites/{code} {
+      allow read, write: if false;
+    }
+
+    // أي حاجة تانية ممنوعة.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

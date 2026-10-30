@@ -30,3 +30,7 @@ ios/Runner/GeneratedPluginRegistrant.*
 
 # Signing
 android/app/upload.jks
+
+# Node
+node_modules/
+firestore-debug.log
