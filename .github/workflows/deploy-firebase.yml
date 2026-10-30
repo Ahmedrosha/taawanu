@@ -7,7 +7,7 @@ on:
       target:
         description: "اللي هيترفع"
         type: choice
-        options: [firestore]
+        options: [firestore, functions, "firestore,functions"]
         default: firestore
 
 jobs:
