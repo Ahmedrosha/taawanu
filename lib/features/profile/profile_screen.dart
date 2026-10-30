@@ -102,6 +102,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 icon: const Icon(Icons.logout),
                 label: Text(t.signOut),
               ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () async {
+                  final ok = await confirmDialog(context, title: t.deleteAccount, body: t.deleteAccountConfirm, destructive: true);
+                  if (!ok || !context.mounted) return;
+                  final done = await runAction(context, () => UserService.instance.deleteAccount());
+                  if (done) await AuthService.instance.signOut();
+                },
+                child: Text(t.deleteAccount, style: const TextStyle(color: AppColors.statusLate)),
+              ),
             ],
           );
         },

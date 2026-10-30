@@ -391,5 +391,7 @@
   "wardWord": "Portion",
   "you": "(you)",
   "yourPortion": "Your portion",
-  "yourPortions": "Your portions"
+  "yourPortions": "Your portions",
+  "deleteAccount": "Delete account",
+  "deleteAccountConfirm": "Delete your account and all your data? You'll leave all your groups. This can't be undone."
 }

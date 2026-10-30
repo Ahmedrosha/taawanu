@@ -1,0 +1,10 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["__APPLE_TEAM_ID__.com.taawanu.taawanu"],
+        "components": [{ "/": "/j/*" }]
+      }
+    ]
+  }
+}

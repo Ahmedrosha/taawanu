@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 /// إحصائيات المستخدم (السيرفر بس هو اللي بيكتبها).
@@ -72,6 +73,11 @@ class UserService {
     } catch (_) {
       // ملف المستخدم ممكن ميكونش اتعمل لسه، ومش مشكلة.
     }
+  }
+
+  /// بيحذف الحساب وكل بياناته من السيرفر.
+  Future<void> deleteAccount() async {
+    await FirebaseFunctions.instanceFor(region: 'me-central1').httpsCallable('deleteAccount').call<Object?>();
   }
 
   Future<void> addFcmToken(String token) async {

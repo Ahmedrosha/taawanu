@@ -7,7 +7,7 @@ on:
       target:
         description: "اللي هيترفع"
         type: choice
-        options: [firestore, functions, "firestore,functions"]
+        options: [firestore, functions, hosting, "firestore,functions", "firestore,functions,hosting"]
         default: firestore
 
 jobs:
@@ -29,6 +29,11 @@ jobs:
           fi
           echo "$SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+      - name: Apple Team ID in app-link file
+        if: contains(inputs.target, 'hosting')
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: sed -i "s/__APPLE_TEAM_ID__/${TEAM_ID}/" site/.well-known/apple-app-site-association
       - name: Deploy
         run: |
           set +e

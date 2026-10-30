@@ -179,5 +179,7 @@
   "wardWord": "الورد",
   "you": "(انت)",
   "yourPortion": "وردك",
-  "yourPortions": "وردك الحالي"
+  "yourPortions": "وردك الحالي",
+  "deleteAccount": "حذف الحساب",
+  "deleteAccountConfirm": "تحذف حسابك وكل بياناتك؟ هتخرج من كل مجموعاتك، وده مش هيترجع."
 }

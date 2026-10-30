@@ -1,4 +1,4 @@
-/// الأذكار: نصوص من الأحاديث الصحيحة (حصن المسلم)، والآيات بتتقري من نص المصحف نفسه.
+// الأذكار: نصوص من الأحاديث الصحيحة (حصن المسلم)، والآيات بتتقري من نص المصحف نفسه.
 
 class Dhikr {
   const Dhikr({required this.id, this.text, this.quran, required this.count, required this.source});

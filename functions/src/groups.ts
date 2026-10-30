@@ -1,4 +1,5 @@
 // إنشاء المجموعات وإدارتها: الإعدادات، والأدوار، والخروج، والحذف.
+import { getAuth } from 'firebase-admin/auth';
 import { FieldValue } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 
@@ -184,6 +185,12 @@ export const deleteGroup = onCall(async (request) => {
   const groupId = requireString(request.data?.groupId, 'groupId');
   const me = await requireMember(groupId, uid);
   if (me.role !== 'admin') throw new HttpsError('permission-denied', 'Admin only.');
+  await deleteGroupData(groupId);
+  return { ok: true };
+});
+
+
+async function deleteGroupData(groupId: string): Promise<void> {
   const members = await groupRef(groupId).collection('members').get();
   const invites = await db.collection('invites').where('groupId', '==', groupId).get();
   const writer = db.bulkWriter();
@@ -191,6 +198,37 @@ export const deleteGroup = onCall(async (request) => {
   invites.forEach((i) => writer.delete(i.ref));
   await writer.close();
   await db.recursiveDelete(groupRef(groupId));
+}
+
+/**
+ * حذف الحساب (مطلوب من Apple وGoogle): بيخرج المستخدم من كل مجموعاته،
+ * ولو هو أدمن بينقل الأدمنية لمساعد أو لأكتر عضو نقاطًا، ولو لوحده بيحذف المجموعة.
+ * وبعدها بيمسح ملفه وحسابه.
+ */
+export const deleteAccount = onCall(async (request) => {
+  const uid = requireUid(request);
+  const index = await db.collection('users').doc(uid).collection('groups').get();
+  for (const entry of index.docs) {
+    const groupId = entry.id;
+    const meSnap = await memberRef(groupId, uid).get();
+    if (!meSnap.exists) continue;
+    if (meSnap.get('role') === 'admin') {
+      const others = (await groupRef(groupId).collection('members').get()).docs.filter((d) => d.id !== uid);
+      if (others.length === 0) {
+        await deleteGroupData(groupId);
+        continue;
+      }
+      const next = others.find((d) => d.get('role') === 'assistant')
+        ?? others.sort((a, b) => (b.get('points') ?? 0) - (a.get('points') ?? 0))[0];
+      const batch = db.batch();
+      batch.update(memberRef(groupId, next.id), { role: 'admin' });
+      batch.set(userGroupIndexRef(next.id, groupId), { role: 'admin' }, { merge: true });
+      batch.update(groupRef(groupId), { adminId: next.id });
+      await batch.commit();
+    }
+    await removeFromGroup(groupId, uid);
+  }
+  await db.recursiveDelete(db.collection('users').doc(uid));
+  await getAuth().deleteUser(uid);
   return { ok: true };
 });
-

@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.taawanu.taawanu",
+      "sha256_cert_fingerprints": [
+        "F1:DA:A2:45:4E:32:E6:FF:13:C6:13:56:8C:BD:BA:04:7C:9C:EE:EF:48:9B:23:AF:24:48:F0:F3:3E:3A:7D:BB"
+      ]
+    }
+  }
+]
