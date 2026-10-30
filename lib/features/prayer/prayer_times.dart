@@ -43,8 +43,8 @@ class PrayerDay {
 /// الطريقة الافتراضية حسب المكان (تقريبي بحدود البلاد).
 PrayerMethodId defaultMethodFor(double lat, double lng) {
   bool box(double la1, double la2, double lo1, double lo2) => lat >= la1 && lat <= la2 && lng >= lo1 && lng <= lo2;
+  if (box(24.4, 26.2, 50.7, 51.7)) return PrayerMethodId.qatar; // قبل الإمارات لأن حدودهم قريبة
   if (box(22.5, 26.5, 51.5, 56.5)) return PrayerMethodId.gulf; // الإمارات
-  if (box(24.4, 26.2, 50.7, 51.7)) return PrayerMethodId.qatar;
   if (box(28.5, 30.1, 46.5, 48.5)) return PrayerMethodId.kuwait;
   if (box(16, 32.2, 34.5, 55.7)) return PrayerMethodId.ummAlQura; // السعودية وما حولها
   if (box(22, 31.7, 24.7, 35)) return PrayerMethodId.egypt;

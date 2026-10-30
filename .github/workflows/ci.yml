@@ -36,7 +36,16 @@ jobs:
           exit $code
       - name: Tests
         run: |
-          if [ -d test ]; then flutter test; else echo "No tests yet"; fi
+          if [ ! -d test ]; then echo "No tests yet"; exit 0; fi
+          set +e
+          flutter test --reporter expanded > test.log 2>&1
+          code=$?
+          cat test.log
+          # أسماء الاختبارات اللي فشلت وسبب الفشل كـ annotations
+          grep -E "\[E\]|Expected:|Actual:|Which:" test.log | head -20 | while IFS= read -r line; do
+            echo "::warning title=test::$(echo "$line" | sed 's/%/%25/g' | cut -c1-300)"
+          done
+          exit $code
 
   firestore-rules:
     runs-on: ubuntu-latest
