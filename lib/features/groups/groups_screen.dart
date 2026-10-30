@@ -5,6 +5,7 @@ import '../../l10n/gen/app_localizations.dart';
 import '../../models/group_options.dart';
 import '../../services/groups_service.dart';
 import '../../theme/app_colors.dart';
+import 'join_screen.dart';
 
 class GroupsScreen extends StatefulWidget {
   const GroupsScreen({super.key});
@@ -23,12 +24,10 @@ class _GroupsScreenState extends State<GroupsScreen> {
       appBar: AppBar(
         title: Text(t.tabGroups, style: const TextStyle(fontWeight: FontWeight.w700)),
         actions: [
-          TextButton.icon(
-            onPressed: () => context.push('/create-group'),
-            icon: const Icon(Icons.add),
-            label: Text(t.newGroup),
-          ),
-          const SizedBox(width: 8),
+          IconButton(tooltip: t.explore, icon: const Icon(Icons.travel_explore), onPressed: () => context.push('/explore')),
+          IconButton(tooltip: t.joinWithCode, icon: const Icon(Icons.link), onPressed: () => showJoinWithCode(context)),
+          IconButton(tooltip: t.newGroup, icon: const Icon(Icons.add), onPressed: () => context.push('/create-group')),
+          const SizedBox(width: 4),
         ],
       ),
       body: StreamBuilder<List<MyGroup>>(
@@ -67,7 +66,7 @@ class _GroupCard extends StatelessWidget {
       margin: EdgeInsets.zero,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.comingSoon))),
+        onTap: () => context.push('/group/${group.id}'),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -142,6 +141,18 @@ class _EmptyState extends StatelessWidget {
               onPressed: onCreate,
               icon: const Icon(Icons.add),
               label: Text(t.newGroup),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => showJoinWithCode(context),
+              icon: const Icon(Icons.link),
+              label: Text(t.joinWithCode),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => context.push('/explore'),
+              icon: const Icon(Icons.travel_explore),
+              label: Text(t.explore),
             ),
           ],
         ),

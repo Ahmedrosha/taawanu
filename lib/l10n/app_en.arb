@@ -16,7 +16,6 @@
   "signInFailed": "Sign-in didn't complete. Please try again.",
   "signOut": "Sign out",
   "defaultUserName": "Reader",
-
   "groupsEmptyTitle": "No groups yet",
   "groupsEmptyBody": "Create a group and invite your friends, or join one with an invite link.",
   "newGroup": "New group",
@@ -33,7 +32,9 @@
   "slotsInfo": "The group will have {slots} slots, so up to {slots} members.",
   "@slotsInfo": {
     "placeholders": {
-      "slots": { "type": "int" }
+      "slots": {
+        "type": "int"
+      }
     }
   },
   "cycleLabel": "Cycle length",
@@ -60,5 +61,335 @@
   "wardJuzAndHalf": "1.5 juz",
   "wardTwoJuz": "2 juz",
   "wardThreeJuz": "3 juz",
-  "wardFiveJuz": "5 juz"
+  "wardFiveJuz": "5 juz",
+  "actionFailed": "Something went wrong. Please try again.",
+  "adhkarMorning": "Morning",
+  "adhkarEvening": "Evening",
+  "adhkarAfterPrayer": "After prayer",
+  "adhkarSleep": "Sleep",
+  "all": "All",
+  "alreadyMember": "You're already in this group",
+  "assignToMember": "Assign to a member",
+  "assignedTo": "With {name}",
+  "@assignedTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "badgeFirstKhatma": "First khatma",
+  "badgePersonal": "Personal khatma",
+  "badgeRescuer": "Helper",
+  "badgeStarter": "Early bird",
+  "badgeStreak12": "12 cycles in a row",
+  "badgeStreak4": "4 cycles in a row",
+  "badges": "Badges",
+  "cancel": "Cancel",
+  "commitment": "Commitment",
+  "confirm": "Confirm",
+  "continueReading": "Continue reading",
+  "continueText": "Continue",
+  "copied": "Copied",
+  "copyLink": "Copy message",
+  "createLink": "Create link",
+  "cycleChangeNote": "Changes to the cycle apply from the next cycle.",
+  "cycleEnded": "Closing",
+  "cycleN": "Cycle {n}",
+  "@cycleN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "cycleWord": "Cycle",
+  "days1": "1 day",
+  "days30": "30 days",
+  "days7": "7 days",
+  "daysLeft": "{n} days left",
+  "@daysLeft": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteConfirm": "Delete the group and all its data? This can't be undone.",
+  "deleteGroup": "Delete group",
+  "detailsAndJoin": "Details and join",
+  "doneCheck": "Done ✓",
+  "earnedPoints": "+{n} points. May Allah accept it.",
+  "@earnedPoints": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "explore": "Explore groups",
+  "exploreEmpty": "No public groups with free slots right now.",
+  "extraPortions": "Extra portions",
+  "extraPortionsBody": "Unfinished portions and empty slots. Take one to help complete the khatma.",
+  "finishPortionExtra": "I finished this portion",
+  "finishedPortion": "I finished my portion",
+  "freeSlots": "{n} free slots",
+  "@freeSlots": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "fromTo": "{from} to {to}",
+  "@fromTo": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "groupForming": "The khatma hasn't started yet",
+  "groupFormingBody": "{members} of {slots} slots are filled. You can start now and others can join later.",
+  "@groupFormingBody": {
+    "placeholders": {
+      "members": {
+        "type": "int"
+      },
+      "slots": {
+        "type": "int"
+      }
+    }
+  },
+  "groupFull": "This group is full",
+  "groupKhatmas": "{n} group",
+  "@groupKhatmas": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "groupOpen": "Accepting new members",
+  "groupSettings": "Group settings",
+  "hizbLabel": "Hizb {n}",
+  "@hizbLabel": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "hizbRange": "Hizb {a}–{b}",
+  "@hizbRange": {
+    "placeholders": {
+      "a": {
+        "type": "int"
+      },
+      "b": {
+        "type": "int"
+      }
+    }
+  },
+  "homeNoGroups": "Join or create a group to start reading together.",
+  "hoursLeft": "{n} hours left",
+  "@hoursLeft": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "invite": "Invite",
+  "inviteInvalid": "This invite link isn't valid or has expired.",
+  "inviteMessage": "Assalamu alaikum! Join us in \"{group}\" on Taawanu. Your portion: {ward}.\n{link}",
+  "@inviteMessage": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      },
+      "ward": {
+        "type": "String"
+      },
+      "link": {
+        "type": "String"
+      }
+    }
+  },
+  "inviteTitle": "Invite members",
+  "invitedBy": "{name} invites you to join",
+  "@invitedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "joinGroup": "Join the group",
+  "joinWithCode": "Join with a link or code",
+  "juzEquivalent": "about {n} juz",
+  "@juzEquivalent": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "juzLabel": "Juz {n}",
+  "@juzLabel": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "juzRange": "Juz {a}–{b}",
+  "@juzRange": {
+    "placeholders": {
+      "a": {
+        "type": "int"
+      },
+      "b": {
+        "type": "int"
+      }
+    }
+  },
+  "khatmaCompleteBanner": "This cycle's khatma is complete, alhamdulillah",
+  "khatmaMap": "Khatma map",
+  "khatmaNotStarted": "The khatma hasn't started yet",
+  "khatmasCount": "{n} khatmas",
+  "@khatmasCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "khatmasLabel": "Khatmas",
+  "leaveConfirm": "Leave this group? The part of your portion you haven't read will be open for volunteers.",
+  "leaveGroup": "Leave group",
+  "linkValidity": "Link valid for",
+  "longestStreakTitle": "Longest streak",
+  "makeAdmin": "Make admin",
+  "makeAdminConfirm": "Make {name} the admin? You'll become an assistant.",
+  "@makeAdminConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "makeAssistant": "Make assistant",
+  "makeMember": "Make regular member",
+  "makeOpen": "Open for volunteers",
+  "markQuarterDone": "I finished this quarter",
+  "maxUses": "Number of uses",
+  "members": "Members",
+  "membersCount": "{n} / {slots} members",
+  "@membersCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "slots": {
+        "type": "int"
+      }
+    }
+  },
+  "membersWord": "Members",
+  "noPortionThisCycle": "No portion for you this cycle",
+  "notNow": "Not now",
+  "onTimeOf": "{a} of {b} cycles on time",
+  "@onTimeOf": {
+    "placeholders": {
+      "a": {
+        "type": "int"
+      },
+      "b": {
+        "type": "int"
+      }
+    }
+  },
+  "openGroup": "Open group",
+  "pasteLinkHint": "Paste the invite link or code",
+  "personalKhatmas": "{n} personal",
+  "@personalKhatmas": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pointsN": "{n} pts",
+  "@pointsN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pointsWord": "Points",
+  "portionDone": "Done ✓",
+  "privateInviteNote": "This group is private: only people with this link can join.",
+  "quarterLabel": "Quarter {n}",
+  "@quarterLabel": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "quarterRange": "Quarters {a}–{b}",
+  "@quarterRange": {
+    "placeholders": {
+      "a": {
+        "type": "int"
+      },
+      "b": {
+        "type": "int"
+      }
+    }
+  },
+  "quartersProgress": "{read} of {total} quarters",
+  "@quartersProgress": {
+    "placeholders": {
+      "read": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "quartersReadLabel": "Quarters read",
+  "readNow": "Read now",
+  "removeFromGroup": "Remove from group",
+  "reset": "Start over",
+  "retry": "Try again",
+  "save": "Save",
+  "saved": "Saved",
+  "sendWhatsApp": "Send on WhatsApp",
+  "startKhatma": "Start the khatma",
+  "startKhatmaConfirm": "Start now? The first cycle begins right away.",
+  "statusDone": "Done",
+  "statusInProgress": "In progress",
+  "statusLate": "Late",
+  "statusOpen": "Open",
+  "statusPending": "Not started",
+  "streakCycles": "Cycles in a row",
+  "take": "Take it",
+  "tapToCount": "Tap a dhikr to count it",
+  "textSize": "Text size",
+  "totalPoints": "Total points",
+  "usesFive": "5 times",
+  "usesOne": "Once",
+  "usesSlots": "Free slots",
+  "waitingForAdmin": "Waiting for the admin to start the khatma",
+  "wardWord": "Portion",
+  "you": "(you)",
+  "yourPortion": "Your portion",
+  "yourPortions": "Your portions"
 }

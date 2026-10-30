@@ -3,11 +3,19 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'l10n/gen/app_localizations.dart';
 import 'router.dart';
+import 'services/prefs.dart';
+import 'services/user_service.dart';
 import 'theme/app_theme.dart';
 
-/// اللغة الحالية للتطبيق. العربي هو الافتراضي.
-/// هتتحفظ في إعدادات المستخدم في خطوة لاحقة.
+/// اللغة الحالية للتطبيق (محفوظة على الجهاز). العربي هو الافتراضي.
 final localeNotifier = ValueNotifier<Locale>(const Locale('ar'));
+
+/// بيغير اللغة ويحفظها، وبيبلغ السيرفر عشان الإشعارات توصل بنفس اللغة.
+Future<void> setAppLocale(Locale locale) async {
+  localeNotifier.value = locale;
+  await Prefs.instance.setLocale(locale);
+  await UserService.instance.setLocale(locale.languageCode);
+}
 
 class TaawanuApp extends StatelessWidget {
   const TaawanuApp({super.key});
