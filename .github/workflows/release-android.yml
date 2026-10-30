@@ -4,6 +4,12 @@ name: Release Android
 # رقم النسخة (versionCode) = رقم التشغيل، فبيزيد لوحده كل مرة.
 on:
   workflow_dispatch:
+    inputs:
+      track:
+        description: "يترفع على أنهي مسار في Play Console (none = بناء بس)"
+        type: choice
+        options: [alpha, internal, production, none]
+        default: alpha
 
 jobs:
   aab:
@@ -56,3 +62,13 @@ jobs:
         with:
           name: taawanu-play-${{ github.run_number }}
           path: build/app/outputs/bundle/release/app-release.aab
+      - name: Upload to Google Play
+        if: inputs.track != 'none'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.taawanu.taawanu
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: ${{ inputs.track }}
+          status: completed
+          whatsNewDirectory: distribution/whatsnew
