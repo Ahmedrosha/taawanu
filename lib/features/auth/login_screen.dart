@@ -33,6 +33,48 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _reviewerLogin() async {
+    final t = AppLocalizations.of(context);
+    final email = TextEditingController();
+    final password = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(t.reviewerSignIn),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: email,
+              keyboardType: TextInputType.emailAddress,
+              autofillHints: const [AutofillHints.email],
+              textDirection: TextDirection.ltr,
+              decoration: InputDecoration(labelText: t.email),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: password,
+              obscureText: true,
+              textDirection: TextDirection.ltr,
+              decoration: InputDecoration(labelText: t.password),
+              onSubmitted: (_) => Navigator.pop(context, true),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(t.cancel)),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(t.signIn)),
+        ],
+      ),
+    );
+    final e = email.text;
+    final pw = password.text;
+    email.dispose();
+    password.dispose();
+    if (ok != true || e.trim().isEmpty || pw.isEmpty || !mounted) return;
+    await _run((l, n) => AuthService.instance.signInWithEmail(email: e, password: pw, locale: l, fallbackName: n));
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
@@ -48,7 +90,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const LogoMark.onDark(size: 112),
+                    // ضغطة طويلة على اللوجو بتفتح دخول المراجعين (لمراجعة Google Play وApp Store).
+                    GestureDetector(
+                      onLongPress: _busy ? null : _reviewerLogin,
+                      child: const LogoMark.onDark(size: 112),
+                    ),
                     const SizedBox(height: 20),
                     Text(
                       t.appName,

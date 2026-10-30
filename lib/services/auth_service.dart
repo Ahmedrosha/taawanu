@@ -77,6 +77,18 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// دخول بالإيميل والباسورد: لحساب مراجعة المتاجر بس (الشاشة مخفية).
+  Future<bool> signInWithEmail({
+    required String email,
+    required String password,
+    required String locale,
+    required String fallbackName,
+  }) async {
+    final result = await _auth.signInWithEmailAndPassword(email: email.trim(), password: password);
+    await _ensureProfile(result.user!, locale: locale, fallbackName: fallbackName);
+    return true;
+  }
+
   Future<void> signOut() async {
     if (_googleReady) {
       await GoogleSignIn.instance.signOut();

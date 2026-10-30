@@ -402,5 +402,9 @@
   "segmentTaken": "Someone just took that portion. Please pick another.",
   "changePortion": "Change portion",
   "changePortionNote": "Pick the new portion. If someone has it, they'll swap.",
-  "changePortionNoteActive": "This applies from the next cycle. If someone has that portion, they'll swap."
+  "changePortionNoteActive": "This applies from the next cycle. If someone has that portion, they'll swap.",
+  "reviewerSignIn": "Reviewer sign-in",
+  "email": "Email",
+  "password": "Password",
+  "signIn": "Sign in"
 }
