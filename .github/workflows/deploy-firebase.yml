@@ -32,7 +32,7 @@ jobs:
       - name: Deploy
         run: |
           set +e
-          firebase deploy --only "${{ inputs.target }}" --project taawanu-4ca70 --non-interactive 2>&1 | tee deploy.log
+          firebase deploy --only "${{ inputs.target }}" --project taawanu-4ca70 --non-interactive --force 2>&1 | tee deploy.log
           code=${PIPESTATUS[0]}
           if [ "$code" -ne 0 ]; then
             # آخر سطور الخطأ تظهر في ملخص التشغيل
