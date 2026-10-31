@@ -728,5 +728,40 @@
   "readToQuarterEnd": "Keep reading to the end of the quarter; the button appears on its last page.",
   "nextQuarterLocked": "The next quarter opens after you mark this one as done.",
   "defaultTag": "Default",
-  "textViewOnlyNote": "These settings are for continuous text only; they don't change the pages."
+  "textViewOnlyNote": "These settings are for continuous text only; they don't change the pages.",
+  "filterManaged": "I manage",
+  "filterMember": "Member",
+  "sortBy": "Sort",
+  "sortRecent": "Newest",
+  "sortName": "Name",
+  "sortPending": "My portion unfinished",
+  "sortSize": "Largest",
+  "searchGroups": "Search groups",
+  "pinnedSection": "Pinned",
+  "pinGroup": "Pin to top",
+  "unpinGroup": "Unpin",
+  "noGroupsMatch": "No groups match these filters",
+  "clearFilters": "Clear filters",
+  "myPortionProgress": "Your portion: {read} of {count}",
+  "@myPortionProgress": {
+    "placeholders": {
+      "read": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "myPortionDoneShort": "Your portion is done ✓",
+  "groupNotStartedShort": "Khatma not started yet",
+  "noPortionThisCycleShort": "No portion this cycle",
+  "groupMembersN": "{n} members",
+  "@groupMembersN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  }
 }

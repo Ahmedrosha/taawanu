@@ -108,4 +108,26 @@ class Prefs {
   String? readPosition(String key) => _p.getString('readPos:$key');
   Future<void> setReadPosition(String key, String v) => _p.setString('readPos:$key', v);
   Future<void> clearReadPosition(String key) => _p.remove('readPos:$key');
+
+  // ---------- فلاتر وترتيب شاشة المجموعات ----------
+
+  /// all | manage | member
+  String get groupsRole => _p.getString('groupsRole') ?? 'all';
+  Future<void> setGroupsRole(String v) => _p.setString('groupsRole', v);
+
+  /// all | private | public
+  String get groupsType => _p.getString('groupsType') ?? 'all';
+  Future<void> setGroupsType(String v) => _p.setString('groupsType', v);
+
+  /// حجم الورد بالأرباع (٠ = الكل).
+  int get groupsWard => _p.getInt('groupsWard') ?? 0;
+  Future<void> setGroupsWard(int v) => _p.setInt('groupsWard', v);
+
+  /// recent | name | pending | size
+  String get groupsSort => _p.getString('groupsSort') ?? 'recent';
+  Future<void> setGroupsSort(String v) => _p.setString('groupsSort', v);
+
+  /// المجموعات المثبّتة فوق.
+  List<String> get pinnedGroups => _p.getStringList('pinnedGroups') ?? const [];
+  Future<void> setPinnedGroups(List<String> v) => _p.setStringList('pinnedGroups', v);
 }

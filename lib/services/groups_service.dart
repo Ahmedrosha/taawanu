@@ -13,6 +13,7 @@ class MyGroup {
     required this.type,
     required this.role,
     required this.wardQuarters,
+    this.joinedAt,
   });
 
   final String id;
@@ -20,8 +21,10 @@ class MyGroup {
   final String type;
   final String role;
   final int wardQuarters;
+  final DateTime? joinedAt;
 
   bool get isPrivate => type == 'private';
+  bool get isManager => role == 'admin' || role == 'assistant';
 
   factory MyGroup.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
@@ -31,6 +34,7 @@ class MyGroup {
       type: (d['type'] as String?) ?? 'private',
       role: (d['role'] as String?) ?? 'member',
       wardQuarters: (d['wardQuarters'] as num?)?.toInt() ?? 8,
+      joinedAt: (d['joinedAt'] as Timestamp?)?.toDate(),
     );
   }
 }
