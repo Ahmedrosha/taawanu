@@ -14,3 +14,7 @@
 ## Madinah Mushaf (optional reader font)
 - Text: King Fahd Glorious Quran Printing Complex (KFGQPC), Uthmanic Hafs data v18, used verbatim (`assets/quran/madinah.json`), via [ibnhazm/KFGQPC](https://github.com/ibnhazm/KFGQPC).
 - Font: KFGQPC HAFS Uthmanic Script v18, distributed unmodified and free of cost under the KFGQPC end-user license (`assets/fonts/KFGQPC-LICENSE.txt`): use, copy and distribute permitted; no selling or modification.
+
+## Adhkar
+- Daily adhkar and duas: from *Hisn al-Muslim* by Sa'id ibn Ali ibn Wahf al-Qahtani, via [nawafalqari/azkar-api](https://github.com/nawafalqari/azkar-api) (cleaned: elongation characters removed, spacing fixed). Quranic verses are shown from the bundled mushaf text.
+- Full Hisn al-Muslim chapters: via [rn0x/hisn_almuslim_json](https://github.com/rn0x/hisn_almuslim_json). Distributed free of charge, as the book permits.

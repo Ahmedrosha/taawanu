@@ -8,6 +8,7 @@ import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/ui.dart';
 import 'adhkar_data.dart';
+import 'hisn_screen.dart';
 
 class AdhkarScreen extends StatefulWidget {
   const AdhkarScreen({super.key});
@@ -17,9 +18,10 @@ class AdhkarScreen extends StatefulWidget {
 }
 
 class _AdhkarScreenState extends State<AdhkarScreen> {
-  AdhkarCategory _cat = _defaultCategory();
+  String _cat = _defaultCategory();
   late final String _today = _dayKey();
   late final Map<String, int> _counts = Prefs.instance.adhkarCounts(_today);
+  late final Future<List<AdhkarCategory>> _data = AdhkarRepository.instance.daily();
 
   static String _dayKey() {
     final n = DateTime.now();
@@ -27,14 +29,7 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
   }
 
   /// الصباح لحد العصر تقريبًا، وبعدها المساء.
-  static AdhkarCategory _defaultCategory() => DateTime.now().hour < 15 ? AdhkarCategory.morning : AdhkarCategory.evening;
-
-  String _label(AppLocalizations t, AdhkarCategory c) => switch (c) {
-        AdhkarCategory.morning => t.adhkarMorning,
-        AdhkarCategory.evening => t.adhkarEvening,
-        AdhkarCategory.afterPrayer => t.adhkarAfterPrayer,
-        AdhkarCategory.sleep => t.adhkarSleep,
-      };
+  static String _defaultCategory() => DateTime.now().hour < 15 ? 'morning' : 'evening';
 
   void _tap(Dhikr d) {
     final c = _counts[d.id] ?? 0;
@@ -48,9 +43,9 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
     Prefs.instance.setAdhkarCounts(_today, _counts);
   }
 
-  void _reset() {
+  void _reset(AdhkarCategory cat) {
     setState(() {
-      for (final d in adhkar[_cat]!) {
+      for (final d in cat.items) {
         _counts.remove(d.id);
       }
     });
@@ -60,48 +55,75 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final items = adhkar[_cat]!;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(t.tabAdhkar, style: const TextStyle(fontWeight: FontWeight.w700)),
-        actions: [IconButton(tooltip: t.reset, onPressed: _reset, icon: const Icon(Icons.refresh))],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: SegmentedButton<AdhkarCategory>(
-              showSelectedIcon: false,
-              segments: [
-                for (final c in AdhkarCategory.values)
-                  ButtonSegment(value: c, label: Text(_label(t, c), style: const TextStyle(fontSize: 12))),
-              ],
-              selected: {_cat},
-              onSelectionChanged: (s) => setState(() => _cat = s.first),
-            ),
+    final en = Localizations.localeOf(context).languageCode == 'en';
+    return FutureBuilder<List<AdhkarCategory>>(
+      future: _data,
+      builder: (context, dSnap) {
+        final cats = dSnap.data;
+        final cat = cats?.firstWhere((c) => c.id == _cat, orElse: () => cats.first);
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(t.tabAdhkar, style: const TextStyle(fontWeight: FontWeight.w700)),
+            actions: [
+              if (cat != null) IconButton(tooltip: t.reset, onPressed: () => _reset(cat), icon: const Icon(Icons.refresh)),
+            ],
           ),
-          Expanded(
-            child: FutureBuilder<QuranData>(
-              future: QuranRepository.instance.load(),
-              builder: (context, snap) {
-                final q = snap.data;
-                return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  itemCount: items.length + 1,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, i) {
-                    if (i == items.length) {
-                      return Text(t.tapToCount, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textMuted));
-                    }
-                    final d = items[i];
-                    return _DhikrCard(dhikr: d, count: _counts[d.id] ?? 0, quran: q, onTap: () => _tap(d));
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+          body: cats == null
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                  children: [
+                    // الأقسام، وآخرها حصن المسلم كله.
+                    SizedBox(
+                      height: 48,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        children: [
+                          for (final c in cats)
+                            Padding(
+                              padding: const EdgeInsetsDirectional.only(end: 8),
+                              child: ChoiceChip(
+                                label: Text(en ? c.en : c.ar),
+                                selected: c.id == cat!.id,
+                                showCheckmark: false,
+                                selectedColor: AppColors.navy,
+                                labelStyle: TextStyle(color: c.id == cat.id ? Colors.white : AppColors.text),
+                                onSelected: (_) => setState(() => _cat = c.id),
+                              ),
+                            ),
+                          ActionChip(
+                            avatar: Icon(Icons.menu_book_outlined, size: 18, color: AppColors.accent),
+                            label: Text(t.hisnMuslim),
+                            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HisnScreen())),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: FutureBuilder<QuranData>(
+                        future: QuranRepository.instance.load(),
+                        builder: (context, snap) {
+                          final q = snap.data;
+                          final items = cat!.items;
+                          return ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                            itemCount: items.length + 1,
+                            separatorBuilder: (_, __) => const SizedBox(height: 10),
+                            itemBuilder: (context, i) {
+                              if (i == items.length) {
+                                return Text(t.tapToCount, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textMuted));
+                              }
+                              final d = items[i];
+                              return _DhikrCard(dhikr: d, count: _counts[d.id] ?? 0, quran: q, onTap: () => _tap(d));
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+        );
+      },
     );
   }
 }
@@ -150,8 +172,8 @@ class _DhikrCard extends StatelessWidget {
                 textDirection: TextDirection.rtl,
                 textAlign: TextAlign.justify,
                 style: isQuran
-                    ? GoogleFonts.getFont('Amiri Quran', fontSize: 20, height: 2.0)
-                    : GoogleFonts.amiri(fontSize: 19, height: 1.9),
+                    ? GoogleFonts.getFont('Amiri Quran', fontSize: 20, height: 2.0, color: AppColors.text)
+                    : GoogleFonts.amiri(fontSize: 19, height: 1.9, color: AppColors.text),
               ),
               const SizedBox(height: 10),
               Row(
@@ -164,8 +186,14 @@ class _DhikrCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(dhikr.source, style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+              if (dhikr.virtue != null) ...[
+                const SizedBox(height: 8),
+                Text(dhikr.virtue!, textDirection: TextDirection.rtl, style: TextStyle(fontSize: 13, color: AppColors.goldText, height: 1.6)),
+              ],
+              if (dhikr.source != null) ...[
+                const SizedBox(height: 4),
+                Text(dhikr.source!, style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+              ],
             ],
           ),
         ),

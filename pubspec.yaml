@@ -39,6 +39,8 @@ flutter:
   assets:
     - assets/quran/quran.json
     - assets/quran/madinah.json
+    - assets/adhkar/daily.json
+    - assets/adhkar/hisn.json
     - assets/fonts/KFGQPC-LICENSE.txt
   fonts:
     # خط مصحف المدينة من مجمع الملك فهد (بدون تعديل، برخصته في assets/fonts/KFGQPC-LICENSE.txt).

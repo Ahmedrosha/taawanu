@@ -577,5 +577,10 @@
         "type": "int"
       }
     }
-  }
+  },
+  "hisnMuslim": "Hisn al-Muslim",
+  "searchHisn": "Search chapters or duas",
+  "noResults": "No results",
+  "footnotes": "Notes and references",
+  "hisnSource": "Hisn al-Muslim, by Sa'id ibn Ali ibn Wahf al-Qahtani"
 }
