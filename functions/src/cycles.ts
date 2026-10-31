@@ -324,7 +324,7 @@ async function maybeCompleteKhatma(groupId: string, cycleNo: number): Promise<vo
 // - تسجيل الأدمن/المساعد لورد حد تاني: من غير نقاط، ومش بيتحسب في الالتزام.
 // - بعد ما الختمة تكتمل مفيش تراجع (مكافأة الختمة اتوزعت خلاص).
 
-interface Actor {
+export interface Actor {
   uid: string;
   manager: boolean;
 }
@@ -345,7 +345,7 @@ type AssignmentOutcome =
   | { kind: 'doneSelf'; points: number; bonus: number; first: boolean; personal: boolean }
   | { kind: 'undone'; refund: number; personal: boolean; selfCounted: boolean };
 
-async function applyAssignmentProgress(groupId: string, target: string, quartersRead: number, actor: Actor) {
+export async function applyAssignmentProgress(groupId: string, target: string, quartersRead: number, actor: Actor) {
   const g = groupData(await groupRef(groupId).get());
   if (g.status !== 'active') throw new HttpsError('failed-precondition', 'Khatma not started.');
   const member = await requireMember(groupId, target);
@@ -450,7 +450,7 @@ type PortionOutcome =
   | { kind: 'undone'; cycle: number; assignee: string | null; refund: number; quarters: number; selfCounted: boolean };
 
 /** [quartersRead] = 'all' معناها الورد كله. */
-async function applyPortionProgress(groupId: string, portionId: string, quartersRead: number | 'all', actor: Actor) {
+export async function applyPortionProgress(groupId: string, portionId: string, quartersRead: number | 'all', actor: Actor) {
   const g = groupData(await groupRef(groupId).get());
   const pRef = portionsCol(groupId).doc(portionId);
 

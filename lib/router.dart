@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 
 import 'features/adhkar/adhkar_screen.dart';
 import 'features/auth/login_screen.dart';
+import 'features/groups/assign_portions_screen.dart';
 import 'features/groups/create_group_screen.dart';
 import 'features/groups/explore_screen.dart';
 import 'features/groups/group_board_screen.dart';
@@ -54,6 +55,7 @@ final appRouter = GoRouter(
           redirect: (context, state) => state.extra is Group ? null : '/group/${state.pathParameters['id']}',
           builder: (context, state) => InviteScreen(group: state.extra! as Group),
         ),
+        GoRoute(path: 'assign', builder: (context, state) => AssignPortionsScreen(groupId: state.pathParameters['id']!)),
         GoRoute(
           path: 'settings',
           redirect: (context, state) => state.extra is Group ? null : '/group/${state.pathParameters['id']}',

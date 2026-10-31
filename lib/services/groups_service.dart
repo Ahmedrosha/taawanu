@@ -184,11 +184,11 @@ class GroupsService {
     return (data['points'] as num?)?.toInt() ?? 0;
   }
 
-  /// تغيير جزء عضو (لو مع حد تاني بيتبادلوا).
-  /// بيرجّع رقم ورد الدورة الجاية لو التغيير مش هيتطبّق غير منها (null لو اتطبّق على طول).
-  Future<int?> moveMember(String groupId, String memberUid, int segment) async {
-    final d = await _call('moveMember', {'groupId': groupId, 'uid': memberUid, 'segment': segment});
-    return d['applied'] == 'next' ? (d['nextSegment'] as num?)?.toInt() : null;
+  /// تغيير جزء عضو، وبيتطبّق على طول. لو الجزء مع حد، أو حد فيهم كان قرا،
+  /// السيرفر بيرجّع تفاصيل عشان نسأل الأدمن، وبعدها بنبعت [confirm].
+  Future<MoveOutcome> moveMember(String groupId, String memberUid, int segment, {bool confirm = false}) async {
+    final d = await _call('moveMember', {'groupId': groupId, 'uid': memberUid, 'segment': segment, 'confirm': confirm});
+    return MoveOutcome.fromMap(d);
   }
 
   Future<void> transferAdmin(String groupId, String memberUid) =>
@@ -234,4 +234,31 @@ class GroupsService {
     final data = await _call('completePortion', {'groupId': groupId, 'portionId': portionId});
     return (data['points'] as num?)?.toInt() ?? 0;
   }
+}
+
+/// نتيجة تغيير الجزء: اتطبّق، أو محتاج تأكيد.
+class MoveOutcome {
+  const MoveOutcome({required this.needsConfirm, this.otherName, this.otherRead = 0, this.volunteerName, this.volunteerRead = 0, this.myRead = 0, this.quarterCount = 0});
+
+  factory MoveOutcome.fromMap(Map<String, dynamic> d) {
+    final other = d['other'] as Map?;
+    final vol = d['volunteer'] as Map?;
+    return MoveOutcome(
+      needsConfirm: d['applied'] == 'confirm',
+      otherName: other?['name'] as String?,
+      otherRead: (other?['read'] as num?)?.toInt() ?? 0,
+      volunteerName: vol?['name'] as String?,
+      volunteerRead: (vol?['read'] as num?)?.toInt() ?? 0,
+      myRead: (d['myRead'] as num?)?.toInt() ?? 0,
+      quarterCount: (d['quarterCount'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  final bool needsConfirm;
+  final String? otherName;
+  final int otherRead;
+  final String? volunteerName;
+  final int volunteerRead;
+  final int myRead;
+  final int quarterCount;
 }

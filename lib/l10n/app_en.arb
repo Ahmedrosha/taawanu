@@ -417,7 +417,7 @@
   "segmentTaken": "Someone just took that portion. Please pick another.",
   "changePortion": "Change portion",
   "changePortionNote": "Pick the new portion. If someone has it, they'll swap.",
-  "changePortionNoteActive": "If the member hasn't started reading, the change applies right away. Otherwise it applies from the next cycle. If someone else has that portion, they'll swap.",
+  "changePortionNoteActive": "The change applies right away in this cycle. If someone else has that portion they'll swap; if either already read some, you'll be asked first.",
   "reviewerSignIn": "Reviewer sign-in",
   "email": "Email",
   "password": "Password",
@@ -630,5 +630,99 @@
   },
   "deleteDownloadedPages": "Delete downloaded pages",
   "downloadFailed": "Download didn't finish. Check your connection and try again.",
-  "textViewSettings": "Continuous text"
+  "textViewSettings": "Continuous text",
+  "assignPortions": "Assign portions",
+  "assignHint": "Tap any portion to choose who takes it",
+  "membersWithoutPortion": "{n} members have no portion this cycle",
+  "@membersWithoutPortion": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "showWho": "Show who",
+  "whoTakes": "{label} — who takes it?",
+  "@whoTakes": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "withoutPortionFirst": "Members without a portion are listed first",
+  "noPortionShort": "No portion",
+  "currentHolder": "(current)",
+  "extraPortionTag": "extra portion",
+  "swapTitle": "{label} is with {name}",
+  "@swapTitle": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "swapBody": "If you confirm they'll swap:\n• {me} → {newLabel}\n• {other} → {oldLabel}",
+  "@swapBody": {
+    "placeholders": {
+      "me": {
+        "type": "String"
+      },
+      "newLabel": {
+        "type": "String"
+      },
+      "other": {
+        "type": "String"
+      },
+      "oldLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "volunteerBody": "{name} took this as an extra portion. If you confirm it's taken from them and goes to {me}.",
+  "@volunteerBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "me": {
+        "type": "String"
+      }
+    }
+  },
+  "moveTitle": "Confirm change",
+  "moveBody": "{me} will take {label}.",
+  "@moveBody": {
+    "placeholders": {
+      "me": {
+        "type": "String"
+      },
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "clearedWarning": "{name} had read {read} of {total} quarters. That progress will be cleared and the new portion starts from the beginning.",
+  "@clearedWarning": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "read": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "confirmSwap": "Confirm swap",
+  "portionChanged": "Portion changed",
+  "segmentTakenError": "Someone else has that portion. Pick an open one.",
+  "alreadyStartedError": "You can't change your portion after you start reading. Ask the admin.",
+  "changeMyPortion": "Change my portion",
+  "changeMyPortionNote": "You can pick an open portion only, as long as you haven't started reading. Taken ones are greyed out."
 }

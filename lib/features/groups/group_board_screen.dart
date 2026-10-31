@@ -9,6 +9,7 @@ import '../../services/groups_service.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/segment_picker.dart';
+import 'assign_portions_screen.dart';
 import 'record_progress_sheet.dart';
 import '../../widgets/ui.dart';
 
@@ -143,6 +144,12 @@ class _FormingCardState extends State<_FormingCard> {
             FilledButton(onPressed: _busy ? null : _start, child: Text(t.startKhatma)),
             const SizedBox(height: 10),
             OutlinedButton.icon(
+              onPressed: () => context.push('/group/${g.id}/assign'),
+              icon: const Icon(Icons.grid_view_rounded),
+              label: Text(t.assignPortions),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
               onPressed: () => context.push('/group/${g.id}/invite', extra: g),
               icon: const Icon(Icons.person_add_alt_1_outlined),
               label: Text(t.invite),
@@ -188,7 +195,12 @@ class _ActiveCycle extends StatelessWidget {
             ],
             StreamBuilder<Assignment?>(
               stream: svc.myAssignment(group.id, group.currentCycle),
-              builder: (context, aSnap) => _MyPortionCard(group: group, assignment: aSnap.data, loading: !aSnap.hasData && aSnap.connectionState == ConnectionState.waiting),
+              builder: (context, aSnap) => _MyPortionCard(
+                group: group,
+                assignment: aSnap.data,
+                loading: !aSnap.hasData && aSnap.connectionState == ConnectionState.waiting,
+                onChange: me == null ? null : () => changeOwnPortion(context, group: group, me: me!, members: members),
+              ),
             ),
             const SizedBox(height: 16),
             if (cycle != null) _KhatmaMap(group: group, cycle: cycle, members: members, me: me),
@@ -216,11 +228,14 @@ class _ActiveCycle extends StatelessWidget {
 }
 
 class _MyPortionCard extends StatelessWidget {
-  const _MyPortionCard({required this.group, required this.assignment, required this.loading});
+  const _MyPortionCard({required this.group, required this.assignment, required this.loading, this.onChange});
 
   final Group group;
   final Assignment? assignment;
   final bool loading;
+
+  /// العضو يغيّر ورده لورد فاضي (طول ما لسه مبدأش يقرا).
+  final VoidCallback? onChange;
 
   @override
   Widget build(BuildContext context) {
@@ -264,6 +279,11 @@ class _MyPortionCard extends StatelessWidget {
               icon: const Icon(Icons.menu_book_outlined),
               label: Text(a.quartersRead > 0 ? t.continueReading : t.readNow),
             ),
+            if (a.quartersRead == 0 && onChange != null)
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(onPressed: onChange, icon: const Icon(Icons.swap_horiz, size: 18), label: Text(t.changeMyPortion)),
+              ),
           ] else if (a.isDone && !a.closed) ...[
             // الورد خلص: يقدر يفتحه تاني (ومنه يتراجع لو سجّل بالغلط).
             const SizedBox(height: 10),
@@ -612,7 +632,7 @@ class _MembersList extends StatelessWidget {
   }
 
   /// المدير يقدر يغيّر جزء أي حد (حتى نفسه والأدمن)، والأدوار حسب _canManage.
-  bool _canOpen(Member target) => (me?.isManager ?? false) || _canManage(target);
+  bool _canOpen(Member target) => (me?.isManager ?? false) || _canManage(target) || target.uid == me?.uid;
 
   bool _canManage(Member target) {
     final m = me;
@@ -634,9 +654,13 @@ class _MembersList extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(title: Text(target.name, style: const TextStyle(fontWeight: FontWeight.w700))),
-            if (group.isActive)
+            if (group.isActive && (me?.isManager ?? false))
               ListTile(leading: const Icon(Icons.edit_note), title: Text(t.recordProgress), onTap: () => Navigator.pop(context, 'record')),
-            ListTile(leading: const Icon(Icons.swap_vert), title: Text(t.changePortion), onTap: () => Navigator.pop(context, 'move')),
+            ListTile(
+              leading: const Icon(Icons.swap_vert),
+              title: Text((me?.isManager ?? false) ? t.changePortion : t.changeMyPortion),
+              onTap: () => Navigator.pop(context, 'move'),
+            ),
             if (canManage && isAdmin && target.role == 'member')
               ListTile(leading: const Icon(Icons.shield_outlined), title: Text(t.makeAssistant), onTap: () => Navigator.pop(context, 'assistant')),
             if (canManage && isAdmin && target.role == 'assistant')
@@ -678,7 +702,11 @@ extension on _MembersList {
   /// اختيار جزء جديد للعضو. لو الجزء مع حد تاني بيتبادلوا.
   Future<void> _move(BuildContext context, Member target) async {
     final t = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    // العضو بيغيّر ورده بنفسه.
+    if (!(me?.isManager ?? false)) {
+      await changeOwnPortion(context, group: group, me: target, members: members);
+      return;
+    }
     // الأرقام = ورد كل عضو في الدورة الحالية (أو الأولى قبل البداية).
     final holders = {for (final m in members) currentSegment(group, m): m.name};
     final seg = await showSegmentPicker(
@@ -690,11 +718,7 @@ extension on _MembersList {
       note: group.isActive ? t.changePortionNoteActive : t.changePortionNote,
     );
     if (seg == null || !context.mounted) return;
-    int? next;
-    final ok = await runAction(context, () async => next = await GroupsService.instance.moveMember(group.id, target.uid, seg));
-    if (ok && next != null) {
-      messenger.showSnackBar(SnackBar(content: Text(t.moveAppliesNext(segmentLabel(t, next!, group.wardQuarters)))));
-    }
+    await changePortionFlow(context, group: group, member: target, segment: seg);
   }
 }
 
@@ -718,6 +742,8 @@ class _BoardMenu extends StatelessWidget {
     return PopupMenuButton<String>(
       onSelected: (v) async {
         switch (v) {
+          case 'assign':
+            context.push('/group/${group.id}/assign');
           case 'settings':
             context.push('/group/${group.id}/settings', extra: group);
           case 'leave':
@@ -733,6 +759,7 @@ class _BoardMenu extends StatelessWidget {
         }
       },
       itemBuilder: (context) => [
+        if (me?.isManager ?? false) PopupMenuItem(value: 'assign', child: Text(t.assignPortions)),
         if (me?.isManager ?? false) PopupMenuItem(value: 'settings', child: Text(t.groupSettings)),
         if (me != null && !me!.isAdmin) PopupMenuItem(value: 'leave', child: Text(t.leaveGroup)),
         if (me?.isAdmin ?? false)

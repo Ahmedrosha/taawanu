@@ -51,26 +51,14 @@ Future<int?> showSegmentPicker(
             Text(note ?? t.chooseStartBody, style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
             const SizedBox(height: 12),
             Expanded(
-              child: wardQuarters < 8
-                  ? _ByJuz(
-                      scroll: scroll,
-                      wardQuarters: wardQuarters,
-                      selected: selected,
-                      cell: (seg, label) => cell(context, seg, label),
-                      wide: holders.isNotEmpty,
-                    )
-                  : GridView.builder(
-                      controller: scroll,
-                      padding: const EdgeInsets.only(bottom: 24),
-                      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: holders.isEmpty ? 64 : 92,
-                        mainAxisSpacing: 8,
-                        crossAxisSpacing: 8,
-                        childAspectRatio: holders.isEmpty ? 1 : 0.95,
-                      ),
-                      itemCount: slots,
-                      itemBuilder: (context, seg) => cell(context, seg, '${seg + 1}'),
-                    ),
+              child: SegmentGrid(
+                scroll: scroll,
+                wardQuarters: wardQuarters,
+                slots: slots,
+                selected: selected,
+                wide: holders.isNotEmpty,
+                cell: (seg, label) => cell(context, seg, label),
+              ),
             ),
           ],
         ),
@@ -79,11 +67,51 @@ Future<int?> showSegmentPicker(
   );
 }
 
+/// الأوراد كلها: جدول أرقام للجزء فأكبر، ومقسمة جزء جزء للأوراد الأصغر.
+/// [cell] بيبني خانة كل ورد (رقمه واسمه المختصر).
+class SegmentGrid extends StatelessWidget {
+  const SegmentGrid({
+    super.key,
+    required this.scroll,
+    required this.wardQuarters,
+    required this.slots,
+    required this.cell,
+    this.selected,
+    this.wide = false,
+  });
+
+  final ScrollController? scroll;
+  final int wardQuarters;
+  final int slots;
+  final int? selected;
+  final bool wide;
+  final Widget Function(int seg, String label) cell;
+
+  @override
+  Widget build(BuildContext context) {
+    if (wardQuarters < 8) {
+      return _ByJuz(scroll: scroll, wardQuarters: wardQuarters, selected: selected, cell: cell, wide: wide);
+    }
+    return GridView.builder(
+      controller: scroll,
+      padding: const EdgeInsets.only(bottom: 24),
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: wide ? 92 : 64,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: wide ? 0.95 : 1,
+      ),
+      itemCount: slots,
+      itemBuilder: (context, seg) => cell(seg, '${seg + 1}'),
+    );
+  }
+}
+
 /// ٣٠ كارت (جزء لكل كارت). جوه كل جزء: الحزبين، وتحت كل حزب أرباعه أو نصّيه.
 class _ByJuz extends StatefulWidget {
   const _ByJuz({required this.scroll, required this.wardQuarters, required this.selected, required this.cell, required this.wide});
 
-  final ScrollController scroll;
+  final ScrollController? scroll;
   final int wardQuarters; // ١ أو ٢ أو ٤
   final int? selected;
   final Widget Function(int seg, String label) cell;
