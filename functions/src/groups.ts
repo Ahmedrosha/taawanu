@@ -228,7 +228,8 @@ export const moveMember = onCall(async (request) => {
   const uid = requireUid(request);
   const groupId = requireString(request.data?.groupId, 'groupId');
   const target = requireString(request.data?.uid, 'uid');
-  const confirmed = request.data?.confirm === true;
+  // التطبيق الجديد بيبعت confirm: false أول مرة عشان يسأل. النسخ القديمة مبتبعتهوش، فالتغيير بيتطبّق على طول.
+  const askFirst = request.data?.confirm === false;
   const me = await requireMember(groupId, uid);
   const manager = me.role === 'admin' || me.role === 'assistant';
   if (!manager && target !== uid) throw new HttpsError('permission-denied', 'Admins only.');
@@ -247,7 +248,7 @@ export const moveMember = onCall(async (request) => {
   if (!manager) {
     if (plan.other || plan.volunteer) throw new HttpsError('already-exists', 'Segment taken.');
     if (plan.myRead > 0) throw new HttpsError('failed-precondition', 'Already started reading.');
-  } else if (!confirmed && (plan.other || plan.volunteer || plan.myRead > 0)) {
+  } else if (askFirst && (plan.other || plan.volunteer || plan.myRead > 0)) {
     return {
       ok: true,
       applied: 'confirm',
