@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/gen/app_localizations.dart';
 import '../../services/mushaf_fonts.dart';
+import '../reader/mushaf_page.dart';
 import '../../services/prefs.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
@@ -40,96 +41,136 @@ class _MushafSettingsState extends State<MushafSettings> {
         _ => t.fontNaskh,
       };
 
+  void _setView(String v) {
+    setState(() => _view = v);
+    Prefs.instance.setReaderView(v);
+  }
+
+  /// اختيار من "شكل القراءة": دايرة واسم، وتحته إعداداته.
+  Widget _option({required String value, required String label, bool isDefault = false, required List<Widget> children}) {
+    final t = AppLocalizations.of(context);
+    final selected = _view == value;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => _setView(value),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Icon(selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                    color: selected ? AppColors.navy : AppColors.textMuted),
+                const SizedBox(width: 10),
+                Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                const Spacer(),
+                if (isDefault)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: AppColors.sky, borderRadius: BorderRadius.circular(6)),
+                    child: Text(t.defaultTag, style: TextStyle(fontSize: 11, color: AppColors.accent, fontWeight: FontWeight.w600)),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.only(start: 34),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final label = TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.text);
+    final note = TextStyle(fontSize: 12, color: AppColors.textMuted);
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(t.readingView, style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            _chip(t.viewPages, _view == 'pages', () {
-              setState(() => _view = 'pages');
-              Prefs.instance.setReaderView('pages');
-            }),
-            _chip(t.viewText, _view == 'text', () {
-              setState(() => _view = 'text');
-              Prefs.instance.setReaderView('text');
-            }),
-          ]),
-          const SizedBox(height: 14),
-          Text(t.pageStyle, style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            _chip(t.pageStyleHafs, _style == 'hafs', () {
-              setState(() => _style = 'hafs');
-              Prefs.instance.setPageStyle('hafs');
-            }),
-            _chip(t.pageStyleQpc, _style == 'qpc', () {
-              setState(() => _style = 'qpc');
-              Prefs.instance.setPageStyle('qpc');
-            }),
-          ]),
-          const SizedBox(height: 8),
-          Text(_style == 'qpc' ? t.qpcNote : t.pagesNote, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-          if (_style == 'qpc') const _QpcDownloads(),
-          const SizedBox(height: 14),
-          Divider(color: AppColors.border),
-          const SizedBox(height: 8),
-          Text(t.textViewSettings, style: const TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          // معاينة: آية من الفاتحة بالخط والحجم المختارين.
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(color: AppColors.paper, borderRadius: BorderRadius.circular(12)),
-            child: FutureBuilder<QuranData>(
-              // المفتاح بالخط: لما الخط يتغير، النص يتحمّل من جديد (مصحف المدينة نصه مختلف).
-              key: ValueKey(_font),
-              future: QuranRepository.instance.loadFor(_font),
-              builder: (context, snap) => Text(
-                snap.data?.ayahText(1, 2) ?? '',
-                textAlign: TextAlign.center,
-                textDirection: TextDirection.rtl,
-                style: quranTextStyle(_font, fontSize: _size, color: AppColors.text),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(t.textSize, style: const TextStyle(fontWeight: FontWeight.w600)),
-          Slider(
-            value: _size,
-            min: 18,
-            max: 40,
-            divisions: 11,
-            label: _size.round().toString(),
-            onChanged: (v) => setState(() => _size = v),
-            onChangeEnd: (v) => Prefs.instance.setReaderFontSize(v),
-          ),
-          Text(t.fontType, style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          Text(t.readingView, style: const TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          _option(
+            value: 'pages',
+            label: t.viewPages,
+            isDefault: true,
             children: [
-              for (final f in Prefs.readerFonts)
-                ChoiceChip(
-                  label: Text(_fontName(t, f)),
-                  selected: _font == f,
-                  showCheckmark: false,
-                  selectedColor: AppColors.navy,
-                  labelStyle: TextStyle(color: _font == f ? Colors.white : AppColors.text),
-                  onSelected: (_) {
-                    setState(() => _font = f);
-                    Prefs.instance.setReaderFont(f);
-                  },
-                ),
+              // عينة من شكل الصفحة بالخط المختار.
+              MushafSample(qpc: _style == 'qpc', key: ValueKey(_style)),
+              const SizedBox(height: 10),
+              Text(t.pageStyle, style: label),
+              const SizedBox(height: 8),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                _chip(t.pageStyleHafs, _style == 'hafs', () {
+                  setState(() => _style = 'hafs');
+                  Prefs.instance.setPageStyle('hafs');
+                }),
+                _chip(t.pageStyleQpc, _style == 'qpc', () {
+                  setState(() => _style = 'qpc');
+                  Prefs.instance.setPageStyle('qpc');
+                }),
+              ]),
+              const SizedBox(height: 8),
+              Text(_style == 'qpc' ? t.qpcNote : t.pagesNote, style: note),
+              if (_style == 'qpc') const _QpcDownloads(),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(_font == madinahFont ? t.quranTextSourceMadinah : t.quranTextSource,
-              style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          const SizedBox(height: 8),
+          Divider(color: AppColors.border),
+          _option(
+            value: 'text',
+            label: t.viewText,
+            children: [
+              // معاينة: آية بالخط والحجم المختارين.
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(color: AppColors.paper, borderRadius: BorderRadius.circular(12)),
+                child: FutureBuilder<QuranData>(
+                  // المفتاح بالخط: لما الخط يتغير، النص يتحمّل من جديد (مصحف المدينة نصه مختلف).
+                  key: ValueKey(_font),
+                  future: QuranRepository.instance.loadFor(_font),
+                  builder: (context, snap) => Text(
+                    snap.data?.ayahText(1, 2) ?? '',
+                    textAlign: TextAlign.center,
+                    textDirection: TextDirection.rtl,
+                    style: quranTextStyle(_font, fontSize: _size, color: AppColors.text),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(t.textSize, style: label),
+              Slider(
+                value: _size,
+                min: 18,
+                max: 40,
+                divisions: 11,
+                label: _size.round().toString(),
+                onChanged: (v) => setState(() => _size = v),
+                onChangeEnd: (v) => Prefs.instance.setReaderFontSize(v),
+              ),
+              Text(t.fontType, style: label),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final f in Prefs.readerFonts)
+                    _chip(_fontName(t, f), _font == f, () {
+                      setState(() => _font = f);
+                      Prefs.instance.setReaderFont(f);
+                    }),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(t.textViewOnlyNote, style: note),
+              const SizedBox(height: 4),
+              Text(_font == madinahFont ? t.quranTextSourceMadinah : t.quranTextSource, style: note),
+            ],
+          ),
         ],
       ),
     );

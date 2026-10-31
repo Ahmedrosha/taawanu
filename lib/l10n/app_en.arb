@@ -609,7 +609,7 @@
   "pageStyle": "Page font",
   "pageStyleHafs": "Hafs font",
   "pageStyleQpc": "Complex fonts (identical to print)",
-  "pagesNote": "Same lines and pages as the Madinah Mushaf. Enlarging the text while reading switches to continuous text; the Mushaf button brings the pages back.",
+  "pagesNote": "Same lines and pages as the Madinah Mushaf, sized automatically to the screen. Enlarging the text while reading switches to continuous text.",
   "qpcNote": "A King Fahd Complex font for each page, downloaded the first time the page opens (needs internet). You can download them all at once (about 160 MB).",
   "downloadAllPages": "Download all pages",
   "downloadingPages": "Downloading… {percent}%",
@@ -726,5 +726,7 @@
   "changeMyPortion": "Change my portion",
   "changeMyPortionNote": "You can pick an open portion only, before the khatma starts. After that, only admins can change it. Taken ones are greyed out.",
   "readToQuarterEnd": "Keep reading to the end of the quarter; the button appears on its last page.",
-  "nextQuarterLocked": "The next quarter opens after you mark this one as done."
+  "nextQuarterLocked": "The next quarter opens after you mark this one as done.",
+  "defaultTag": "Default",
+  "textViewOnlyNote": "These settings are for continuous text only; they don't change the pages."
 }

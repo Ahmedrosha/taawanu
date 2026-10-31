@@ -335,3 +335,92 @@ class _FramePainter extends CustomPainter {
   @override
   bool shouldRepaint(_FramePainter old) => old.line != line || old.fill != fill;
 }
+
+/// عينة صغيرة من صفحة المصحف (أول ٤ سطور من صفحة ٣) بالخط المختار، للإعدادات.
+class MushafSample extends StatefulWidget {
+  const MushafSample({super.key, required this.qpc});
+
+  final bool qpc;
+
+  @override
+  State<MushafSample> createState() => _MushafSampleState();
+}
+
+class _MushafSampleState extends State<MushafSample> {
+  static const _page = 3;
+  static const _lines = 4;
+  late final Future<MushafLayout> _layout = MushafLayout.load();
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.qpc) _loadFont();
+  }
+
+  Future<void> _loadFont() async {
+    setState(() => _failed = false);
+    final ok = await MushafFonts.instance.ensurePage(_page);
+    if (!ok && mounted) setState(() => _failed = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Container(
+      height: 40.0 * _lines + 16,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.paper,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.paperLine),
+      ),
+      child: FutureBuilder<MushafLayout>(
+        future: _layout,
+        builder: (context, snap) {
+          final layout = snap.data;
+          if (layout == null) return const Center(child: CircularProgressIndicator());
+          if (widget.qpc && _failed) {
+            return Center(
+              child: TextButton.icon(onPressed: _loadFont, icon: const Icon(Icons.wifi_off, size: 18), label: Text(t.mushafFontOffline, textAlign: TextAlign.center)),
+            );
+          }
+          return ListenableBuilder(
+            listenable: MushafFonts.instance,
+            builder: (context, _) {
+              if (widget.qpc && !MushafFonts.instance.isReady(_page)) return const Center(child: CircularProgressIndicator());
+              return LayoutBuilder(builder: (context, c) => _render(layout, c.maxWidth, c.maxHeight / _lines));
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _render(MushafLayout layout, double width, double lineH) {
+    final qpc = widget.qpc;
+    String word(MushafWord w) => qpc ? w.qpc : w.hafs;
+    final family = qpc ? MushafFonts.familyFor(_page) : madinahFont;
+    final lines = layout.page(_page);
+    final m = _PageMetrics.of(page: _page, qpc: qpc, family: family, width: width, lineH: lineH, lines: lines, word: word);
+    final style = TextStyle(fontFamily: family, fontSize: m.fontSize, height: 1.0, color: AppColors.text);
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Column(
+        children: [
+          for (final l in lines.where((l) => l.type == MushafLineType.text).take(_lines))
+            SizedBox(
+              height: lineH,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  for (final w in l.words)
+                    if (word(w).isNotEmpty) Text(word(w), softWrap: false, textDirection: TextDirection.rtl, style: style),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
