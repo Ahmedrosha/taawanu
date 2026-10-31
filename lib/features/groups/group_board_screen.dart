@@ -352,62 +352,45 @@ class _KhatmaMap extends StatelessWidget {
   final List<Member> members;
   final Member? me;
 
+  /// الأدمن والمساعد: الضغط على ورد عضو بيفتح تسجيل ورده.
+  bool get _canRecord => me?.isManager ?? false;
+
+  void _record(BuildContext context, Segment s, Map<String, String> names) => showRecordProgress(
+        context,
+        group: group,
+        memberUid: s.uid!,
+        memberName: names[s.uid] ?? '—',
+        segmentFromQuarter: s.seg * group.wardQuarters + 1,
+      );
+
+  bool _recordable(Segment s) => _canRecord && s.uid != null && s.status != 'late';
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final n = cycle.segments.length;
-    final columns = n <= 6 ? 3 : n <= 10 ? 5 : n <= 30 ? 6 : n <= 60 ? 10 : n <= 120 ? 12 : 16;
-    final showNumbers = n <= 60;
     final names = {for (final m in members) m.uid: m.name};
-    final canRecord = me?.isManager ?? false;
+    // نسبة الانتهاء: الأرباع اللي خلصت من الـ٢٤٠.
+    final done = (240 - cycle.remainingQuarters).clamp(0, 240);
+    final percent = (done * 100 / 240).round();
+    final byJuz = group.wardQuarters < 8;
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.khatmaMap, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-          if (canRecord) ...[
-            const SizedBox(height: 2),
-            Text(t.tapToRecordHint, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-          ],
-          const SizedBox(height: 12),
-          GridView.count(
-            crossAxisCount: columns,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: showNumbers ? 6 : 3,
-            crossAxisSpacing: showNumbers ? 6 : 3,
-            childAspectRatio: showNumbers ? 1.1 : 1,
+          Row(
             children: [
-              for (final s in cycle.segments)
-                Tooltip(
-                  message: '${rangeLabel(t, s.seg * group.wardQuarters + 1, (s.seg + 1) * group.wardQuarters)}'
-                      ' · ${segmentStatusLabel(t, s.status)}${s.uid != null ? ' · ${names[s.uid] ?? ''}' : ''}',
-                  child: GestureDetector(
-                    // الأدمن والمساعد: الضغط على خانة عضو بيفتح تسجيل ورده.
-                    onTap: canRecord && s.uid != null && s.status != 'late'
-                        ? () => showRecordProgress(
-                              context,
-                              group: group,
-                              memberUid: s.uid!,
-                              memberName: names[s.uid] ?? '—',
-                              segmentFromQuarter: s.seg * group.wardQuarters + 1,
-                            )
-                        : null,
-                    child: Container(
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: segmentColor(s.status),
-                        borderRadius: BorderRadius.circular(showNumbers ? 8 : 3),
-                        border: s.status == 'open' ? Border.all(color: AppColors.mutedLine) : null,
-                      ),
-                      child: showNumbers
-                          ? Text('${s.seg + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: segmentTextColor(s.status)))
-                          : null,
-                    ),
-                  ),
-                ),
+              Expanded(child: Text(t.khatmaMap, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15))),
+              Text(t.khatmaPercent(percent), style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.statusDone)),
             ],
           ),
+          const SizedBox(height: 6),
+          ProgressLine(value: done / 240),
+          if (_canRecord || byJuz) ...[
+            const SizedBox(height: 6),
+            Text(byJuz ? t.tapJuzHint : t.tapToRecordHint, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          ],
+          const SizedBox(height: 12),
+          if (byJuz) _juzGrid(context, t, names) else _segmentGrid(context, t, names),
           const SizedBox(height: 12),
           Wrap(
             spacing: 12,
@@ -427,6 +410,131 @@ class _KhatmaMap extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// ورد جزء أو أكبر: خانة لكل ورد زي ما هو.
+  Widget _segmentGrid(BuildContext context, AppLocalizations t, Map<String, String> names) {
+    final n = cycle.segments.length;
+    final columns = n <= 6 ? 3 : n <= 10 ? 5 : n <= 30 ? 6 : 10;
+    return GridView.count(
+      crossAxisCount: columns,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 6,
+      crossAxisSpacing: 6,
+      childAspectRatio: 1.1,
+      children: [
+        for (final s in cycle.segments)
+          Tooltip(
+            message: '${segmentLabel(t, s.seg, group.wardQuarters)} · ${segmentStatusLabel(t, s.status)}${s.uid != null ? ' · ${names[s.uid] ?? ''}' : ''}',
+            child: GestureDetector(
+              onTap: _recordable(s) ? () => _record(context, s, names) : null,
+              child: Container(
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: segmentColor(s.status),
+                  borderRadius: BorderRadius.circular(8),
+                  border: s.status == 'open' ? Border.all(color: AppColors.mutedLine) : null,
+                ),
+                child: Text('${s.seg + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: segmentTextColor(s.status))),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// ورد أصغر من جزء: ٣٠ مربع (جزء لكل مربع)، وتحت رقمه أوراده بألوانها.
+  Widget _juzGrid(BuildContext context, AppLocalizations t, Map<String, String> names) {
+    final per = 8 ~/ group.wardQuarters; // أوراد في الجزء: ٢ أو ٤ أو ٨
+    final bySeg = {for (final s in cycle.segments) s.seg: s};
+    return GridView.count(
+      crossAxisCount: 6,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
+      childAspectRatio: 1.15,
+      children: [
+        for (var juz = 0; juz < 30; juz++)
+          Material(
+            color: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: BorderSide(color: AppColors.border),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => _juzSheet(context, juz, per, bySeg, names),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(4, 4, 4, 6),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('${juz + 1}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.text)),
+                    Row(
+                      children: [
+                        for (var k = 0; k < per; k++) ...[
+                          if (k > 0) SizedBox(width: per > 4 ? 1.5 : 2),
+                          Expanded(
+                            child: Container(
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: segmentColor(bySeg[juz * per + k]?.status ?? 'open'),
+                                borderRadius: BorderRadius.circular(2),
+                                border: (bySeg[juz * per + k]?.status ?? 'open') == 'open' ? Border.all(color: AppColors.mutedLine, width: 0.6) : null,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// أوراد الجزء: مين معاه كل ورد وحالته. الأدمن يدوس على ورد يسجّله.
+  Future<void> _juzSheet(BuildContext context, int juz, int per, Map<int, Segment> bySeg, Map<String, String> names) async {
+    final t = AppLocalizations.of(context);
+    final picked = await showModalBottomSheet<Segment>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(t.juzLabel(juz + 1), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            ),
+            for (var k = 0; k < per; k++)
+              if (bySeg[juz * per + k] case final s?)
+                ListTile(
+                  leading: Container(width: 14, height: 14, decoration: BoxDecoration(color: segmentColor(s.status), borderRadius: BorderRadius.circular(4))),
+                  title: Text(segmentLabel(t, s.seg, group.wardQuarters), style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text([
+                    if (s.uid != null) names[s.uid] ?? '—',
+                    segmentStatusLabel(t, s.status),
+                  ].join(' · ')),
+                  trailing: _recordable(s) ? const Icon(Icons.edit_note) : null,
+                  onTap: _recordable(s) ? () => Navigator.pop(context, s) : null,
+                ),
+            if (_canRecord)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Text(t.tapToRecordHint, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked != null && context.mounted) _record(context, picked, names);
   }
 }
 

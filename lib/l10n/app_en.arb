@@ -763,5 +763,14 @@
         "type": "int"
       }
     }
-  }
+  },
+  "khatmaPercent": "{percent}% done",
+  "@khatmaPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "tapJuzHint": "Tap a juz to see its portions and who has each one."
 }

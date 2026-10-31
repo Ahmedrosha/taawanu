@@ -353,5 +353,7 @@
   "myPortionDoneShort": "وردك خلص ✓",
   "groupNotStartedShort": "الختمة لسه مبدأتش",
   "noPortionThisCycleShort": "ملكش ورد الدورة دي",
-  "groupMembersN": "{n} عضو"
+  "groupMembersN": "{n} عضو",
+  "khatmaPercent": "خلص {percent}٪",
+  "tapJuzHint": "دوس على أي جزء عشان تشوف أوراده ومين معاه كل ورد."
 }

@@ -15,6 +15,14 @@ import 'join_screen.dart';
 class _Stat {
   Group? group;
   Assignment? assignment;
+  Cycle? cycle;
+
+  /// نسبة انتهاء الختمة في الدورة الحالية.
+  int? get percent {
+    final c = cycle;
+    if (c == null) return null;
+    return ((240 - c.remainingQuarters).clamp(0, 240) * 100 / 240).round();
+  }
 }
 
 /// بيتابع كل مجموعة من مجموعاتي ووردي فيها، عشان الكروت والترتيب يفضلوا محدّثين.
@@ -23,6 +31,7 @@ class _Stats extends ChangeNotifier {
   final stats = <String, _Stat>{};
   final _groupSubs = <String, StreamSubscription<Group?>>{};
   final _aSubs = <String, StreamSubscription<Assignment?>>{};
+  final _cSubs = <String, StreamSubscription<Cycle?>>{};
   final _aCycle = <String, int>{};
 
   void sync(List<MyGroup> groups) {
@@ -31,6 +40,7 @@ class _Stats extends ChangeNotifier {
       if (!ids.contains(id)) {
         _groupSubs.remove(id)?.cancel();
         _aSubs.remove(id)?.cancel();
+        _cSubs.remove(id)?.cancel();
         _aCycle.remove(id);
         stats.remove(id);
       }
@@ -44,8 +54,14 @@ class _Stats extends ChangeNotifier {
         if (_aCycle[id] != cycle) {
           _aCycle[id] = cycle;
           _aSubs.remove(id)?.cancel();
+          _cSubs.remove(id)?.cancel();
           stats[id]?.assignment = null;
+          stats[id]?.cycle = null;
           if (cycle > 0) {
+            _cSubs[id] = _svc.cycle(id, cycle).listen((c) {
+              stats[id]?.cycle = c;
+              notifyListeners();
+            });
             _aSubs[id] = _svc.myAssignment(id, cycle).listen((a) {
               stats[id]?.assignment = a;
               notifyListeners();
@@ -63,6 +79,9 @@ class _Stats extends ChangeNotifier {
       s.cancel();
     }
     for (final s in _aSubs.values) {
+      s.cancel();
+    }
+    for (final s in _cSubs.values) {
       s.cancel();
     }
     super.dispose();
@@ -432,6 +451,7 @@ class _GroupCard extends StatelessWidget {
                         group.isPrivate ? t.typePrivateShort : t.typePublicShort,
                         wardLabel(t, group.wardQuarters),
                         if (g != null) t.groupMembersN(g.memberCount),
+                        if (stat?.percent != null) t.khatmaPercent(stat!.percent!),
                       ].join(' · '),
                       style: text.bodySmall?.copyWith(color: AppColors.textMuted),
                     ),
