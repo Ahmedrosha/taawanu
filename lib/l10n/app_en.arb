@@ -402,7 +402,7 @@
   "segmentTaken": "Someone just took that portion. Please pick another.",
   "changePortion": "Change portion",
   "changePortionNote": "Pick the new portion. If someone has it, they'll swap.",
-  "changePortionNoteActive": "This applies from the next cycle. If someone has that portion, they'll swap.",
+  "changePortionNoteActive": "If the member hasn't started reading, the change applies right away. Otherwise it applies from the next cycle. If someone else has that portion, they'll swap.",
   "reviewerSignIn": "Reviewer sign-in",
   "email": "Email",
   "password": "Password",
@@ -548,5 +548,21 @@
   "appearance": "Appearance",
   "themeSystem": "Auto",
   "themeLight": "Light",
-  "themeDark": "Dark"
+  "themeDark": "Dark",
+  "moveAppliesNext": "The member already started reading, so the change starts next cycle: {label}",
+  "fromNextCycle": "Next cycle: {label}",
+  "@moveAppliesNext": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "@fromNextCycle": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  }
 }

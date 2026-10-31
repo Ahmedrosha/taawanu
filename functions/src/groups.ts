@@ -1,14 +1,14 @@
 // إنشاء المجموعات وإدارتها: الإعدادات، والأدوار، والخروج، والحذف.
 import { getAuth } from 'firebase-admin/auth';
-import { FieldValue } from 'firebase-admin/firestore';
+import { DocumentSnapshot, FieldValue } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 
 import {
-  db, groupData, groupRef, memberRef, requireManager, requireMember,
+  assignmentRef, cycleRef, db, groupData, groupRef, memberRef, requireManager, requireMember,
   requireString, requireUid, Role, userDisplay, userGroupIndexRef,
 } from './common';
 import { releaseMemberWork } from './cycles';
-import { pickCycle, slotForSegment } from './rotation';
+import { segmentFor, slotForSegment } from './rotation';
 import { CYCLE_UNITS, LATE_POLICIES, parseNewGroup, parseSegment, ValidationError } from './validation';
 
 /** حد أقصى لعدد المجموعات اللي المستخدم الواحد يقدر يعملها، ضد الإساءة. */
@@ -174,7 +174,7 @@ export const moveMember = onCall(async (request) => {
   const target = requireString(request.data?.uid, 'uid');
   await requireManager(groupId, uid);
   const gRef = groupRef(groupId);
-  await db.runTransaction(async (tx) => {
+  const result = await db.runTransaction(async (tx) => {
     const g = groupData(await tx.get(gRef));
     let segment: number;
     try {
@@ -183,18 +183,81 @@ export const moveMember = onCall(async (request) => {
       asInvalid(e);
     }
     if (segment < 0) throw new HttpsError('invalid-argument', 'segment is required');
-    const cycle = pickCycle(g.status, g.currentCycle, true);
-    const newSlot = slotForSegment(segment, cycle, g.slots);
+    const active = g.status === 'active';
+    // الرقم اللي الأدمن بيختاره = ورد العضو في الدورة الحالية (أو الأولى لو لسه مبدأتش).
+    const n = active ? g.currentCycle : 1;
+    const newSlot = slotForSegment(segment, n, g.slots);
     const members = await tx.get(gRef.collection('members'));
     const mine = members.docs.find((d) => d.id === target);
     if (!mine) throw new HttpsError('not-found', 'Not a member.');
     const oldSlot = mine.get('slot') as number;
-    if (oldSlot === newSlot) return;
+    if (oldSlot === newSlot) return { applied: 'none' as const };
     const other = members.docs.find((d) => d.get('slot') === newSlot);
-    tx.update(mine.ref, { slot: newSlot });
-    if (other) tx.update(other.ref, { slot: oldSlot });
+    const oldSeg = segmentFor(oldSlot, n, g.slots);
+
+    if (!active) {
+      tx.update(mine.ref, { slot: newSlot });
+      if (other) tx.update(other.ref, { slot: oldSlot });
+      return { applied: 'now' as const };
+    }
+
+    // بعد البداية: لو محدش من الاتنين بدأ يقرا، التغيير بيتطبّق على طول في الدورة دي.
+    const cRef = cycleRef(groupId, n);
+    const myRef = assignmentRef(groupId, n, target);
+    const otherRef = other ? assignmentRef(groupId, n, other.id) : null;
+    const emptyQuery = groupRef(groupId).collection('portions')
+      .where('cycle', '==', n).where('origin', '==', 'empty')
+      .where('fromQuarter', '==', segment * g.wardQuarters + 1).limit(1);
+    const [cSnap, mySnap, otherSnap, emptySnap] = await Promise.all([
+      tx.get(cRef), tx.get(myRef), otherRef ? tx.get(otherRef) : Promise.resolve(null), tx.get(emptyQuery),
+    ]);
+    const notStarted = (d: DocumentSnapshot | null) => {
+      if (!d || !d.exists) return true;
+      const x = d.data()!;
+      return !x.closed && x.status === 'pending' && (x.quartersRead ?? 0) === 0;
+    };
+    const emptyDoc = emptySnap.docs[0];
+    const emptyFree = !other && (!emptyDoc || (emptyDoc.get('status') === 'open' && (emptyDoc.get('quartersRead') ?? 0) === 0));
+    // لازم العضو يكون ليه ورد في الدورة دي عشان نبدّله على طول.
+    const canNow = cSnap.exists && mySnap.exists && notStarted(mySnap) && (other ? notStarted(otherSnap) : emptyFree);
+
+    tx.update(mine.ref, { slot: newSlot, nowSegment: canNow ? FieldValue.delete() : { cycle: n, seg: oldSeg } });
+    if (other) {
+      tx.update(other.ref, { slot: oldSlot, nowSegment: canNow ? FieldValue.delete() : { cycle: n, seg: segment } });
+    }
+    if (!canNow) return { applied: 'next' as const, nextSegment: segmentFor(newSlot, n + 1, g.slots) };
+
+    const range = (seg: number) => ({ fromQuarter: seg * g.wardQuarters + 1, toQuarter: (seg + 1) * g.wardQuarters });
+    const fresh = (seg: number) => ({
+      ...range(seg), segment: seg, quarterCount: g.wardQuarters, quartersRead: 0, status: 'pending', closed: false,
+    });
+    const c = cSnap.data()!;
+    const segs = (c.segments as { seg: number; uid: string | null; status: string }[]).map((s) => ({ ...s }));
+    const setSeg = (seg: number, owner: string | null) => {
+      const s = segs.find((x) => x.seg === seg);
+      if (s) {
+        s.uid = owner;
+        s.status = owner ? 'pending' : 'open';
+      }
+    };
+    tx.set(myRef, fresh(segment));
+    setSeg(segment, target);
+    if (other && otherRef) {
+      tx.set(otherRef, fresh(oldSeg));
+      setSeg(oldSeg, other.id);
+    } else {
+      // الخانة الجديدة كانت فاضية: العضو ياخدها، وخانته القديمة تبقى متاحة للتطوع.
+      if (emptyDoc) tx.delete(emptyDoc.ref);
+      setSeg(oldSeg, null);
+      tx.set(groupRef(groupId).collection('portions').doc(), {
+        ...range(oldSeg), cycle: n, quarterCount: g.wardQuarters, assignee: null, status: 'open', origin: 'empty',
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    }
+    tx.update(cRef, { segments: segs });
+    return { applied: 'now' as const };
   });
-  return { ok: true };
+  return { ok: true, ...result };
 });
 
 /** الأدمن ينقل الأدمنية لعضو تاني، وهو بيبقى مساعد. */

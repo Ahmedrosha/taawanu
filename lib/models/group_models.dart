@@ -81,11 +81,16 @@ class Member {
     required this.name,
     this.photoUrl,
     required this.points,
+    this.nowSegCycle,
+    this.nowSeg,
   });
 
   final String uid;
   final String role;
   final int slot;
+  /// لو الأدمن غيّر ورد العضو بعد ما بدأ يقرا: الورد الحالي لحد آخر الدورة دي.
+  final int? nowSegCycle;
+  final int? nowSeg;
   final String name;
   final String? photoUrl;
   final int points;
@@ -102,6 +107,8 @@ class Member {
       name: (d['name'] as String?) ?? '—',
       photoUrl: d['photoUrl'] as String?,
       points: _int(d['points']),
+      nowSegCycle: ((d['nowSegment'] as Map?)?['cycle'] as num?)?.toInt(),
+      nowSeg: ((d['nowSegment'] as Map?)?['seg'] as num?)?.toInt(),
     );
   }
 }

@@ -592,7 +592,13 @@ class _MembersList extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               subtitle: Text(
-                '${segmentLabel(t, segmentForSlot(members[i].slot, group.isActive ? group.currentCycle : 1, group.slots), group.wardQuarters)} · ${roleLabel(t, members[i].role)}',
+                [
+                  segmentLabel(t, currentSegment(group, members[i]), group.wardQuarters),
+                  // التغيير هيتطبّق من الدورة الجاية.
+                  if (group.isActive && members[i].nowSegCycle == group.currentCycle)
+                    t.fromNextCycle(segmentLabel(t, segmentForSlot(members[i].slot, group.currentCycle + 1, group.slots), group.wardQuarters)),
+                  roleLabel(t, members[i].role),
+                ].join(' · '),
                 style: const TextStyle(fontSize: 12),
               ),
               trailing: Text(t.pointsN(members[i].points), style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700)),
@@ -672,20 +678,31 @@ extension on _MembersList {
   /// اختيار جزء جديد للعضو. لو الجزء مع حد تاني بيتبادلوا.
   Future<void> _move(BuildContext context, Member target) async {
     final t = AppLocalizations.of(context);
-    // قبل البداية: الدورة الأولى. بعدها: التغيير بيبدأ من الدورة الجاية.
-    final cycle = group.isActive ? group.currentCycle + 1 : 1;
-    final holders = {for (final m in members) segmentForSlot(m.slot, cycle, group.slots): m.name};
+    final messenger = ScaffoldMessenger.of(context);
+    // الأرقام = ورد كل عضو في الدورة الحالية (أو الأولى قبل البداية).
+    final holders = {for (final m in members) currentSegment(group, m): m.name};
     final seg = await showSegmentPicker(
       context,
       wardQuarters: group.wardQuarters,
       slots: group.slots,
-      selected: segmentForSlot(target.slot, cycle, group.slots),
+      selected: currentSegment(group, target),
       holders: holders,
       note: group.isActive ? t.changePortionNoteActive : t.changePortionNote,
     );
     if (seg == null || !context.mounted) return;
-    await runAction(context, () => GroupsService.instance.moveMember(group.id, target.uid, seg));
+    int? next;
+    final ok = await runAction(context, () async => next = await GroupsService.instance.moveMember(group.id, target.uid, seg));
+    if (ok && next != null) {
+      messenger.showSnackBar(SnackBar(content: Text(t.moveAppliesNext(segmentLabel(t, next!, group.wardQuarters)))));
+    }
   }
+}
+
+/// ورد العضو في الدورة الحالية (لو الأدمن غيّره بعد ما بدأ، بيفضل القديم لحد آخر الدورة).
+int currentSegment(Group group, Member m) {
+  final n = group.isActive ? group.currentCycle : 1;
+  if (m.nowSegCycle == n && m.nowSeg != null) return m.nowSeg!;
+  return segmentForSlot(m.slot, n, group.slots);
 }
 
 class _BoardMenu extends StatelessWidget {

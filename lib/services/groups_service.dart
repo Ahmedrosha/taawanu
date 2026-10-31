@@ -185,8 +185,11 @@ class GroupsService {
   }
 
   /// تغيير جزء عضو (لو مع حد تاني بيتبادلوا).
-  Future<void> moveMember(String groupId, String memberUid, int segment) =>
-      _call('moveMember', {'groupId': groupId, 'uid': memberUid, 'segment': segment});
+  /// بيرجّع رقم ورد الدورة الجاية لو التغيير مش هيتطبّق غير منها (null لو اتطبّق على طول).
+  Future<int?> moveMember(String groupId, String memberUid, int segment) async {
+    final d = await _call('moveMember', {'groupId': groupId, 'uid': memberUid, 'segment': segment});
+    return d['applied'] == 'next' ? (d['nextSegment'] as num?)?.toInt() : null;
+  }
 
   Future<void> transferAdmin(String groupId, String memberUid) =>
       _call('transferAdmin', {'groupId': groupId, 'uid': memberUid});

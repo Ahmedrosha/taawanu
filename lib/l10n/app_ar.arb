@@ -190,7 +190,7 @@
   "segmentTaken": "الورد ده اتاخد لسه، اختار غيره.",
   "changePortion": "غيّر الورد",
   "changePortionNote": "اختار الورد الجديد. لو مع حد تاني هيتبادلوا.",
-  "changePortionNoteActive": "التغيير بيبدأ من الدورة الجاية. لو الورد مع حد تاني هيتبادلوا.",
+  "changePortionNoteActive": "لو العضو لسه مبدأش يقرا ورده، التغيير بيتطبّق على طول. ولو بدأ، بيتطبّق من الدورة الجاية. ولو الورد مع حد تاني هيتبادلوا.",
   "reviewerSignIn": "دخول المراجعين",
   "email": "الإيميل",
   "password": "كلمة السر",
@@ -270,5 +270,7 @@
   "appearance": "المظهر",
   "themeSystem": "تلقائي",
   "themeLight": "فاتح",
-  "themeDark": "غامق"
+  "themeDark": "غامق",
+  "moveAppliesNext": "العضو كان بدأ يقرا، فالتغيير هيبدأ من الدورة الجاية: {label}",
+  "fromNextCycle": "من الدورة الجاية: {label}"
 }
