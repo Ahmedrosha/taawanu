@@ -10,7 +10,7 @@ on:
       track:
         description: "المسار"
         type: choice
-        options: [internal, alpha, production]
+        options: [internal, alpha, production, status]
         default: internal
 
 jobs:
@@ -41,6 +41,13 @@ jobs:
               return r.json()
           edit = check(s.post(f'{base}/edits'))['id']
           track = os.environ['TRACK']
+          if track == 'status':
+              # بس بنعرض النسخ اللي على كل مسار.
+              for t in check(s.get(f'{base}/edits/{edit}/tracks')).get('tracks', []):
+                  rel = '; '.join(f"{r.get('versionCodes')} {r.get('status')}" for r in t.get('releases', []))
+                  print(f"::notice title={t['track']}::{rel or '-'}")
+              s.delete(f'{base}/edits/{edit}')
+              raise SystemExit(0)
           body = {'track': track, 'releases': [{
               'versionCodes': [os.environ['VERSION_CODE']], 'status': 'completed',
               'releaseNotes': [{'language': 'ar', 'text': 'نسخة تجريبية'}],
