@@ -36,3 +36,4 @@ node_modules/
 firestore-debug.log
 
 functions/lib/
+site/mushaf/

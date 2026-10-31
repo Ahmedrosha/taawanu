@@ -33,6 +33,14 @@ class Prefs {
 
   Future<void> setReaderFont(String v) => _p.setString('readerFont', v);
 
+  /// شكل القراءة: 'pages' = صفحات المصحف (الافتراضي)، 'text' = نص متصل بالحجم اللي يختاره.
+  String get readerView => _p.getString('readerView') == 'text' ? 'text' : 'pages';
+  Future<void> setReaderView(String v) => _p.setString('readerView', v);
+
+  /// خط الصفحات: 'hafs' = خط حفص (جوه التطبيق)، 'qpc' = خطوط صفحات المجمع (بتتحمّل).
+  String get pageStyle => _p.getString('pageStyle') == 'qpc' ? 'qpc' : 'hafs';
+  Future<void> setPageStyle(String v) => _p.setString('pageStyle', v);
+
   /// عدادات الأذكار بتتصفر كل يوم.
   Map<String, int> adhkarCounts(String day) {
     if (_p.getString('adhkarDay') != day) return {};

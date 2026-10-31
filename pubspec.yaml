@@ -27,6 +27,7 @@ dependencies:
   hijri: ^3.0.0
   flutter_local_notifications: ^18.0.1
   timezone: ^0.10.0
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
@@ -39,6 +40,7 @@ flutter:
   assets:
     - assets/quran/quran.json
     - assets/quran/madinah.json
+    - assets/mushaf/pages.json
     - assets/adhkar/daily.json
     - assets/adhkar/hisn.json
     - assets/fonts/KFGQPC-LICENSE.txt

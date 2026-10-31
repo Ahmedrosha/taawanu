@@ -597,5 +597,38 @@
   "searchHisn": "Search chapters or duas",
   "noResults": "No results",
   "footnotes": "Notes and references",
-  "hisnSource": "Hisn al-Muslim, by Sa'id ibn Ali ibn Wahf al-Qahtani"
+  "hisnSource": "Hisn al-Muslim, by Sa'id ibn Ali ibn Wahf al-Qahtani",
+  "switchedToText": "Switched to continuous text so you can enlarge it. Tap the Mushaf button above to go back to pages.",
+  "enlargeText": "Enlarge text",
+  "mushafPagesView": "Mushaf page view",
+  "mushafFontOffline": "This page needs internet the first time to download its font.",
+  "useHafsPages": "Read with the Hafs font instead",
+  "readingView": "Reading view",
+  "viewPages": "Mushaf pages",
+  "viewText": "Continuous text",
+  "pageStyle": "Page font",
+  "pageStyleHafs": "Hafs font",
+  "pageStyleQpc": "Complex fonts (identical to print)",
+  "pagesNote": "Same lines and pages as the Madinah Mushaf. Enlarging the text while reading switches to continuous text; the Mushaf button brings the pages back.",
+  "qpcNote": "A King Fahd Complex font for each page, downloaded the first time the page opens (needs internet). You can download them all at once (about 160 MB).",
+  "downloadAllPages": "Download all pages",
+  "downloadingPages": "Downloading… {percent}%",
+  "@downloadingPages": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "pagesDownloaded": "{n} of 604 pages downloaded",
+  "@pagesDownloaded": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteDownloadedPages": "Delete downloaded pages",
+  "downloadFailed": "Download didn't finish. Check your connection and try again.",
+  "textViewSettings": "Continuous text"
 }

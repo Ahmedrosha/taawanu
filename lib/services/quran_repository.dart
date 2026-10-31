@@ -67,6 +67,21 @@ class QuranData {
     return (s - 1, ayahCount(s - 1));
   }
 
+  /// الربع اللي فيه الآية دي (١–٢٤٠).
+  int quarterOf(int surah, int ayah) {
+    var lo = 1, hi = 240;
+    while (lo < hi) {
+      final mid = (lo + hi + 1) ~/ 2;
+      final q = _quarters[mid - 1];
+      if (q[0] < surah || (q[0] == surah && q[1] <= ayah)) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    return lo;
+  }
+
   /// كل آيات الربع بالترتيب.
   List<Ayah> ayahsOfQuarter(int quarter) {
     final (s1, a1) = quarterStart(quarter);

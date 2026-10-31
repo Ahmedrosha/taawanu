@@ -7,15 +7,19 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../l10n/gen/app_localizations.dart';
 import '../../services/groups_service.dart';
+import '../../services/mushaf_fonts.dart';
+import '../../services/mushaf_layout.dart';
 import '../../services/prefs.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/quran_style.dart';
 import '../../widgets/ui.dart';
 import '../groups/group_board_screen.dart' show ReadRequest;
+import 'mushaf_page.dart';
 
 
 /// قراءة الورد ربع ربع، وتسجيل كل ربع لما يخلص.
+/// الافتراضي صفحات زي مصحف المدينة، واللي عايز يكبّر الخط بيتحوّل لنص متصل ويقدر يرجع.
 class ReaderScreen extends StatefulWidget {
   const ReaderScreen({super.key, required this.request});
 
@@ -36,6 +40,34 @@ class _ReaderScreenState extends State<ReaderScreen> {
   final _anchors = _Anchors();
   Timer? _saveTimer;
 
+  /// 'pages' = صفحات المصحف، 'text' = نص متصل.
+  late String _view = Prefs.instance.readerView;
+  late bool _qpc = Prefs.instance.pageStyle == 'qpc';
+  PageController? _pager;
+  int _page = 1;
+  QuranData? _pageQuran;
+  MushafLayout? _layout;
+  final _pointers = <int, Offset>{};
+  double? _pinchStart;
+
+  Future<(QuranData, MushafLayout?)>? _textData;
+  Future<(QuranData, MushafLayout?)>? _pagesData;
+
+  bool get _pages => _view == 'pages';
+
+  Future<(QuranData, MushafLayout?)> get _data =>
+      _pages ? _pagesData ??= _loadPages() : _textData ??= _loadText();
+
+  /// الصفحات دايمًا بنص مصحف المدينة، عشان الكلمات تطابق التوزيع.
+  Future<(QuranData, MushafLayout?)> _loadPages() async {
+    final q = QuranRepository.instance.loadMadinah();
+    final layout = MushafLayout.load();
+    return (await q, await layout);
+  }
+
+  Future<(QuranData, MushafLayout?)> _loadText() async =>
+      (await QuranRepository.instance.loadFor(Prefs.instance.readerFont), null);
+
   ReadRequest get r => widget.request;
 
   /// مفتاح حفظ مكان القراءة لكل ورد.
@@ -48,6 +80,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
     _saveTimer?.cancel();
     _savePosition();
     _scroll.dispose();
+    _pager?.dispose();
     super.dispose();
   }
 
@@ -97,8 +130,127 @@ class _ReaderScreenState extends State<ReaderScreen> {
   }
 
   void _savePosition() {
-    final pos = _topAyah();
+    final pos = _pages ? _pagePosition() : _topAyah();
     if (pos != null) Prefs.instance.setReadPosition(_posKey, pos.toString());
+  }
+
+  // ---------- صفحات المصحف ----------
+
+  int _cmp(int s1, int a1, int s2, int a2) => s1 != s2 ? s1 - s2 : a1 - a2;
+
+  /// أول آية في الصفحة الحالية (جوه حدود الورد).
+  _AyahPos? _pagePosition() {
+    final q = _pageQuran, layout = _layout;
+    if (q == null || layout == null) return null;
+    var (s, a) = layout.firstAyahOf(_page);
+    final (s1, a1) = q.quarterStart(r.fromQuarter);
+    final (s2, a2) = q.quarterEnd(r.toQuarter);
+    if (_cmp(s, a, s1, a1) < 0) (s, a) = (s1, a1);
+    if (_cmp(s, a, s2, a2) > 0) (s, a) = (s2, a2);
+    return _AyahPos(q.quarterOf(s, a).clamp(r.fromQuarter, r.toQuarter), s, a);
+  }
+
+  /// التحويل بين الصفحات والنص المتصل، من نفس الآية.
+  Future<void> _setView(String view) async {
+    if (view == _view) return;
+    final pos = _pages ? _pagePosition() : _topAyah();
+    if (pos != null) await Prefs.instance.setReadPosition(_posKey, pos.toString());
+    await Prefs.instance.setReaderView(view);
+    if (!mounted) return;
+    final old = _pager;
+    setState(() {
+      _view = view;
+      _pager = null;
+      _scrolled = false;
+      _anchors.paragraphs.clear();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => old?.dispose());
+  }
+
+  Future<void> _enlarge() async {
+    final t = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    await _setView('text');
+    messenger.showSnackBar(SnackBar(content: Text(t.switchedToText), duration: const Duration(seconds: 5)));
+  }
+
+  void _useHafs() {
+    Prefs.instance.setPageStyle('hafs');
+    setState(() => _qpc = false);
+  }
+
+  /// تكبير بصباعين على الصفحة = تحويل للنص المتصل.
+  void _onPointer(PointerEvent e) {
+    if (e is PointerDownEvent) {
+      _pointers[e.pointer] = e.position;
+    } else if (e is PointerMoveEvent) {
+      _pointers[e.pointer] = e.position;
+    } else {
+      _pointers.remove(e.pointer);
+    }
+    if (_pointers.length != 2) {
+      _pinchStart = null;
+      return;
+    }
+    final pts = _pointers.values.toList();
+    final d = (pts[0] - pts[1]).distance;
+    _pinchStart ??= d;
+    if (_pinchStart! > 0 && d / _pinchStart! > 1.3) {
+      _pointers.clear();
+      _pinchStart = null;
+      _enlarge();
+    }
+  }
+
+  Widget _pagesBody(QuranData q, MushafLayout layout) {
+    _pageQuran = q;
+    _layout = layout;
+    final (s1, a1) = q.quarterStart(r.fromQuarter);
+    final (s2, a2) = q.quarterEnd(r.toQuarter);
+    final first = layout.pageOf(s1, a1);
+    final last = layout.endPageOf(s2, a2);
+    if (_pager == null) {
+      final saved = _AyahPos.parse(Prefs.instance.readPosition(_posKey));
+      var start = first;
+      if (saved != null) {
+        start = layout.pageOf(saved.surah, saved.ayah);
+      } else if (_read > 0 && _read < r.quarterCount) {
+        final (s, a) = q.quarterStart(r.fromQuarter + _read);
+        start = layout.pageOf(s, a);
+      }
+      _page = start.clamp(first, last);
+      _pager = PageController(initialPage: _page - first);
+      if (_qpc) MushafFonts.instance.prefetch(_page);
+    }
+    bool inRange(int s, int a) => _cmp(s, a, s1, a1) >= 0 && _cmp(s, a, s2, a2) <= 0;
+    return Listener(
+      onPointerDown: _onPointer,
+      onPointerMove: _onPointer,
+      onPointerUp: _onPointer,
+      onPointerCancel: _onPointer,
+      child: Directionality(
+        // المصحف بيتقلّب من اليمين للشمال حتى لو التطبيق إنجليزي.
+        textDirection: TextDirection.rtl,
+        child: PageView.builder(
+          controller: _pager,
+          itemCount: last - first + 1,
+          onPageChanged: (i) {
+            _page = first + i;
+            if (_qpc) MushafFonts.instance.prefetch(_page);
+            _saveTimer?.cancel();
+            _saveTimer = Timer(const Duration(milliseconds: 800), _savePosition);
+          },
+          itemBuilder: (context, i) => MushafPage(
+            layout: layout,
+            quran: q,
+            page: first + i,
+            qpc: _qpc,
+            inRange: inRange,
+            onUseHafs: _useHafs,
+          ),
+        ),
+      ),
+    );
   }
 
   /// بيوصل لربع حتى لو لسه مش متبني في القايمة (بيقرّب بالتقدير وبعدين بيظبط).
@@ -204,16 +356,22 @@ class _ReaderScreenState extends State<ReaderScreen> {
             Text(r.groupName, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
           ],
         ),
-        actions: [
-          IconButton(tooltip: t.textSize, onPressed: () => _changeFont(-2), icon: const Icon(Icons.text_decrease)),
-          IconButton(tooltip: t.textSize, onPressed: () => _changeFont(2), icon: const Icon(Icons.text_increase)),
-        ],
+        actions: _pages
+            ? [IconButton(tooltip: t.enlargeText, onPressed: _enlarge, icon: const Icon(Icons.zoom_in))]
+            : [
+                IconButton(tooltip: t.mushafPagesView, onPressed: () => _setView('pages'), icon: const Icon(Icons.menu_book_outlined)),
+                IconButton(tooltip: t.textSize, onPressed: () => _changeFont(-2), icon: const Icon(Icons.text_decrease)),
+                IconButton(tooltip: t.textSize, onPressed: () => _changeFont(2), icon: const Icon(Icons.text_increase)),
+              ],
       ),
-      body: FutureBuilder<QuranData>(
-        future: QuranRepository.instance.loadFor(Prefs.instance.readerFont),
+      body: FutureBuilder<(QuranData, MushafLayout?)>(
+        key: ValueKey(_view),
+        future: _data,
         builder: (context, snap) {
-          final q = snap.data;
-          if (q == null) return const Center(child: CircularProgressIndicator());
+          final data = snap.data;
+          if (data == null) return const Center(child: CircularProgressIndicator());
+          final (q, layout) = data;
+          if (layout != null) return _pagesBody(q, layout);
           _scrollToCurrent();
           // بنحفظ المكان بعد ما التمرير يقف بثانية.
           return NotificationListener<ScrollEndNotification>(
@@ -258,7 +416,22 @@ class _ReaderScreenState extends State<ReaderScreen> {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 6, 12, 10),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // في وضع الصفحات زرار تسجيل الربع تحت على طول.
+              if (_pages && _read < r.quarterCount)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, bottom: 8),
+                  child: FilledButton(
+                    onPressed: _busy ? null : _markQuarter,
+                    child: Text(_read == r.quarterCount - 1
+                        ? (r.isPortion ? t.finishPortionExtra : t.finishedPortion)
+                        : '${t.markQuarterDone} · ${rangeLabel(t, r.fromQuarter + _read, r.fromQuarter + _read)}'),
+                  ),
+                ),
+              Row(
             children: [
               Expanded(
                 child: Column(
@@ -278,6 +451,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
                 icon: const Icon(Icons.undo, size: 18),
                 label: Text(t.undo),
               ),
+            ],
+          ),
             ],
           ),
         ),

@@ -34,6 +34,17 @@ jobs:
         env:
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: sed -i "s/__APPLE_TEAM_ID__/${TEAM_ID}/" site/.well-known/apple-app-site-association
+      # خطوط صفحات المجمع لوضع "مطابق للمطبوع" في التطبيق: بتتحوّل لـ ttf وتترفع على taawanu.app/mushaf/qpc2
+      - name: Mushaf page fonts
+        if: contains(inputs.target, 'hosting')
+        run: |
+          git clone -q --filter=blob:none --no-checkout https://github.com/zonetecde/mushaf-layout.git "$RUNNER_TEMP/ml"
+          cd "$RUNNER_TEMP/ml"
+          git checkout -q 421e9eaa991897ecd50d7abb79160651a45976d3 -- fonts/QPC2
+          cd "$GITHUB_WORKSPACE"
+          pip install --quiet fonttools brotli
+          python3 tools/build_mushaf_fonts.py "$RUNNER_TEMP/ml/fonts/QPC2" site/mushaf/qpc2
+          echo "::notice title=Mushaf fonts::$(ls site/mushaf/qpc2 | wc -l) files, $(du -sh site/mushaf/qpc2 | cut -f1)"
       - name: Deploy
         run: |
           set +e
