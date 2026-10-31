@@ -43,29 +43,50 @@ class _ReaderScreenState extends State<ReaderScreen> {
     });
   }
 
-  Future<void> _markQuarter() async {
-    final t = AppLocalizations.of(context);
+  /// تسجيل عدد الأرباع (للأمام أو للتراجع). الورد العادي والإضافي نفس الطريقة.
+  Future<int?> _save(int value) async {
     final svc = GroupsService.instance;
-    final next = _read + 1;
-    final finishing = r.isPortion || next == r.quarterCount;
-    setState(() => _busy = true);
     var points = 0;
+    setState(() => _busy = true);
     final ok = await runAction(context, () async {
-      if (r.isPortion) {
-        points = await svc.completePortion(r.groupId, r.portionId!);
-      } else {
-        points = await svc.updateProgress(r.groupId, next);
-      }
+      points = r.isPortion
+          ? await svc.updatePortionProgress(r.groupId, r.portionId!, value)
+          : await svc.updateProgress(r.groupId, value);
     });
-    if (!mounted) return;
+    if (!mounted) return null;
     setState(() {
       _busy = false;
-      if (ok) _read = r.isPortion ? r.quarterCount : next;
+      if (ok) _read = value;
     });
-    if (ok && finishing) {
+    return ok ? points : null;
+  }
+
+  Future<void> _markQuarter() async {
+    final t = AppLocalizations.of(context);
+    final next = _read + 1;
+    final finishing = next == r.quarterCount;
+    // تأكيد قبل آخر ربع، عشان الضغط بالغلط.
+    if (finishing && !await confirmDialog(context, title: t.confirmFinishTitle, body: t.confirmFinishBody)) return;
+    if (!mounted) return;
+    final points = await _save(next);
+    if (points == null || !mounted) return;
+    if (finishing) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.earnedPoints(points))));
       context.pop();
     }
+  }
+
+  /// تراجع عن آخر ربع اتسجّل. لو الورد كان خلص، النقاط بتتشال.
+  Future<void> _undo() async {
+    final t = AppLocalizations.of(context);
+    final wasDone = _read == r.quarterCount;
+    if (wasDone && !await confirmDialog(context, title: t.undo, body: t.undoDoneConfirm)) return;
+    if (!mounted) return;
+    final points = await _save(_read - 1);
+    if (points == null || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(points < 0 ? t.undoneWithPoints(-points) : t.undone),
+    ));
   }
 
   Future<void> _changeFont(double delta) async {
@@ -113,36 +134,31 @@ class _ReaderScreenState extends State<ReaderScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                   sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize)),
                 ),
-                if (!r.isPortion && i == _read)
+                if (i == _read)
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                       child: FilledButton(
                         onPressed: _busy ? null : _markQuarter,
-                        child: Text(i == r.quarterCount - 1 ? t.finishedPortion : t.markQuarterDone),
+                        child: Text(i == r.quarterCount - 1 ? (r.isPortion ? t.finishPortionExtra : t.finishedPortion) : t.markQuarterDone),
                       ),
                     ),
                   ),
               ],
-              if (r.isPortion)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-                    child: FilledButton(onPressed: _busy ? null : _markQuarter, child: Text(t.finishPortionExtra)),
-                  ),
-                ),
               const SliverToBoxAdapter(child: SizedBox(height: 40)),
             ],
           );
         },
       ),
-      bottomNavigationBar: r.isPortion
-          ? null
-          : SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 6, 20, 10),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 6, 12, 10),
+          child: Row(
+            children: [
+              Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     ProgressLine(value: _read / r.quarterCount),
                     const SizedBox(height: 6),
@@ -150,7 +166,17 @@ class _ReaderScreenState extends State<ReaderScreen> {
                   ],
                 ),
               ),
-            ),
+              const SizedBox(width: 8),
+              // تراجع عن آخر ربع (لو اتسجّل بالغلط).
+              TextButton.icon(
+                onPressed: _busy || _read == 0 ? null : _undo,
+                icon: const Icon(Icons.undo, size: 18),
+                label: Text(t.undo),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

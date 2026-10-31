@@ -198,6 +198,9 @@ class Portion {
     required this.assignee,
     required this.status,
     required this.origin,
+    this.quartersRead = 0,
+    this.recordedBy,
+    this.doneCycle,
   });
 
   final String id;
@@ -208,8 +211,14 @@ class Portion {
   final String? assignee;
   final String status; // open | assigned | done
   final String origin; // empty | carry | distribute | volunteer | ask | left
+  final int quartersRead;
+  final String? recordedBy;
+  /// الدورة اللي الورد خلص فيها (عشان يفضل ظاهر لحد آخرها).
+  final int? doneCycle;
 
   bool get isOpen => status == 'open';
+  bool get isDone => status == 'done';
+  double get progress => quarterCount == 0 ? 0 : (isDone ? 1 : quartersRead / quarterCount);
 
   factory Portion.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
@@ -222,6 +231,9 @@ class Portion {
       assignee: d['assignee'] as String?,
       status: (d['status'] as String?) ?? 'open',
       origin: (d['origin'] as String?) ?? 'volunteer',
+      quartersRead: _int(d['quartersRead']),
+      recordedBy: d['recordedBy'] as String?,
+      doneCycle: (d['doneCycle'] as num?)?.toInt(),
     );
   }
 }

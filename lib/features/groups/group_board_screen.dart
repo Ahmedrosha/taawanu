@@ -194,14 +194,19 @@ class _ActiveCycle extends StatelessWidget {
             if (cycle != null) _KhatmaMap(group: group, cycle: cycle, members: members, me: me),
             StreamBuilder<List<Portion>>(
               stream: portionsStream,
-              builder: (context, pSnap) {
-                final portions = pSnap.data ?? const <Portion>[];
-                if (portions.isEmpty) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.only(top: 20),
-                  child: _ExtraPortions(group: group, portions: portions, members: members, me: me),
-                );
-              },
+              builder: (context, pSnap) => _DonePortions(
+                // المفتاح بالدورة: لما الدورة تتغير، الاشتراك يتجدد.
+                key: ValueKey(group.currentCycle),
+                group: group,
+                builder: (done) {
+                  final portions = [...?pSnap.data, ...done]..sort((a, b) => a.fromQuarter.compareTo(b.fromQuarter));
+                  if (portions.isEmpty) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 20),
+                    child: _ExtraPortions(group: group, portions: portions, members: members, me: me),
+                  );
+                },
+              ),
             ),
           ],
         );
@@ -259,6 +264,14 @@ class _MyPortionCard extends StatelessWidget {
               icon: const Icon(Icons.menu_book_outlined),
               label: Text(a.quartersRead > 0 ? t.continueReading : t.readNow),
             ),
+          ] else if (a.isDone && !a.closed) ...[
+            // الورد خلص: يقدر يفتحه تاني (ومنه يتراجع لو سجّل بالغلط).
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => context.push('/read', extra: ReadRequest.regular(group: group, assignment: a)),
+              icon: const Icon(Icons.menu_book_outlined),
+              label: Text(t.open),
+            ),
           ],
         ],
       ),
@@ -290,7 +303,7 @@ class ReadRequest {
         groupName: group.name,
         fromQuarter: portion.fromQuarter,
         toQuarter: portion.toQuarter,
-        quartersRead: 0,
+        quartersRead: portion.isDone ? portion.quarterCount : portion.quartersRead,
         portionId: portion.id,
       );
 
@@ -413,6 +426,27 @@ String segmentStatusLabel(AppLocalizations t, String status) => switch (status) 
       _ => t.statusPending,
     };
 
+/// الأوراد الإضافية اللي خلصت في الدورة الحالية.
+class _DonePortions extends StatefulWidget {
+  const _DonePortions({super.key, required this.group, required this.builder});
+
+  final Group group;
+  final Widget Function(List<Portion> done) builder;
+
+  @override
+  State<_DonePortions> createState() => _DonePortionsState();
+}
+
+class _DonePortionsState extends State<_DonePortions> {
+  late final Stream<List<Portion>> _done = GroupsService.instance.donePortions(widget.group.id, widget.group.currentCycle);
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<List<Portion>>(
+        stream: _done,
+        builder: (context, snap) => widget.builder(snap.data ?? const []),
+      );
+}
+
 class _ExtraPortions extends StatelessWidget {
   const _ExtraPortions({required this.group, required this.portions, required this.members, required this.me});
 
@@ -436,40 +470,67 @@ class _ExtraPortions extends StatelessWidget {
         for (final p in portions)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: AppCard(
-              child: Row(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                // الورد اللي خلص: أخضر فاتح.
+                color: p.isDone ? const Color(0xFFE8F5EC) : AppColors.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: p.isDone ? const Color(0xFFA7D7B5) : AppColors.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(rangeLabel(t, p.fromQuarter, p.toQuarter), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${t.cycleN(p.cycle)} · ${p.isOpen ? t.statusOpen : t.assignedTo(names[p.assignee] ?? '—')}',
-                          style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-                        ),
+                  Row(
+                    children: [
+                      if (p.isDone) ...[
+                        const Icon(Icons.check_circle, color: AppColors.statusDone, size: 22),
+                        const SizedBox(width: 8),
                       ],
-                    ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(rangeLabel(t, p.fromQuarter, p.toQuarter), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                            const SizedBox(height: 2),
+                            Text(
+                              [
+                                t.cycleN(p.cycle),
+                                if (p.isDone) t.portionDone else if (p.isOpen) t.statusOpen,
+                                if (p.assignee != null) t.assignedTo(names[p.assignee] ?? '—'),
+                                if (p.recordedBy != null) t.recordedByAdminNote,
+                              ].join(' · '),
+                              style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (p.isOpen)
+                        TextButton(
+                          onPressed: () => runAction(context, () => svc.claimPortion(group.id, p.id)),
+                          child: Text(t.take),
+                        )
+                      else if (p.assignee == svc.uid)
+                        FilledButton.tonal(
+                          // الثيم بيخلي الزرار بعرض الشاشة، وهنا جوه صف فلازم عرض محدود.
+                          style: FilledButton.styleFrom(minimumSize: const Size(0, 40), padding: const EdgeInsets.symmetric(horizontal: 16)),
+                          onPressed: () => context.push('/read', extra: ReadRequest.portion(group: group, portion: p)),
+                          child: Text(p.isDone ? t.open : (p.quartersRead > 0 ? t.continueReading : t.readNow)),
+                        ),
+                      if (me?.isManager ?? false)
+                        IconButton(
+                          tooltip: t.assignToMember,
+                          icon: const Icon(Icons.more_vert),
+                          onPressed: () => _manage(context, p, names),
+                        ),
+                    ],
                   ),
-                  if (p.isOpen)
-                    TextButton(
-                      onPressed: () => runAction(context, () => svc.claimPortion(group.id, p.id)),
-                      child: Text(t.take),
-                    )
-                  else if (p.assignee == svc.uid)
-                    FilledButton.tonal(
-                      // الثيم بيخلي الزرار بعرض الشاشة، وهنا جوه صف فلازم عرض محدود.
-                      style: FilledButton.styleFrom(minimumSize: const Size(0, 40), padding: const EdgeInsets.symmetric(horizontal: 16)),
-                      onPressed: () => context.push('/read', extra: ReadRequest.portion(group: group, portion: p)),
-                      child: Text(t.readNow),
-                    ),
-                  if (me?.isManager ?? false)
-                    IconButton(
-                      tooltip: t.assignToMember,
-                      icon: const Icon(Icons.more_vert),
-                      onPressed: () => _assign(context, p),
-                    ),
+                  if (!p.isDone && p.quartersRead > 0) ...[
+                    const SizedBox(height: 10),
+                    ProgressLine(value: p.progress),
+                    const SizedBox(height: 4),
+                    Text(t.quartersProgress(p.quartersRead, p.quarterCount), style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                  ],
                 ],
               ),
             ),
@@ -478,7 +539,7 @@ class _ExtraPortions extends StatelessWidget {
     );
   }
 
-  Future<void> _assign(BuildContext context, Portion p) async {
+  Future<void> _manage(BuildContext context, Portion p, Map<String, String> names) async {
     final t = AppLocalizations.of(context);
     final choice = await showModalBottomSheet<String>(
       context: context,
@@ -487,20 +548,20 @@ class _ExtraPortions extends StatelessWidget {
         child: ListView(
           shrinkWrap: true,
           children: [
-            ListTile(leading: const Icon(Icons.check_circle_outline, color: AppColors.statusDone), title: Text(t.markPortionDoneByAdmin), onTap: () => Navigator.pop(context, '#done')),
-            ListTile(leading: const Icon(Icons.volunteer_activism_outlined), title: Text(t.makeOpen), onTap: () => Navigator.pop(context, '')),
-            const Divider(height: 1),
-            for (final m in members)
-              ListTile(leading: const Icon(Icons.person_outline), title: Text(m.name), onTap: () => Navigator.pop(context, m.uid)),
+            ListTile(leading: const Icon(Icons.edit_note), title: Text(t.recordProgress), onTap: () => Navigator.pop(context, '#record')),
+            if (!p.isDone) ...[
+              ListTile(leading: const Icon(Icons.volunteer_activism_outlined), title: Text(t.makeOpen), onTap: () => Navigator.pop(context, '')),
+              const Divider(height: 1),
+              for (final m in members)
+                ListTile(leading: const Icon(Icons.person_outline), title: Text(m.name), onTap: () => Navigator.pop(context, m.uid)),
+            ],
           ],
         ),
       ),
     );
     if (choice == null || !context.mounted) return;
-    if (choice == '#done') {
-      if (await confirmDialog(context, title: t.markPortionDoneByAdmin, body: t.recordProgressNote) && context.mounted) {
-        await runAction(context, () => GroupsService.instance.recordPortion(group.id, p.id, done: true));
-      }
+    if (choice == '#record') {
+      await showRecordPortion(context, group: group, portion: p, name: p.assignee != null ? (names[p.assignee] ?? '—') : t.extraPortions);
       return;
     }
     await runAction(context, () => GroupsService.instance.assignPortion(group.id, p.id, choice.isEmpty ? null : choice));

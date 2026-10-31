@@ -107,6 +107,14 @@ class GroupsService {
       .snapshots()
       .map((s) => s.docs.map(Portion.fromDoc).toList()..sort((a, b) => a.fromQuarter.compareTo(b.fromQuarter)));
 
+  /// الأوراد الإضافية اللي خلصت في الدورة دي (بتفضل ظاهرة لحد آخرها).
+  Stream<List<Portion>> donePortions(String groupId, int cycle) => _group(groupId)
+      .collection('portions')
+      .where('status', isEqualTo: 'done')
+      .where('doneCycle', isEqualTo: cycle)
+      .snapshots()
+      .map((s) => s.docs.map(Portion.fromDoc).toList());
+
   /// المجموعات العامة اللي فيها خانات فاضية.
   Future<List<Group>> explorePublic() async {
     final s = await _db
@@ -167,8 +175,14 @@ class GroupsService {
   Future<void> recordProgress(String groupId, String memberUid, int quartersRead) =>
       _call('recordProgress', {'groupId': groupId, 'uid': memberUid, 'quartersRead': quartersRead});
 
-  Future<void> recordPortion(String groupId, String portionId, {required bool done}) =>
-      _call('recordProgress', {'groupId': groupId, 'portionId': portionId, 'done': done});
+  Future<void> recordPortion(String groupId, String portionId, int quartersRead) =>
+      _call('recordProgress', {'groupId': groupId, 'portionId': portionId, 'quartersRead': quartersRead});
+
+  /// تقدم ورد إضافي ربع ربع. بيرجّع النقاط (بالسالب لو تراجع عن ورد كان خلص).
+  Future<int> updatePortionProgress(String groupId, String portionId, int quartersRead) async {
+    final data = await _call('updatePortionProgress', {'groupId': groupId, 'portionId': portionId, 'quartersRead': quartersRead});
+    return (data['points'] as num?)?.toInt() ?? 0;
+  }
 
   /// تغيير جزء عضو (لو مع حد تاني بيتبادلوا).
   Future<void> moveMember(String groupId, String memberUid, int segment) =>

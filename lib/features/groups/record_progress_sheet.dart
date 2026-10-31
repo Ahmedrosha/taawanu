@@ -34,37 +34,72 @@ Future<void> showRecordProgress(
     messenger.showSnackBar(SnackBar(content: Text(t.recordFromExtraPortions)));
     return;
   }
-  // العضو خلّص بنفسه وخد نقاطه: مفيش تعديل.
-  if (a.isDone && a.recordedBy == null) {
-    messenger.showSnackBar(SnackBar(content: Text(t.recordedBySelf(memberName))));
-    return;
-  }
-  final value = await showModalBottomSheet<int>(
-    context: context,
-    showDragHandle: true,
-    builder: (context) => _RecordSheet(name: memberName, assignment: a!),
+  final value = await _showSheet(
+    context,
+    title: t.recordProgressTitle(memberName),
+    from: a.fromQuarter,
+    to: a.toQuarter,
+    current: a.quartersRead,
+    // العضو خلّص بنفسه: الرجوع هيشيل نقاطه.
+    selfDone: a.isDone && a.recordedBy == null,
   );
   if (value == null || value == a.quartersRead || !context.mounted) return;
   await runAction(context, () => GroupsService.instance.recordProgress(group.id, memberUid, value));
 }
 
-class _RecordSheet extends StatefulWidget {
-  const _RecordSheet({required this.name, required this.assignment});
+/// نفس الشاشة لورد إضافي.
+Future<void> showRecordPortion(BuildContext context, {required Group group, required Portion portion, required String name}) async {
+  final t = AppLocalizations.of(context);
+  final current = portion.isDone ? portion.quarterCount : portion.quartersRead;
+  final value = await _showSheet(
+    context,
+    title: t.recordProgressTitle(name),
+    from: portion.fromQuarter,
+    to: portion.toQuarter,
+    current: current,
+    selfDone: portion.isDone && portion.recordedBy == null && portion.assignee != null,
+  );
+  if (value == null || value == current || !context.mounted) return;
+  await runAction(context, () => GroupsService.instance.recordPortion(group.id, portion.id, value));
+}
 
-  final String name;
-  final Assignment assignment;
+Future<int?> _showSheet(
+  BuildContext context, {
+  required String title,
+  required int from,
+  required int to,
+  required int current,
+  required bool selfDone,
+}) {
+  return showModalBottomSheet<int>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (context) => _RecordSheet(title: title, from: from, to: to, current: current, selfDone: selfDone),
+  );
+}
+
+class _RecordSheet extends StatefulWidget {
+  const _RecordSheet({required this.title, required this.from, required this.to, required this.current, required this.selfDone});
+
+  final String title;
+  final int from;
+  final int to;
+  final int current;
+  final bool selfDone;
 
   @override
   State<_RecordSheet> createState() => _RecordSheetState();
 }
 
 class _RecordSheetState extends State<_RecordSheet> {
-  late int _value = widget.assignment.quartersRead;
+  late int _value = widget.current;
+
+  int get _count => widget.to - widget.from + 1;
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final a = widget.assignment;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
@@ -72,24 +107,24 @@ class _RecordSheetState extends State<_RecordSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(t.recordProgressTitle(widget.name), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            Text(widget.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
-            Text(rangeLabel(t, a.fromQuarter, a.toQuarter), style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w600)),
+            Text(rangeLabel(t, widget.from, widget.to), style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            InfoBanner(text: t.recordProgressNote),
+            InfoBanner(text: widget.selfDone ? t.undoSelfDoneNote : t.recordProgressNote),
             const SizedBox(height: 16),
-            Text(t.quartersProgress(_value, a.quarterCount), style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(t.quartersProgress(_value, _count), style: const TextStyle(fontWeight: FontWeight.w600)),
             Slider(
               value: _value.toDouble(),
               min: 0,
-              max: a.quarterCount.toDouble(),
-              divisions: a.quarterCount,
+              max: _count.toDouble(),
+              divisions: _count,
               label: '$_value',
               onChanged: (v) => setState(() => _value = v.round()),
             ),
             const SizedBox(height: 8),
             FilledButton(
-              onPressed: () => Navigator.pop(context, a.quarterCount),
+              onPressed: widget.current == _count ? null : () => Navigator.pop(context, _count),
               child: Text(t.markWholeDone),
             ),
             const SizedBox(height: 8),
@@ -97,7 +132,7 @@ class _RecordSheetState extends State<_RecordSheet> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context, 0),
+                    onPressed: widget.current == 0 ? null : () => Navigator.pop(context, 0),
                     child: Text(t.reset),
                   ),
                 ),

@@ -319,73 +319,238 @@ async function maybeCompleteKhatma(groupId: string, cycleNo: number): Promise<vo
 }
 
 // ---------------------------------------------------------------------------
-// تسجيل تقدم الورد العادي
+// تسجيل التقدم: الورد العادي والأوراد الإضافية، من العضو نفسه أو من الأدمن/المساعد.
+// - العضو بياخد نقاطه لما يخلّص بنفسه، ولو تراجع النقاط دي بتتشال بنفس الرقم.
+// - تسجيل الأدمن/المساعد لورد حد تاني: من غير نقاط، ومش بيتحسب في الالتزام.
+// - بعد ما الختمة تكتمل مفيش تراجع (مكافأة الختمة اتوزعت خلاص).
 
-export const updateProgress = onCall(async (request) => {
-  const uid = requireUid(request);
-  const groupId = requireString(request.data?.groupId, 'groupId');
-  const quartersRead = request.data?.quartersRead;
-  if (typeof quartersRead !== 'number' || !Number.isInteger(quartersRead) || quartersRead < 0) {
-    throw new HttpsError('invalid-argument', 'quartersRead must be a non-negative integer');
-  }
-  const member = await requireMember(groupId, uid);
+interface Actor {
+  uid: string;
+  manager: boolean;
+}
+
+type Awarded = { pointsAwarded?: number; personalAwarded?: boolean };
+
+/** نقاط ورد عادي قديم اتسجّل قبل ما نحفظ النقاط الممنوحة. */
+function legacyRegularPoints(a: AssignmentDoc, c: CycleDoc): number {
+  const at = a.completedAt?.toDate();
+  if (!at) return regularPoints(a.quarterCount, false, false);
+  const onTime = at <= c.endsAt.toDate();
+  const early = at <= c.midAt.toDate();
+  return regularPoints(a.quarterCount, onTime, early);
+}
+
+type AssignmentOutcome =
+  | { kind: 'none' | 'partial' | 'doneByManager' }
+  | { kind: 'doneSelf'; points: number; bonus: number; first: boolean; personal: boolean }
+  | { kind: 'undone'; refund: number; personal: boolean; selfCounted: boolean };
+
+async function applyAssignmentProgress(groupId: string, target: string, quartersRead: number, actor: Actor) {
   const g = groupData(await groupRef(groupId).get());
   if (g.status !== 'active') throw new HttpsError('failed-precondition', 'Khatma not started.');
+  const member = await requireMember(groupId, target);
   const n = g.currentCycle;
-  const aRef = assignmentRef(groupId, n, uid);
+  const aRef = assignmentRef(groupId, n, target);
   const cRef = cycleRef(groupId, n);
+  const byManager = actor.manager && actor.uid !== target;
 
-  const result = await db.runTransaction(async (tx: Transaction) => {
+  const out = await db.runTransaction(async (tx: Transaction): Promise<AssignmentOutcome> => {
     const [aSnap, cSnap] = await Promise.all([tx.get(aRef), tx.get(cRef)]);
     if (!aSnap.exists) throw new HttpsError('not-found', 'No portion this cycle.');
-    const a = aSnap.data() as AssignmentDoc;
+    const a = aSnap.data() as AssignmentDoc & Awarded;
     const c = cSnap.data() as CycleDoc;
-    if (a.closed || a.status === 'done') throw new HttpsError('failed-precondition', 'Portion already closed.');
+    if (a.closed) throw new HttpsError('failed-precondition', 'Portion already closed.');
     if (quartersRead > a.quarterCount) throw new HttpsError('invalid-argument', 'Too many quarters.');
-
+    const wasDone = a.status === 'done';
     const done = quartersRead === a.quarterCount;
-    const segments = c.segments.map((s) => (s.seg === a.segment ? { ...s, status: done ? 'done' : quartersRead > 0 ? 'in_progress' : 'pending' } : s));
+    if (wasDone && done) return { kind: 'none' };
+    if (wasDone && c.khatmaComplete) throw new HttpsError('failed-precondition', 'Khatma already complete.');
 
-    if (!done) {
-      tx.update(aRef, { quartersRead, status: quartersRead > 0 ? 'in_progress' : 'pending', recordedBy: null });
-      tx.update(cRef, { segments });
-      return { done: false, points: 0, first: false };
+    const status = done ? 'done' : quartersRead > 0 ? 'in_progress' : 'pending';
+    const segments = c.segments.map((s) => (s.seg === a.segment ? { ...s, status } : s));
+
+    if (done) {
+      if (byManager) {
+        tx.update(aRef, {
+          quartersRead, status, recordedBy: actor.uid, completedAt: FieldValue.serverTimestamp(),
+          pointsAwarded: 0, personalAwarded: false,
+        });
+        tx.update(cRef, { segments, remainingQuarters: FieldValue.increment(-a.quarterCount) });
+        return { kind: 'doneByManager' };
+      }
+      const now = new Date();
+      const points = regularPoints(a.quarterCount, now <= c.endsAt.toDate(), now <= c.midAt.toDate());
+      const personal = ((member.readCount ?? 0) + 1) % g.slots === 0;
+      const bonus = personal ? PERSONAL_KHATMA_BONUS : 0;
+      const first = !c.firstFinisher;
+      tx.update(aRef, {
+        quartersRead, status, recordedBy: null, completedAt: FieldValue.serverTimestamp(),
+        pointsAwarded: points + bonus, personalAwarded: personal,
+      });
+      tx.update(cRef, {
+        segments,
+        remainingQuarters: FieldValue.increment(-a.quarterCount),
+        ...(first ? { firstFinisher: target } : {}),
+      });
+      return { kind: 'doneSelf', points, bonus, first, personal };
     }
 
-    const now = new Date();
-    const onTime = now <= c.endsAt.toDate();
-    const early = now <= c.midAt.toDate();
-    const points = regularPoints(a.quarterCount, onTime, early);
-    const first = !c.firstFinisher;
-    tx.update(aRef, { quartersRead, status: 'done', completedAt: FieldValue.serverTimestamp(), recordedBy: null });
-    tx.update(cRef, {
-      segments,
-      remainingQuarters: FieldValue.increment(-a.quarterCount),
-      ...(first ? { firstFinisher: uid } : {}),
+    tx.update(aRef, {
+      quartersRead, status, recordedBy: byManager ? actor.uid : null,
+      ...(wasDone ? { completedAt: null, pointsAwarded: 0, personalAwarded: false } : {}),
     });
-    return { done: true, points, first };
+    tx.update(cRef, { segments, ...(wasDone ? { remainingQuarters: FieldValue.increment(a.quarterCount) } : {}) });
+    if (!wasDone) return { kind: 'partial' };
+    const selfCounted = !a.recordedBy;
+    return {
+      kind: 'undone',
+      selfCounted,
+      refund: selfCounted ? (a.pointsAwarded ?? legacyRegularPoints(a, c)) : 0,
+      personal: selfCounted && (a.personalAwarded ?? false),
+    };
   });
 
-  if (result.done) {
-    const readCount = (member.readCount ?? 0) + 1;
-    const personal = readCount % g.slots === 0;
-    const bonus = personal ? PERSONAL_KHATMA_BONUS : 0;
-    await memberRef(groupId, uid).update({
-      points: FieldValue.increment(result.points + bonus),
-      readCount: FieldValue.increment(1),
-    });
+  if (out.kind === 'doneSelf') {
+    const total = out.points + out.bonus;
+    await memberRef(groupId, target).update({ points: FieldValue.increment(total), readCount: FieldValue.increment(1) });
     const badges: string[] = [];
-    if (result.first) badges.push(BADGES.starter);
-    if (personal) badges.push(BADGES.personalKhatma);
-    await db.collection('users').doc(uid).set({
-      points: FieldValue.increment(result.points + bonus),
+    if (out.first) badges.push(BADGES.starter);
+    if (out.personal) badges.push(BADGES.personalKhatma);
+    await db.collection('users').doc(target).set({
+      points: FieldValue.increment(total),
       quartersRead: FieldValue.increment(g.wardQuarters),
-      ...(personal ? { khatmasPersonal: FieldValue.increment(1) } : {}),
+      ...(out.personal ? { khatmasPersonal: FieldValue.increment(1) } : {}),
       ...(badges.length ? { badges: FieldValue.arrayUnion(...badges) } : {}),
     }, { merge: true });
     await maybeCompleteKhatma(groupId, n);
+    return { done: true, points: total };
   }
-  return { done: result.done, points: result.points };
+  if (out.kind === 'doneByManager') {
+    await maybeCompleteKhatma(groupId, n);
+    return { done: true, points: 0 };
+  }
+  if (out.kind === 'undone' && out.selfCounted) {
+    await memberRef(groupId, target).update({ points: FieldValue.increment(-out.refund), readCount: FieldValue.increment(-1) });
+    await db.collection('users').doc(target).set({
+      points: FieldValue.increment(-out.refund),
+      quartersRead: FieldValue.increment(-g.wardQuarters),
+      ...(out.personal ? { khatmasPersonal: FieldValue.increment(-1) } : {}),
+    }, { merge: true });
+    return { done: false, points: -out.refund };
+  }
+  return { done: false, points: 0 };
+}
+
+type PortionState = PortionDoc & Awarded & { quartersRead?: number; recordedBy?: string | null };
+
+type PortionOutcome =
+  | { kind: 'none' | 'partial' }
+  | { kind: 'doneByManager'; cycle: number; assignee: string | null }
+  | { kind: 'doneSelf'; cycle: number; assignee: string; points: number; rescue: boolean; quarters: number }
+  | { kind: 'undone'; cycle: number; assignee: string | null; refund: number; quarters: number; selfCounted: boolean };
+
+/** [quartersRead] = 'all' معناها الورد كله. */
+async function applyPortionProgress(groupId: string, portionId: string, quartersRead: number | 'all', actor: Actor) {
+  const g = groupData(await groupRef(groupId).get());
+  const pRef = portionsCol(groupId).doc(portionId);
+
+  const out = await db.runTransaction(async (tx: Transaction): Promise<PortionOutcome> => {
+    const snap = await tx.get(pRef);
+    const p = snap.data() as PortionState | undefined;
+    if (!p) throw new HttpsError('not-found', 'Portion not found.');
+    const isAssignee = p.assignee === actor.uid;
+    if (!actor.manager && !isAssignee) throw new HttpsError('permission-denied', 'Not your portion.');
+    if (!actor.manager && p.status === 'open') throw new HttpsError('failed-precondition', 'Take the portion first.');
+    const count = p.quarterCount;
+    const q = quartersRead === 'all' ? count : quartersRead;
+    if (q > count) throw new HttpsError('invalid-argument', 'Too many quarters.');
+    const wasDone = p.status === 'done';
+    const done = q === count;
+    if (wasDone && done) return { kind: 'none' };
+
+    const cRef = cycleRef(groupId, p.cycle);
+    const c = (await tx.get(cRef)).data() as CycleDoc | undefined;
+    const setSegment = await segmentUpdater(tx, groupId, p);
+    if (wasDone && c?.khatmaComplete) throw new HttpsError('failed-precondition', 'Khatma already complete.');
+    const byManager = actor.manager && !isAssignee;
+    const ownCarry = p.origin === 'carry' && p.originalUid === p.assignee;
+
+    if (done) {
+      const selfDone = !byManager && p.assignee !== null;
+      const points = selfDone ? count * (ownCarry ? POINTS_PER_QUARTER : RESCUE_POINTS_PER_QUARTER) : 0;
+      tx.update(pRef, {
+        status: 'done', quartersRead: q, completedAt: FieldValue.serverTimestamp(),
+        recordedBy: byManager ? actor.uid : null, pointsAwarded: points, doneCycle: g.currentCycle,
+      });
+      setSegment({ status: 'done', ...(p.assignee ? { uid: p.assignee } : {}) });
+      tx.update(cRef, { remainingQuarters: FieldValue.increment(-count) });
+      if (selfDone) return { kind: 'doneSelf', cycle: p.cycle, assignee: p.assignee!, points, rescue: !ownCarry, quarters: count };
+      return { kind: 'doneByManager', cycle: p.cycle, assignee: p.assignee };
+    }
+
+    tx.update(pRef, {
+      status: p.assignee ? 'assigned' : 'open', quartersRead: q, recordedBy: byManager ? actor.uid : null,
+      ...(wasDone ? { completedAt: null, pointsAwarded: 0, doneCycle: null } : {}),
+    });
+    setSegment({ status: q > 0 ? 'in_progress' : p.assignee ? 'pending' : 'open' });
+    if (wasDone) tx.update(cRef, { remainingQuarters: FieldValue.increment(count) });
+    if (!wasDone) return { kind: 'partial' };
+    const selfCounted = !p.recordedBy && p.assignee !== null;
+    return {
+      kind: 'undone', cycle: p.cycle, assignee: p.assignee, quarters: count, selfCounted,
+      refund: selfCounted ? (p.pointsAwarded ?? count * (ownCarry ? POINTS_PER_QUARTER : RESCUE_POINTS_PER_QUARTER)) : 0,
+    };
+  });
+
+  if (out.kind === 'doneSelf') {
+    await memberRef(groupId, out.assignee).update({ points: FieldValue.increment(out.points) });
+    await db.collection('users').doc(out.assignee).set({
+      points: FieldValue.increment(out.points),
+      quartersRead: FieldValue.increment(out.quarters),
+      ...(out.rescue ? { badges: FieldValue.arrayUnion(BADGES.rescuer) } : {}),
+    }, { merge: true });
+    await maybeCompleteKhatma(groupId, out.cycle);
+    return { done: true, points: out.points, assignee: out.assignee };
+  }
+  if (out.kind === 'doneByManager') {
+    await maybeCompleteKhatma(groupId, out.cycle);
+    return { done: true, points: 0, assignee: out.assignee };
+  }
+  if (out.kind === 'undone' && out.selfCounted && out.assignee) {
+    await memberRef(groupId, out.assignee).update({ points: FieldValue.increment(-out.refund) });
+    await db.collection('users').doc(out.assignee).set({
+      points: FieldValue.increment(-out.refund),
+      quartersRead: FieldValue.increment(-out.quarters),
+    }, { merge: true });
+    return { done: false, points: -out.refund, assignee: out.assignee };
+  }
+  return { done: false, points: 0, assignee: out.kind === 'undone' ? out.assignee : null };
+}
+
+function readQuarters(raw: unknown): number {
+  if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 0) {
+    throw new HttpsError('invalid-argument', 'quartersRead must be a non-negative integer');
+  }
+  return raw;
+}
+
+/** العضو بيسجّل (أو بيتراجع عن) ورده في الدورة الحالية. */
+export const updateProgress = onCall(async (request) => {
+  const uid = requireUid(request);
+  const groupId = requireString(request.data?.groupId, 'groupId');
+  const quartersRead = readQuarters(request.data?.quartersRead);
+  return await applyAssignmentProgress(groupId, uid, quartersRead, { uid, manager: false });
+});
+
+/** العضو بيسجّل (أو بيتراجع عن) تقدمه في ورد إضافي ربع ربع. */
+export const updatePortionProgress = onCall(async (request) => {
+  const uid = requireUid(request);
+  const groupId = requireString(request.data?.groupId, 'groupId');
+  const portionId = requireString(request.data?.portionId, 'portionId');
+  const quartersRead = readQuarters(request.data?.quartersRead);
+  await requireMember(groupId, uid);
+  const r = await applyPortionProgress(groupId, portionId, quartersRead, { uid, manager: false });
+  return { done: r.done, points: r.points };
 });
 
 // ---------------------------------------------------------------------------
@@ -453,36 +618,14 @@ export const assignPortion = onCall(async (request) => {
   return { ok: true };
 });
 
+/** النسخ القديمة من التطبيق: "خلصت الورد ده" مرة واحدة. */
 export const completePortion = onCall(async (request) => {
   const uid = requireUid(request);
   const groupId = requireString(request.data?.groupId, 'groupId');
   const portionId = requireString(request.data?.portionId, 'portionId');
   await requireMember(groupId, uid);
-  const pRef = portionsCol(groupId).doc(portionId);
-  const p = await db.runTransaction(async (tx) => {
-    const snap = await tx.get(pRef);
-    const portion = snap.data() as PortionDoc | undefined;
-    if (!portion) throw new HttpsError('not-found', 'Portion not found.');
-    if (portion.assignee !== uid || portion.status !== 'assigned') {
-      throw new HttpsError('permission-denied', 'Not your portion.');
-    }
-    const setSegment = await segmentUpdater(tx, groupId, portion);
-    setSegment({ uid, status: 'done' });
-    tx.update(pRef, { status: 'done', completedAt: FieldValue.serverTimestamp() });
-    tx.update(cycleRef(groupId, portion.cycle), { remainingQuarters: FieldValue.increment(-portion.quarterCount) });
-    return portion;
-  });
-
-  const ownCarry = p.origin === 'carry' && p.originalUid === uid;
-  const points = p.quarterCount * (ownCarry ? POINTS_PER_QUARTER : RESCUE_POINTS_PER_QUARTER);
-  await memberRef(groupId, uid).update({ points: FieldValue.increment(points) });
-  await db.collection('users').doc(uid).set({
-    points: FieldValue.increment(points),
-    quartersRead: FieldValue.increment(p.quarterCount),
-    ...(ownCarry ? {} : { badges: FieldValue.arrayUnion(BADGES.rescuer) }),
-  }, { merge: true });
-  await maybeCompleteKhatma(groupId, p.cycle);
-  return { points };
+  const r = await applyPortionProgress(groupId, portionId, 'all', { uid, manager: false });
+  return { points: r.points };
 });
 
 // ---------------------------------------------------------------------------
@@ -495,80 +638,21 @@ export const recordProgress = onCall(async (request) => {
   await requireManager(groupId, managerUid);
   const g = groupData(await groupRef(groupId).get());
   if (g.status !== 'active') throw new HttpsError('failed-precondition', 'Khatma not started.');
+  const actor = { uid: managerUid, manager: true };
   const portionId = typeof request.data?.portionId === 'string' ? request.data.portionId : null;
 
-  let notifyUid: string | null = null;
-  let cycleNo = g.currentCycle;
-  let nowDone = false;
-
+  let notifyUid: string | null;
   if (portionId) {
-    // ورد إضافي: يا خلص يا لأ.
-    const done = request.data?.done === true;
-    const pRef = portionsCol(groupId).doc(portionId);
-    const r = await db.runTransaction(async (tx) => {
-      const snap = await tx.get(pRef);
-      const p = snap.data() as (PortionDoc & { recordedBy?: string | null }) | undefined;
-      if (!p) throw new HttpsError('not-found', 'Portion not found.');
-      const cRef = cycleRef(groupId, p.cycle);
-      const c = (await tx.get(cRef)).data() as CycleDoc | undefined;
-      const setSegment = await segmentUpdater(tx, groupId, p);
-      if (done) {
-        if (p.status === 'done') return null;
-        tx.update(pRef, { status: 'done', completedAt: FieldValue.serverTimestamp(), recordedBy: managerUid });
-        setSegment({ status: 'done' });
-        tx.update(cRef, { remainingQuarters: FieldValue.increment(-p.quarterCount) });
-      } else {
-        if (p.status !== 'done') return null;
-        if (!p.recordedBy) throw new HttpsError('failed-precondition', 'Recorded by the member.');
-        if (c?.khatmaComplete) throw new HttpsError('failed-precondition', 'Khatma already complete.');
-        tx.update(pRef, { status: p.assignee ? 'assigned' : 'open', completedAt: null, recordedBy: null });
-        setSegment(p.assignee ? { status: 'pending' } : { uid: null, status: 'open' });
-        tx.update(cRef, { remainingQuarters: FieldValue.increment(p.quarterCount) });
-      }
-      return p;
-    });
-    if (!r) return { ok: true };
-    notifyUid = r.assignee;
-    cycleNo = r.cycle;
-    nowDone = done;
+    // النسخ القديمة كانت بتبعت done بس.
+    const raw = request.data?.quartersRead;
+    const q: number | 'all' = raw === undefined ? (request.data?.done === true ? 'all' : 0) : readQuarters(raw);
+    notifyUid = (await applyPortionProgress(groupId, portionId, q, actor)).assignee;
   } else {
-    // ورد الدورة الحالية لعضو.
     const target = requireString(request.data?.uid, 'uid');
-    await requireMember(groupId, target);
-    const quartersRead = request.data?.quartersRead;
-    if (typeof quartersRead !== 'number' || !Number.isInteger(quartersRead) || quartersRead < 0) {
-      throw new HttpsError('invalid-argument', 'quartersRead must be a non-negative integer');
-    }
-    const aRef = assignmentRef(groupId, cycleNo, target);
-    const cRef = cycleRef(groupId, cycleNo);
-    await db.runTransaction(async (tx) => {
-      const [aSnap, cSnap] = await Promise.all([tx.get(aRef), tx.get(cRef)]);
-      if (!aSnap.exists) throw new HttpsError('not-found', 'No portion this cycle.');
-      const a = aSnap.data() as AssignmentDoc;
-      const c = cSnap.data() as CycleDoc;
-      if (a.closed) throw new HttpsError('failed-precondition', 'Portion already closed.');
-      if (quartersRead > a.quarterCount) throw new HttpsError('invalid-argument', 'Too many quarters.');
-      const wasDone = a.status === 'done';
-      // العضو سجّل وخد نقاطه: منلغيش ده.
-      if (wasDone && !a.recordedBy) throw new HttpsError('failed-precondition', 'Recorded by the member.');
-      const done = quartersRead === a.quarterCount;
-      if (wasDone && !done && c.khatmaComplete) throw new HttpsError('failed-precondition', 'Khatma already complete.');
-      const status = done ? 'done' : quartersRead > 0 ? 'in_progress' : 'pending';
-      tx.update(aRef, {
-        quartersRead, status, recordedBy: managerUid,
-        completedAt: done ? (wasDone ? a.completedAt ?? FieldValue.serverTimestamp() : FieldValue.serverTimestamp()) : null,
-      });
-      const delta = (done && !wasDone) ? -a.quarterCount : (!done && wasDone) ? a.quarterCount : 0;
-      tx.update(cRef, {
-        segments: c.segments.map((s) => (s.seg === a.segment ? { ...s, status } : s)),
-        ...(delta ? { remainingQuarters: FieldValue.increment(delta) } : {}),
-      });
-      nowDone = done && !wasDone;
-    });
+    await applyAssignmentProgress(groupId, target, readQuarters(request.data?.quartersRead), actor);
     notifyUid = target;
   }
 
-  if (nowDone) await maybeCompleteKhatma(groupId, cycleNo);
   if (notifyUid && notifyUid !== managerUid) {
     await notifyUsers([notifyUid], () => ({
       ar: { title: g.name, body: 'الأدمن حدّث تقدم وردك.' },

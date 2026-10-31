@@ -520,5 +520,20 @@
       }
     }
   },
-  "recordFromExtraPortions": "This cell is an extra portion. Record it from the ⋮ menu under Extra portions."
+  "recordFromExtraPortions": "This cell is an extra portion. Record it from the ⋮ menu under Extra portions.",
+  "open": "Open",
+  "undo": "Undo",
+  "undone": "Last quarter undone.",
+  "undoneWithPoints": "Portion set back to in progress; {n} points removed.",
+  "undoDoneConfirm": "The portion will go back to in progress and the points you earned for it will be removed. Continue?",
+  "confirmFinishTitle": "Finished the whole portion?",
+  "confirmFinishBody": "Make sure you've read the last quarter, then you'll get your points.",
+  "undoSelfDoneNote": "The member recorded this portion themselves and earned points. Moving it back removes those points.",
+  "@undoneWithPoints": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  }
 }
