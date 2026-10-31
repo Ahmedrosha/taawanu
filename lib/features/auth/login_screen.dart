@@ -5,6 +5,7 @@ import '../../l10n/gen/app_localizations.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/logo_mark.dart';
+import 'sign_in_errors.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,7 +28,10 @@ class _LoginScreenState extends State<LoginScreen> {
       // لو الدخول نجح، التنقل للرئيسية بيحصل تلقائيًا من الـrouter.
     } catch (e) {
       debugPrint('Sign-in error: $e');
-      messenger.showSnackBar(SnackBar(content: Text(t.signInFailed)));
+      messenger.showSnackBar(SnackBar(
+        content: Text(signInErrorText(t, e)),
+        duration: const Duration(seconds: 8),
+      ));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

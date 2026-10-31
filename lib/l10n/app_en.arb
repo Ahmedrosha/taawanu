@@ -14,6 +14,21 @@
   "signInWithGoogle": "Continue with Google",
   "signInWithApple": "Continue with Apple",
   "signInFailed": "Sign-in didn't complete. Please try again.",
+  "signInNoInternet": "No internet connection. Check your connection and try again.",
+  "signInNoGoogleAccount": "No Google account on this phone. Add one in the phone settings and try again.",
+  "signInConfigError": "Google sign-in isn't set up correctly. Please send us a screenshot of this message.",
+  "signInSignupClosed": "New accounts can't be created right now. Please send us a screenshot of this message.",
+  "signInAccountDisabled": "This account has been disabled.",
+  "signInWrongCredentials": "Wrong email or password.",
+  "signInTooMany": "Too many attempts. Wait a bit and try again.",
+  "errorCode": "(Code: {code})",
+  "@errorCode": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "signOut": "Sign out",
   "defaultUserName": "Reader",
   "groupsEmptyTitle": "No groups yet",
