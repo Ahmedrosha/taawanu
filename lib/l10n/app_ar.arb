@@ -257,5 +257,12 @@
   "undoDoneConfirm": "الورد هيرجع \"جاري\"، والنقاط اللي خدتها عليه هتتشال. تكمّل؟",
   "confirmFinishTitle": "خلصت الورد كله؟",
   "confirmFinishBody": "اتأكد إنك قريت آخر ربع، وبعدها هتاخد نقاطك.",
-  "undoSelfDoneNote": "العضو سجّل الورد ده بنفسه وخد نقاطه. لو رجّعته، النقاط دي هتتشال منه."
+  "undoSelfDoneNote": "العضو سجّل الورد ده بنفسه وخد نقاطه. لو رجّعته، النقاط دي هتتشال منه.",
+  "mushafSettings": "المصحف",
+  "fontType": "نوع الخط",
+  "fontAmiriQuran": "أميري قرآن",
+  "fontScheherazade": "شهرزاد",
+  "fontAmiri": "أميري",
+  "fontNaskh": "نسخ بسيط",
+  "quranTextSource": "نص المصحف: مشروع تنزيل (tanzil.net)"
 }

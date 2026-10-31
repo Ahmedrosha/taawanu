@@ -6,6 +6,7 @@ import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/ui.dart';
+import 'mushaf_settings.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -82,6 +83,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   for (final b in _badgeDefs(t)) _Badge(icon: b.$2, label: b.$3, earned: s.badges.contains(b.$1)),
                 ],
               ),
+              const SizedBox(height: 28),
+              SectionTitle(t.mushafSettings),
+              const SizedBox(height: 10),
+              const MushafSettings(),
               const SizedBox(height: 28),
               SectionTitle(t.language),
               const SizedBox(height: 10),

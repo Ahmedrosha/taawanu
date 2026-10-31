@@ -221,7 +221,7 @@ class _QuarterText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ayahs = data.ayahsOfQuarter(quarter);
-    final quranStyle = GoogleFonts.getFont('Amiri Quran', fontSize: fontSize, height: 2.1, color: AppColors.text);
+    final quranStyle = GoogleFonts.getFont(Prefs.instance.readerFont, fontSize: fontSize, height: 2.1, color: AppColors.text);
     final markStyle = quranStyle.copyWith(fontSize: fontSize * 0.8, color: const Color(0xFF8A6A14));
 
     // نقسم الآيات لمجموعات حسب السورة، عشان نحط عنوان السورة قبل أول آية فيها.

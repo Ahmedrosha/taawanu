@@ -19,6 +19,15 @@ class Prefs {
   double get readerFontSize => _p.getDouble('readerFontSize') ?? 26;
   Future<void> setReaderFontSize(double v) => _p.setDouble('readerFontSize', v);
 
+  /// خط المصحف (اسم الخط في Google Fonts).
+  static const readerFonts = ['Amiri Quran', 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic'];
+  String get readerFont {
+    final v = _p.getString('readerFont');
+    return readerFonts.contains(v) ? v! : readerFonts.first;
+  }
+
+  Future<void> setReaderFont(String v) => _p.setString('readerFont', v);
+
   /// عدادات الأذكار بتتصفر كل يوم.
   Map<String, int> adhkarCounts(String day) {
     if (_p.getString('adhkarDay') != day) return {};

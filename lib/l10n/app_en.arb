@@ -535,5 +535,12 @@
         "type": "int"
       }
     }
-  }
+  },
+  "mushafSettings": "Quran text",
+  "fontType": "Font",
+  "fontAmiriQuran": "Amiri Quran",
+  "fontScheherazade": "Scheherazade",
+  "fontAmiri": "Amiri",
+  "fontNaskh": "Simple Naskh",
+  "quranTextSource": "Quran text: Tanzil Project (tanzil.net)"
 }
