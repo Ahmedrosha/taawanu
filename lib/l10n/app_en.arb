@@ -724,5 +724,5 @@
   "segmentTakenError": "Someone else has that portion. Pick an open one.",
   "alreadyStartedError": "You can't change your portion after you start reading. Ask the admin.",
   "changeMyPortion": "Change my portion",
-  "changeMyPortionNote": "You can pick an open portion only, as long as you haven't started reading. Taken ones are greyed out."
+  "changeMyPortionNote": "You can pick an open portion only, before the khatma starts. After that, only admins can change it. Taken ones are greyed out."
 }

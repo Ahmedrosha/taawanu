@@ -222,7 +222,7 @@ async function planMove(groupId: string, target: string, segment: number): Promi
  * - الأدمن والمساعد: في أي وقت. لو الجزء مع عضو تاني بيتبادلوا، ولو مع متطوع بيتشال منه.
  *   لو حد فيهم كان قرا منه، اللي اتقرا بيتمسح (والنقاط بترجع) وكل واحد يبدأ ورده الجديد من الأول.
  *   أول مرة بيرجع { applied: 'confirm', ... } عشان التطبيق يسأل، وبعد التأكيد بيتبعت confirm: true.
- * - العضو نفسه: لجزء فاضي بس، وطول ما هو لسه مبدأش يقرا.
+ * - العضو نفسه: لجزء فاضي بس، وقبل بداية الختمة.
  */
 export const moveMember = onCall(async (request) => {
   const uid = requireUid(request);
@@ -246,8 +246,9 @@ export const moveMember = onCall(async (request) => {
   if (plan.same) return { ok: true, applied: 'none' };
 
   if (!manager) {
+    // العضو يغيّر ورده بنفسه قبل بداية الختمة بس. بعد البداية التغيير للأدمن والمساعد.
+    if (plan.active) throw new HttpsError('failed-precondition', 'Khatma already started.');
     if (plan.other || plan.volunteer) throw new HttpsError('already-exists', 'Segment taken.');
-    if (plan.myRead > 0) throw new HttpsError('failed-precondition', 'Already started reading.');
   } else if (askFirst && (plan.other || plan.volunteer || plan.myRead > 0)) {
     return {
       ok: true,

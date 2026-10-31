@@ -199,7 +199,6 @@ class _ActiveCycle extends StatelessWidget {
                 group: group,
                 assignment: aSnap.data,
                 loading: !aSnap.hasData && aSnap.connectionState == ConnectionState.waiting,
-                onChange: me == null ? null : () => changeOwnPortion(context, group: group, me: me!, members: members),
               ),
             ),
             const SizedBox(height: 16),
@@ -228,14 +227,11 @@ class _ActiveCycle extends StatelessWidget {
 }
 
 class _MyPortionCard extends StatelessWidget {
-  const _MyPortionCard({required this.group, required this.assignment, required this.loading, this.onChange});
+  const _MyPortionCard({required this.group, required this.assignment, required this.loading});
 
   final Group group;
   final Assignment? assignment;
   final bool loading;
-
-  /// العضو يغيّر ورده لورد فاضي (طول ما لسه مبدأش يقرا).
-  final VoidCallback? onChange;
 
   @override
   Widget build(BuildContext context) {
@@ -279,11 +275,7 @@ class _MyPortionCard extends StatelessWidget {
               icon: const Icon(Icons.menu_book_outlined),
               label: Text(a.quartersRead > 0 ? t.continueReading : t.readNow),
             ),
-            if (a.quartersRead == 0 && onChange != null)
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: TextButton.icon(onPressed: onChange, icon: const Icon(Icons.swap_horiz, size: 18), label: Text(t.changeMyPortion)),
-              ),
+
           ] else if (a.isDone && !a.closed) ...[
             // الورد خلص: يقدر يفتحه تاني (ومنه يتراجع لو سجّل بالغلط).
             const SizedBox(height: 10),
@@ -632,7 +624,8 @@ class _MembersList extends StatelessWidget {
   }
 
   /// المدير يقدر يغيّر جزء أي حد (حتى نفسه والأدمن)، والأدوار حسب _canManage.
-  bool _canOpen(Member target) => (me?.isManager ?? false) || _canManage(target) || target.uid == me?.uid;
+  // العضو يقدر يفتح اسمه عشان يغيّر ورده قبل بداية الختمة بس.
+  bool _canOpen(Member target) => (me?.isManager ?? false) || _canManage(target) || (target.uid == me?.uid && !group.isActive);
 
   bool _canManage(Member target) {
     final m = me;
