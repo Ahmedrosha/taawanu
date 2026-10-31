@@ -472,7 +472,7 @@
   "turnRight": "Turn right",
   "turnLeft": "Turn left",
   "distanceToMakkah": "Distance to Makkah: {km} km",
-  "calibrateCompass": "The compass needs calibrating: move your phone in a figure 8.",
+  "calibrateCompass": "The compass needs calibrating: move your phone in a figure 8 (∞).",
   "qiblaTip": "Hold the phone flat, away from metal and magnets.",
   "setupPrayerTimes": "Set your location to see prayer times",
   "@methodAuto": {
