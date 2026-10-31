@@ -84,7 +84,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
   late String _type = _prefs.groupsType;
   late int _ward = _prefs.groupsWard;
   late String _sort = _prefs.groupsSort;
-  late List<String> _pinned = [..._prefs.pinnedGroups];
+  late final List<String> _pinned = [..._prefs.pinnedGroups];
   String _query = '';
   final _search = TextEditingController();
 
@@ -201,13 +201,15 @@ class _GroupsScreenState extends State<GroupsScreen> {
     final items = <Widget>[];
     void section(String title, List<MyGroup> list, {IconData? icon}) {
       if (list.isEmpty) return;
-      if (title.isNotEmpty) items.add(Padding(
-        padding: const EdgeInsets.only(top: 6, bottom: 8),
-        child: Row(children: [
-          if (icon != null) ...[Icon(icon, size: 16, color: AppColors.accent), const SizedBox(width: 4)],
-          Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.accent)),
-        ]),
-      ));
+      if (title.isNotEmpty) {
+        items.add(Padding(
+          padding: const EdgeInsets.only(top: 6, bottom: 8),
+          child: Row(children: [
+            if (icon != null) ...[Icon(icon, size: 16, color: AppColors.accent), const SizedBox(width: 4)],
+            Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.accent)),
+          ]),
+        ));
+      }
       for (final g in list) {
         items.add(Padding(
           padding: const EdgeInsets.only(bottom: 12),
