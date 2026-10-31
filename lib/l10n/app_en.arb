@@ -722,7 +722,7 @@
   "confirmSwap": "Confirm swap",
   "portionChanged": "Portion changed",
   "segmentTakenError": "Someone else has that portion. Pick an open one.",
-  "alreadyStartedError": "You can't change your portion after you start reading. Ask the admin.",
+  "alreadyStartedError": "The khatma has started, so only an admin can change portions now.",
   "changeMyPortion": "Change my portion",
   "changeMyPortionNote": "You can pick an open portion only, before the khatma starts. After that, only admins can change it. Taken ones are greyed out."
 }
