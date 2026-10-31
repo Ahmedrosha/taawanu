@@ -15,13 +15,28 @@ class Ayah {
 
 /// نص المصحف وحدود الأرباع (من ملف assets/quran/quran.json).
 class QuranData {
-  QuranData._(this.basmala, this.surahNamesAr, this.surahNamesEn, this._quarters, this._surahs);
+  QuranData._(this.basmala, this.surahNamesAr, this.surahNamesEn, this._quarters, this._surahs, {this.numbersInText = false});
+
+  /// نص مصحف المدينة فيه علامة رقم الآية جوه النص نفسه.
+  final bool numbersInText;
 
   final String basmala;
   final List<String> surahNamesAr;
   final List<String> surahNamesEn;
   final List<List<int>> _quarters; // بداية كل ربع: [سورة، آية]
   final List<List<String>> _surahs;
+
+  /// نفس البيانات بنص مصحف المدينة (مجمع الملك فهد). رقم الآية جزء من النص.
+  QuranData _withText(String basmala, List<List<String>> surahs) =>
+      QuranData._(basmala, surahNamesAr, surahNamesEn, _quarters, surahs, numbersInText: true);
+
+  static (String, List<List<String>>) _parseMadinah(String raw) {
+    final d = jsonDecode(raw) as Map<String, dynamic>;
+    return (
+      d['basmala'] as String,
+      [for (final s in d['surahs'] as List) List<String>.from(s as List)],
+    );
+  }
 
   static QuranData _parse(String raw) {
     final d = jsonDecode(raw) as Map<String, dynamic>;
@@ -74,12 +89,28 @@ class QuranRepository {
 
   Future<QuranData>? _loading;
 
+  Future<QuranData>? _loadingMadinah;
+
   /// بيتحمّل مرة واحدة، وبيتفك في خيط منفصل عشان الواجهة متقفش.
   Future<QuranData> load() => _loading ??= () async {
         final raw = await rootBundle.loadString('assets/quran/quran.json');
         return compute(QuranData._parse, raw);
       }();
+
+  /// نص مصحف المدينة (لخط مجمع الملك فهد)، بنفس حدود الأرباع.
+  Future<QuranData> loadMadinah() => _loadingMadinah ??= () async {
+        final base = await load();
+        final raw = await rootBundle.loadString('assets/quran/madinah.json');
+        final (basmala, surahs) = await compute(QuranData._parseMadinah, raw);
+        return base._withText(basmala, surahs);
+      }();
+
+  /// حسب الخط المختار.
+  Future<QuranData> loadFor(String font) => font == madinahFont ? loadMadinah() : load();
 }
+
+/// اسم خط مصحف المدينة في الإعدادات وفي pubspec.
+const madinahFont = 'KFGQPC Hafs';
 
 /// وصف مدى الأرباع: الجزء ٧، الحزب ١٣، الأرباع ٣–٥…
 String rangeLabel(AppLocalizations t, int from, int to) {

@@ -20,10 +20,11 @@ class Prefs {
   Future<void> setReaderFontSize(double v) => _p.setDouble('readerFontSize', v);
 
   /// خط المصحف (اسم الخط في Google Fonts).
-  static const readerFonts = ['Amiri Quran', 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic'];
+  /// 'KFGQPC Hafs' = خط مصحف المدينة (ملف جوه التطبيق)، والباقي من Google Fonts.
+  static const readerFonts = ['KFGQPC Hafs', 'Amiri Quran', 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic'];
   String get readerFont {
     final v = _p.getString('readerFont');
-    return readerFonts.contains(v) ? v! : readerFonts.first;
+    return readerFonts.contains(v) ? v! : 'Amiri Quran';
   }
 
   Future<void> setReaderFont(String v) => _p.setString('readerFont', v);

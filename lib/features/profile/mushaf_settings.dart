@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../l10n/gen/app_localizations.dart';
 import '../../services/prefs.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/quran_style.dart';
 import '../../widgets/ui.dart';
 
 /// إعدادات المصحف في "حسابي": حجم الخط ونوعه، مع معاينة.
@@ -20,6 +20,7 @@ class _MushafSettingsState extends State<MushafSettings> {
   late String _font = Prefs.instance.readerFont;
 
   String _fontName(AppLocalizations t, String f) => switch (f) {
+        madinahFont => t.fontMadinah,
         'Amiri Quran' => t.fontAmiriQuran,
         'Scheherazade New' => t.fontScheherazade,
         'Amiri' => t.fontAmiri,
@@ -38,12 +39,14 @@ class _MushafSettingsState extends State<MushafSettings> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(color: const Color(0xFFFFFDF7), borderRadius: BorderRadius.circular(12)),
             child: FutureBuilder<QuranData>(
-              future: QuranRepository.instance.load(),
+              // المفتاح بالخط: لما الخط يتغير، النص يتحمّل من جديد (مصحف المدينة نصه مختلف).
+              key: ValueKey(_font),
+              future: QuranRepository.instance.loadFor(_font),
               builder: (context, snap) => Text(
                 snap.data?.ayahText(1, 2) ?? '',
                 textAlign: TextAlign.center,
                 textDirection: TextDirection.rtl,
-                style: GoogleFonts.getFont(_font, fontSize: _size, height: 2.1, color: AppColors.text),
+                style: quranTextStyle(_font, fontSize: _size, color: AppColors.text),
               ),
             ),
           ),
@@ -79,7 +82,8 @@ class _MushafSettingsState extends State<MushafSettings> {
             ],
           ),
           const SizedBox(height: 12),
-          Text(t.quranTextSource, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          Text(_font == madinahFont ? t.quranTextSourceMadinah : t.quranTextSource,
+              style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
         ],
       ),
     );

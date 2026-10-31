@@ -7,6 +7,7 @@ import '../../services/groups_service.dart';
 import '../../services/prefs.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/quran_style.dart';
 import '../../widgets/ui.dart';
 import '../groups/group_board_screen.dart' show ReadRequest;
 
@@ -115,7 +116,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
         ],
       ),
       body: FutureBuilder<QuranData>(
-        future: QuranRepository.instance.load(),
+        future: QuranRepository.instance.loadFor(Prefs.instance.readerFont),
         builder: (context, snap) {
           final q = snap.data;
           if (q == null) return const Center(child: CircularProgressIndicator());
@@ -221,7 +222,7 @@ class _QuarterText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ayahs = data.ayahsOfQuarter(quarter);
-    final quranStyle = GoogleFonts.getFont(Prefs.instance.readerFont, fontSize: fontSize, height: 2.1, color: AppColors.text);
+    final quranStyle = quranTextStyle(Prefs.instance.readerFont, fontSize: fontSize, color: AppColors.text);
     final markStyle = quranStyle.copyWith(fontSize: fontSize * 0.8, color: const Color(0xFF8A6A14));
 
     // نقسم الآيات لمجموعات حسب السورة، عشان نحط عنوان السورة قبل أول آية فيها.
@@ -242,7 +243,8 @@ class _QuarterText extends StatelessWidget {
         }
       }
       spans.add(TextSpan(text: '${a.text} ', style: quranStyle));
-      spans.add(TextSpan(text: '﴿${_arabicNumber(a.number)}﴾ ', style: markStyle));
+      // مصحف المدينة: رقم الآية جوه النص بشكل المصحف المطبوع.
+      if (!data.numbersInText) spans.add(TextSpan(text: '﴿${_arabicNumber(a.number)}﴾ ', style: markStyle));
     }
     flush();
 

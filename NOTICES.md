@@ -10,3 +10,7 @@
 
 ## Fonts
 - Amiri Quran, Reem Kufi, IBM Plex Sans Arabic: SIL Open Font License 1.1, loaded through Google Fonts.
+
+## Madinah Mushaf (optional reader font)
+- Text: King Fahd Glorious Quran Printing Complex (KFGQPC), Uthmanic Hafs data v18, used verbatim (`assets/quran/madinah.json`), via [ibnhazm/KFGQPC](https://github.com/ibnhazm/KFGQPC).
+- Font: KFGQPC HAFS Uthmanic Script v18, distributed unmodified and free of cost under the KFGQPC end-user license (`assets/fonts/KFGQPC-LICENSE.txt`): use, copy and distribute permitted; no selling or modification.

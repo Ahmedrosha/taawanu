@@ -36,3 +36,10 @@ flutter:
   generate: true
   assets:
     - assets/quran/quran.json
+    - assets/quran/madinah.json
+    - assets/fonts/KFGQPC-LICENSE.txt
+  fonts:
+    # خط مصحف المدينة من مجمع الملك فهد (بدون تعديل، برخصته في assets/fonts/KFGQPC-LICENSE.txt).
+    - family: KFGQPC Hafs
+      fonts:
+        - asset: assets/fonts/KFGQPC-HAFS-Uthmanic-v18.ttf

@@ -264,5 +264,7 @@
   "fontScheherazade": "شهرزاد",
   "fontAmiri": "أميري",
   "fontNaskh": "نسخ بسيط",
-  "quranTextSource": "نص المصحف: مشروع تنزيل (tanzil.net)"
+  "quranTextSource": "نص المصحف: مشروع تنزيل (tanzil.net)",
+  "fontMadinah": "مصحف المدينة",
+  "quranTextSourceMadinah": "نص وخط مصحف المدينة: مجمع الملك فهد لطباعة المصحف الشريف"
 }
