@@ -48,7 +48,7 @@ Future<int?> showSegmentPicker(
           children: [
             Text(t.chooseStartTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
-            Text(note ?? t.chooseStartBody, style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
+            Text(note ?? t.chooseStartBody, style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
             const SizedBox(height: 12),
             Expanded(
               child: wardQuarters < 8
@@ -129,12 +129,12 @@ class _ByJuzState extends State<_ByJuz> {
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: juz == selectedJuz ? AppColors.navy : AppColors.border),
+                border: Border.all(color: juz == selectedJuz ? AppColors.accent : AppColors.border),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(t.juzLabel(juz + 1), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.navy)),
+                  Text(t.juzLabel(juz + 1), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.accent)),
                   const SizedBox(height: 8),
                   if (w == 4)
                     // ورد حزب: الحزبين جنب بعض.
@@ -157,7 +157,7 @@ class _ByJuzState extends State<_ByJuz> {
                           children: [
                             SizedBox(
                               width: 74,
-                              child: Text(t.hizbLabel(juz * 2 + h + 1), style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
+                              child: Text(t.hizbLabel(juz * 2 + h + 1), style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
                             ),
                             Expanded(
                               child: Wrap(
@@ -264,11 +264,11 @@ class SegmentChoiceTile extends StatelessWidget {
       color: AppColors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: AppColors.border),
       ),
       child: ListTile(
         onTap: onTap,
-        leading: const Icon(Icons.menu_book_outlined, color: AppColors.navy),
+        leading: Icon(Icons.menu_book_outlined, color: AppColors.accent),
         title: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
         trailing: onTap == null ? null : const Icon(Icons.edit_outlined, size: 20),
       ),

@@ -11,8 +11,6 @@ import '../../widgets/quran_style.dart';
 import '../../widgets/ui.dart';
 import '../groups/group_board_screen.dart' show ReadRequest;
 
-const _paper = Color(0xFFFFFDF7);
-const _paperLine = Color(0xFFECE6D6);
 
 /// قراءة الورد ربع ربع، وتسجيل كل ربع لما يخلص.
 class ReaderScreen extends StatefulWidget {
@@ -100,14 +98,14 @@ class _ReaderScreenState extends State<ReaderScreen> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: _paper,
+      backgroundColor: AppColors.paper,
       appBar: AppBar(
-        backgroundColor: _paper,
+        backgroundColor: AppColors.paper,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(rangeLabel(t, r.fromQuarter, r.toQuarter), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
-            Text(r.groupName, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+            Text(r.groupName, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
           ],
         ),
         actions: [
@@ -163,7 +161,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                   children: [
                     ProgressLine(value: _read / r.quarterCount),
                     const SizedBox(height: 6),
-                    Text(t.quartersProgress(_read, r.quarterCount), style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    Text(t.quartersProgress(_read, r.quarterCount), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                   ],
                 ),
               ),
@@ -194,13 +192,13 @@ class _QuarterHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
       child: Row(
         children: [
-          const Expanded(child: Divider(color: _paperLine)),
+          Expanded(child: Divider(color: AppColors.paperLine)),
           const SizedBox(width: 10),
-          if (done) const Icon(Icons.check_circle, size: 18, color: AppColors.statusDone),
+          if (done) Icon(Icons.check_circle, size: 18, color: AppColors.statusDone),
           if (done) const SizedBox(width: 4),
-          Text(label, style: const TextStyle(color: Color(0xFF8A7A4E), fontWeight: FontWeight.w600)),
+          Text(label, style: TextStyle(color: AppColors.paperLabel, fontWeight: FontWeight.w600)),
           const SizedBox(width: 10),
-          const Expanded(child: Divider(color: _paperLine)),
+          Expanded(child: Divider(color: AppColors.paperLine)),
         ],
       ),
     );
@@ -223,7 +221,7 @@ class _QuarterText extends StatelessWidget {
   Widget build(BuildContext context) {
     final ayahs = data.ayahsOfQuarter(quarter);
     final quranStyle = quranTextStyle(Prefs.instance.readerFont, fontSize: fontSize, color: AppColors.text);
-    final markStyle = quranStyle.copyWith(fontSize: fontSize * 0.8, color: const Color(0xFF8A6A14));
+    final markStyle = quranStyle.copyWith(fontSize: fontSize * 0.8, color: AppColors.goldInk);
 
     // نقسم الآيات لمجموعات حسب السورة، عشان نحط عنوان السورة قبل أول آية فيها.
     final blocks = <Widget>[];
@@ -268,13 +266,13 @@ class _SurahTitle extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.sky,
-        border: Border.all(color: AppColors.navy, width: 1.5),
+        border: Border.all(color: AppColors.accent, width: 1.5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         name,
         textAlign: TextAlign.center,
-        style: GoogleFonts.amiri(fontSize: fontSize * 0.8, fontWeight: FontWeight.w700, color: AppColors.navy),
+        style: GoogleFonts.amiri(fontSize: fontSize * 0.8, fontWeight: FontWeight.w700, color: AppColors.accent),
       ),
     );
   }

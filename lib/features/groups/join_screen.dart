@@ -131,7 +131,7 @@ class _JoinScreenState extends State<JoinScreen> {
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: AppColors.background,
                     borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                   ),
@@ -157,7 +157,7 @@ class _JoinScreenState extends State<JoinScreen> {
                           alignment: AlignmentDirectional.centerStart,
                           child: Text(
                             p.status == 'active' ? t.yourStartHintActive : t.yourStartHint,
-                            style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+                            style: TextStyle(fontSize: 13, color: AppColors.textMuted),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -168,7 +168,7 @@ class _JoinScreenState extends State<JoinScreen> {
                       ],
                       const Spacer(),
                       if (p.alreadyMember) ...[
-                        Text(t.alreadyMember, style: const TextStyle(color: AppColors.textMuted)),
+                        Text(t.alreadyMember, style: TextStyle(color: AppColors.textMuted)),
                         const SizedBox(height: 12),
                         FilledButton(
                           onPressed: () {
@@ -178,7 +178,7 @@ class _JoinScreenState extends State<JoinScreen> {
                           child: Text(t.openGroup),
                         ),
                       ] else if (p.memberCount >= p.slots)
-                        Text(t.groupFull, style: const TextStyle(color: AppColors.statusLate, fontWeight: FontWeight.w600))
+                        Text(t.groupFull, style: TextStyle(color: AppColors.statusLate, fontWeight: FontWeight.w600))
                       else
                         FilledButton(onPressed: _busy ? null : () => _join(p), child: Text(t.joinGroup)),
                       const SizedBox(height: 8),

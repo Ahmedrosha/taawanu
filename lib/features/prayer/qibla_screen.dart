@@ -44,11 +44,11 @@ class QiblaScreen extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: aligned ? AppColors.statusDone : AppColors.navy,
+                          color: aligned ? AppColors.statusDone : AppColors.accent,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(t.qiblaBearing(qibla.round()), style: const TextStyle(color: AppColors.textMuted)),
+                      Text(t.qiblaBearing(qibla.round()), style: TextStyle(color: AppColors.textMuted)),
                       const Spacer(),
                       AspectRatio(
                         aspectRatio: 1,
@@ -59,13 +59,13 @@ class QiblaScreen extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
-                      Text(t.distanceToMakkah(km), style: const TextStyle(color: AppColors.textMuted)),
+                      Text(t.distanceToMakkah(km), style: TextStyle(color: AppColors.textMuted)),
                       if (accuracy != null && accuracy > 30) ...[
                         const SizedBox(height: 10),
-                        Text(t.calibrateCompass, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, color: AppColors.statusLate)),
+                        Text(t.calibrateCompass, textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.statusLate)),
                       ],
                       const SizedBox(height: 10),
-                      Text(t.qiblaTip, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                      Text(t.qiblaTip, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                     ],
                   ),
                 );
@@ -120,7 +120,7 @@ class _DialPainter extends CustomPainter {
       canvas.drawLine(p1, p2, tick);
     }
     final tp = TextPainter(
-      text: const TextSpan(text: 'N', style: TextStyle(color: AppColors.statusLate, fontWeight: FontWeight.w700, fontSize: 18)),
+      text: TextSpan(text: 'N', style: TextStyle(color: AppColors.statusLate, fontWeight: FontWeight.w700, fontSize: 18)),
       textDirection: TextDirection.ltr,
     )..layout();
     tp.paint(canvas, c + Offset(-tp.width / 2, -r + 22));
@@ -129,7 +129,7 @@ class _DialPainter extends CustomPainter {
     final a = qibla * math.pi / 180;
     final dir = Offset(math.sin(a), -math.cos(a));
     final arrow = Paint()
-      ..color = aligned ? AppColors.statusDone : AppColors.navy
+      ..color = aligned ? AppColors.statusDone : AppColors.accent
       ..strokeWidth = 6
       ..strokeCap = StrokeCap.round;
     canvas.drawLine(c, c + dir * (r - 40), arrow);
@@ -137,7 +137,7 @@ class _DialPainter extends CustomPainter {
     final k = c + dir * (r - 40);
     canvas.drawRect(Rect.fromCenter(center: k, width: 26, height: 26), Paint()..color = const Color(0xFF111827));
     canvas.drawRect(Rect.fromLTWH(k.dx - 13, k.dy - 6, 26, 4), Paint()..color = AppColors.gold);
-    canvas.drawCircle(c, 7, Paint()..color = AppColors.navy);
+    canvas.drawCircle(c, 7, Paint()..color = AppColors.accent);
   }
 
   @override

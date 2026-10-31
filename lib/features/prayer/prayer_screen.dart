@@ -168,7 +168,7 @@ class _PrayerScreenState extends State<PrayerScreen> {
                 AppCard(
                   padding: EdgeInsets.zero,
                   child: ListTile(
-                    leading: const Icon(Icons.explore_outlined, color: AppColors.navy),
+                    leading: Icon(Icons.explore_outlined, color: AppColors.accent),
                     title: Text(t.qiblaDirection, style: const TextStyle(fontWeight: FontWeight.w700)),
                     subtitle: Text(t.qiblaBearing(qiblaBearing(_c.lat, _c.lng).round())),
                     trailing: const Icon(Icons.chevron_right),
@@ -179,7 +179,7 @@ class _PrayerScreenState extends State<PrayerScreen> {
                 Text(
                   '${methodName(t, _c.method)} · ${_c.asrHanafi ? t.asrHanafi : t.asrStandard}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                  style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                 ),
               ],
             ),
@@ -203,11 +203,11 @@ class _NoLocation extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.mosque_outlined, size: 64, color: AppColors.navy),
+            Icon(Icons.mosque_outlined, size: 64, color: AppColors.accent),
             const SizedBox(height: 16),
             Text(t.prayerNeedLocation, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 6),
-            Text(t.locationPrivacyNote, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
+            Text(t.locationPrivacyNote, textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: locating ? null : onLocate,
@@ -238,7 +238,7 @@ class _LocationRow extends StatelessWidget {
     final t = AppLocalizations.of(context);
     return Row(
       children: [
-        const Icon(Icons.place_outlined, size: 20, color: AppColors.navy),
+        Icon(Icons.place_outlined, size: 20, color: AppColors.accent),
         const SizedBox(width: 6),
         Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.w600))),
         IconButton(
@@ -313,7 +313,7 @@ class _TodayTimes extends StatelessWidget {
                   Icon(
                     p == Prayer.sunrise ? Icons.wb_twilight : Icons.access_time,
                     size: 18,
-                    color: isNextToday && p == nextP ? AppColors.navy : AppColors.textMuted,
+                    color: isNextToday && p == nextP ? AppColors.accent : AppColors.textMuted,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -329,7 +329,7 @@ class _TodayTimes extends StatelessWidget {
                     formatTime(context, today[p]),
                     style: TextStyle(
                       fontWeight: isNextToday && p == nextP ? FontWeight.w700 : FontWeight.w500,
-                      color: isNextToday && p == nextP ? AppColors.navy : AppColors.text,
+                      color: isNextToday && p == nextP ? AppColors.accent : AppColors.text,
                     ),
                   ),
                 ],

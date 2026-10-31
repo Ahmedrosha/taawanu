@@ -91,7 +91,7 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, i) {
                     if (i == items.length) {
-                      return Text(t.tapToCount, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: AppColors.textMuted));
+                      return Text(t.tapToCount, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textMuted));
                     }
                     final d = items[i];
                     return _DhikrCard(dhikr: d, count: _counts[d.id] ?? 0, quran: q, onTap: () => _tap(d));
@@ -131,7 +131,7 @@ class _DhikrCard extends StatelessWidget {
     final text = _text();
     final isQuran = dhikr.quran != null;
     return Material(
-      color: done ? const Color(0xFFF0FDF4) : AppColors.surface,
+      color: done ? AppColors.doneTint : AppColors.surface,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -140,7 +140,7 @@ class _DhikrCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: done ? const Color(0xFF86EFAC) : AppColors.border),
+            border: Border.all(color: done ? AppColors.doneBorder : AppColors.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -160,12 +160,12 @@ class _DhikrCard extends StatelessWidget {
                   const SizedBox(width: 12),
                   Text(
                     done ? t.doneCheck : '$count / ${dhikr.count}',
-                    style: TextStyle(fontWeight: FontWeight.w700, color: done ? AppColors.statusDone : AppColors.navy),
+                    style: TextStyle(fontWeight: FontWeight.w700, color: done ? AppColors.statusDone : AppColors.accent),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
-              Text(dhikr.source, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+              Text(dhikr.source, style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
             ],
           ),
         ),

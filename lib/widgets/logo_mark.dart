@@ -10,18 +10,23 @@ class LogoMark extends StatelessWidget {
   const LogoMark({
     super.key,
     this.size = 96,
-    this.leftColor = AppColors.navy,
-    this.rightColor = AppColors.blue,
-  });
+    Color? leftColor,
+    Color? rightColor,
+  })  : _left = leftColor,
+        _right = rightColor;
 
   /// نسخة للخلفيات الغامقة.
   const LogoMark.onDark({super.key, this.size = 96})
-      : leftColor = Colors.white,
-        rightColor = const Color(0xFFBFDBFE);
+      : _left = Colors.white,
+        _right = const Color(0xFFBFDBFE);
 
   final double size;
-  final Color leftColor;
-  final Color rightColor;
+  final Color? _left;
+  final Color? _right;
+
+  // الافتراضي حسب الوضع (فاتح/غامق).
+  Color get leftColor => _left ?? (AppColors.isDark ? Colors.white : AppColors.navy);
+  Color get rightColor => _right ?? (AppColors.isDark ? const Color(0xFF93C5FD) : AppColors.blue);
 
   @override
   Widget build(BuildContext context) {

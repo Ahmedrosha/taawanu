@@ -120,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: AppColors.background,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               ),
@@ -211,7 +211,7 @@ class _GoogleG extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: AppColors.border),
       ),
-      child: const Text('G', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.blue, fontSize: 14)),
+      child: Text('G', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.blue, fontSize: 14)),
     );
   }
 }

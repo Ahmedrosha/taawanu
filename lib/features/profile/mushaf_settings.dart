@@ -37,7 +37,7 @@ class _MushafSettingsState extends State<MushafSettings> {
           // معاينة: آية من الفاتحة بالخط والحجم المختارين.
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(color: const Color(0xFFFFFDF7), borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(color: AppColors.paper, borderRadius: BorderRadius.circular(12)),
             child: FutureBuilder<QuranData>(
               // المفتاح بالخط: لما الخط يتغير، النص يتحمّل من جديد (مصحف المدينة نصه مختلف).
               key: ValueKey(_font),
@@ -83,7 +83,7 @@ class _MushafSettingsState extends State<MushafSettings> {
           ),
           const SizedBox(height: 12),
           Text(_font == madinahFont ? t.quranTextSourceMadinah : t.quranTextSource,
-              style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+              style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
         ],
       ),
     );

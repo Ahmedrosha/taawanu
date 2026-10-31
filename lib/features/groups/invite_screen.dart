@@ -62,7 +62,7 @@ class _InviteScreenState extends State<InviteScreen> {
             child: Row(
               children: [
                 Expanded(child: Text(g.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17))),
-                StatusPill(label: t.freeSlots(free), color: AppColors.navy, light: true),
+                StatusPill(label: t.freeSlots(free), color: AppColors.accent, light: true),
               ],
             ),
           ),
@@ -105,7 +105,7 @@ class _InviteScreenState extends State<InviteScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFFDCF8C6),
+                color: AppColors.whatsappBubble,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: SelectableText(_message(t), style: const TextStyle(height: 1.7)),
@@ -124,7 +124,7 @@ class _InviteScreenState extends State<InviteScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(color: AppColors.sky, borderRadius: BorderRadius.circular(14)),
-              child: Text(t.privateInviteNote, style: const TextStyle(color: AppColors.navy)),
+              child: Text(t.privateInviteNote, style: TextStyle(color: AppColors.accent)),
             ),
         ],
       ),

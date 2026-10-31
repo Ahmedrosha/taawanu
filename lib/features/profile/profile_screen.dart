@@ -41,7 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-                        if (user?.email != null) Text(user!.email!, style: const TextStyle(color: AppColors.textMuted)),
+                        if (user?.email != null) Text(user!.email!, style: TextStyle(color: AppColors.textMuted)),
                       ],
                     ),
                   ),
@@ -88,6 +88,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 10),
               const MushafSettings(),
               const SizedBox(height: 28),
+              SectionTitle(t.appearance),
+              const SizedBox(height: 10),
+              ValueListenableBuilder<ThemeMode>(
+                valueListenable: themeModeNotifier,
+                builder: (context, mode, _) => SegmentedButton<ThemeMode>(
+                  showSelectedIcon: false,
+                  segments: [
+                    ButtonSegment(value: ThemeMode.system, label: Text(t.themeSystem), icon: const Icon(Icons.brightness_auto_outlined)),
+                    ButtonSegment(value: ThemeMode.light, label: Text(t.themeLight), icon: const Icon(Icons.light_mode_outlined)),
+                    ButtonSegment(value: ThemeMode.dark, label: Text(t.themeDark), icon: const Icon(Icons.dark_mode_outlined)),
+                  ],
+                  selected: {mode},
+                  onSelectionChanged: (sel) => setAppThemeMode(sel.first),
+                ),
+              ),
+              const SizedBox(height: 28),
               SectionTitle(t.language),
               const SizedBox(height: 10),
               ValueListenableBuilder<Locale>(
@@ -115,7 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   final done = await runAction(context, () => UserService.instance.deleteAccount());
                   if (done) await AuthService.instance.signOut();
                 },
-                child: Text(t.deleteAccount, style: const TextStyle(color: AppColors.statusLate)),
+                child: Text(t.deleteAccount, style: TextStyle(color: AppColors.statusLate)),
               ),
             ],
           );
@@ -149,9 +165,9 @@ class _Kpi extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-          Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.navy)),
-          Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          Text(title, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.accent)),
+          Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
         ],
       ),
     );
@@ -176,10 +192,10 @@ class _Badge extends StatelessWidget {
             height: 56,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: earned ? const Color(0xFFFDF6E3) : const Color(0xFFF1F5F9),
-              border: Border.all(color: earned ? AppColors.gold : const Color(0xFFCBD5E1), width: 2),
+              color: earned ? AppColors.goldTint : AppColors.neutralTint,
+              border: Border.all(color: earned ? AppColors.gold : AppColors.statusPending, width: 2),
             ),
-            child: Icon(icon, color: earned ? const Color(0xFF8A6A14) : const Color(0xFF94A3B8)),
+            child: Icon(icon, color: earned ? AppColors.goldInk : AppColors.mutedLine),
           ),
           const SizedBox(height: 6),
           Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: earned ? AppColors.text : AppColors.textMuted)),

@@ -50,9 +50,9 @@ class _NextPrayerTileState extends State<NextPrayerTile> {
       final (p, at) = _c.next(now);
       content = Text.rich(
         TextSpan(children: [
-          TextSpan(text: '${t.nextPrayer}: ', style: const TextStyle(color: AppColors.textMuted)),
+          TextSpan(text: '${t.nextPrayer}: ', style: TextStyle(color: AppColors.textMuted)),
           TextSpan(text: '${prayerName(t, p)} ${formatTime(context, at)}', style: const TextStyle(fontWeight: FontWeight.w700)),
-          TextSpan(text: ' · ${timeUntil(t, at.difference(now.toUtc()))}', style: const TextStyle(color: AppColors.textMuted)),
+          TextSpan(text: ' · ${timeUntil(t, at.difference(now.toUtc()))}', style: TextStyle(color: AppColors.textMuted)),
         ]),
       );
     }
@@ -65,10 +65,10 @@ class _NextPrayerTileState extends State<NextPrayerTile> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
-              const Icon(Icons.mosque_outlined, color: AppColors.navy),
+              Icon(Icons.mosque_outlined, color: AppColors.accent),
               const SizedBox(width: 10),
               Expanded(child: content),
-              const Icon(Icons.chevron_right, color: AppColors.textMuted),
+              Icon(Icons.chevron_right, color: AppColors.textMuted),
             ],
           ),
         ),

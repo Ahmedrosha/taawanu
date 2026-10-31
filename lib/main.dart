@@ -12,6 +12,7 @@ Future<void> main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await Prefs.init();
   localeNotifier.value = Prefs.instance.locale;
+  themeModeNotifier.value = Prefs.instance.themeMode;
   // الإشعارات بتبدأ بعد تسجيل الدخول، وبتقف بعد الخروج.
   void syncPush() {
     if (AuthService.instance.isSignedIn) {

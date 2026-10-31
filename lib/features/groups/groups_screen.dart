@@ -75,7 +75,7 @@ class _GroupCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(color: AppColors.sky, borderRadius: BorderRadius.circular(14)),
-                child: Icon(group.isPrivate ? Icons.lock_outline : Icons.public, color: AppColors.navy),
+                child: Icon(group.isPrivate ? Icons.lock_outline : Icons.public, color: AppColors.accent),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -96,7 +96,7 @@ class _GroupCard extends StatelessWidget {
                 decoration: BoxDecoration(color: AppColors.sky, borderRadius: BorderRadius.circular(999)),
                 child: Text(
                   roleLabel(t, group.role),
-                  style: text.labelSmall?.copyWith(color: AppColors.navy, fontWeight: FontWeight.w700),
+                  style: text.labelSmall?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w700),
                 ),
               ),
             ],
@@ -125,8 +125,8 @@ class _EmptyState extends StatelessWidget {
             Container(
               width: 88,
               height: 88,
-              decoration: const BoxDecoration(color: AppColors.sky, shape: BoxShape.circle),
-              child: const Icon(Icons.groups_outlined, size: 44, color: AppColors.navy),
+              decoration: BoxDecoration(color: AppColors.sky, shape: BoxShape.circle),
+              child: Icon(Icons.groups_outlined, size: 44, color: AppColors.accent),
             ),
             const SizedBox(height: 20),
             Text(t.groupsEmptyTitle, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700)),

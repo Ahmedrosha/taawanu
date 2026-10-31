@@ -5,6 +5,7 @@ import 'l10n/gen/app_localizations.dart';
 import 'router.dart';
 import 'services/prefs.dart';
 import 'services/user_service.dart';
+import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 
 /// اللغة الحالية للتطبيق (محفوظة على الجهاز). العربي هو الافتراضي.
@@ -17,18 +18,38 @@ Future<void> setAppLocale(Locale locale) async {
   await UserService.instance.setLocale(locale.languageCode);
 }
 
+/// المظهر: تلقائي (زي الموبايل) أو فاتح أو غامق. محفوظ على الجهاز.
+final themeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.system);
+
+Future<void> setAppThemeMode(ThemeMode mode) async {
+  themeModeNotifier.value = mode;
+  await Prefs.instance.setThemeMode(mode.name);
+}
+
 class TaawanuApp extends StatelessWidget {
   const TaawanuApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<Locale>(
-      valueListenable: localeNotifier,
-      builder: (context, locale, _) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([localeNotifier, themeModeNotifier]),
+      builder: (context, _) {
+        final locale = localeNotifier.value;
+        final mode = themeModeNotifier.value;
         return MaterialApp.router(
           onGenerateTitle: (context) => AppLocalizations.of(context).appName,
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: mode,
+          // الألوان في الشاشات بتتقري من AppColors، فلما الوضع يتغير بنعيد بناء كل حاجة.
+          builder: (context, child) {
+            final dark = mode == ThemeMode.dark ||
+                (mode == ThemeMode.system && MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+            final b = dark ? Brightness.dark : Brightness.light;
+            AppColors.use(b);
+            return KeyedSubtree(key: ValueKey(b), child: child ?? const SizedBox.shrink());
+          },
           locale: locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: const [

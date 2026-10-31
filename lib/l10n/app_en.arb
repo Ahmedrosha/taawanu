@@ -544,5 +544,9 @@
   "fontNaskh": "Simple Naskh",
   "quranTextSource": "Quran text: Tanzil Project (tanzil.net)",
   "fontMadinah": "Madinah Mushaf",
-  "quranTextSourceMadinah": "Madinah Mushaf text and font: King Fahd Glorious Quran Printing Complex"
+  "quranTextSourceMadinah": "Madinah Mushaf text and font: King Fahd Glorious Quran Printing Complex",
+  "appearance": "Appearance",
+  "themeSystem": "Auto",
+  "themeLight": "Light",
+  "themeDark": "Dark"
 }

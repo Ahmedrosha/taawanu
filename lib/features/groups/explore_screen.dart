@@ -51,7 +51,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 if (groups.isEmpty)
                   Padding(
                     padding: const EdgeInsets.all(32),
-                    child: Text(t.exploreEmpty, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+                    child: Text(t.exploreEmpty, textAlign: TextAlign.center, style: TextStyle(color: AppColors.textMuted)),
                   ),
                 for (final g in groups)
                   Padding(
@@ -63,22 +63,22 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           Row(
                             children: [
                               Expanded(child: Text(g.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
-                              StatusPill(label: t.freeSlots(g.slots - g.memberCount), color: AppColors.navy, light: true),
+                              StatusPill(label: t.freeSlots(g.slots - g.memberCount), color: AppColors.accent, light: true),
                             ],
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '${wardLabel(t, g.wardQuarters)} · ${g.cycleCount == 1 ? '' : '${g.cycleCount} '}${cycleUnitLabel(t, CycleUnit.values.byName(g.cycleUnit))}',
-                            style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+                            style: TextStyle(fontSize: 13, color: AppColors.textMuted),
                           ),
                           const SizedBox(height: 10),
                           ProgressLine(value: g.memberCount / g.slots),
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              Text(t.membersCount(g.memberCount, g.slots), style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                              Text(t.membersCount(g.memberCount, g.slots), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                               const Spacer(),
-                              Text(t.khatmasCount(g.khatmasCompleted), style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                              Text(t.khatmasCount(g.khatmasCompleted), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                             ],
                           ),
                           const SizedBox(height: 10),

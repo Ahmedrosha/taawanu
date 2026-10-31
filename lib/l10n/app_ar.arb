@@ -266,5 +266,9 @@
   "fontNaskh": "نسخ بسيط",
   "quranTextSource": "نص المصحف: مشروع تنزيل (tanzil.net)",
   "fontMadinah": "مصحف المدينة",
-  "quranTextSourceMadinah": "نص وخط مصحف المدينة: مجمع الملك فهد لطباعة المصحف الشريف"
+  "quranTextSourceMadinah": "نص وخط مصحف المدينة: مجمع الملك فهد لطباعة المصحف الشريف",
+  "appearance": "المظهر",
+  "themeSystem": "تلقائي",
+  "themeLight": "فاتح",
+  "themeDark": "غامق"
 }

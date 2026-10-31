@@ -54,7 +54,7 @@ class StatTile extends StatelessWidget {
           fit: BoxFit.scaleDown,
           child: Text(
             value,
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: onDark ? Colors.white : AppColors.navy),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: onDark ? Colors.white : AppColors.accent),
           ),
         ),
         const SizedBox(height: 2),
@@ -100,7 +100,7 @@ class ProgressLine extends StatelessWidget {
       child: LinearProgressIndicator(
         value: value.clamp(0, 1),
         minHeight: 8,
-        backgroundColor: const Color(0xFFE2E8F0),
+        backgroundColor: AppColors.track,
         color: AppColors.blue,
       ),
     );
@@ -117,15 +117,15 @@ class InfoBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFDF6E3),
+        color: AppColors.goldTint,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.gold),
       ),
       child: Row(
         children: [
-          const Icon(Icons.auto_awesome, color: Color(0xFF8A6A14)),
+          Icon(Icons.auto_awesome, color: AppColors.goldInk),
           const SizedBox(width: 10),
-          Expanded(child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF5C4708)))),
+          Expanded(child: Text(text, style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.goldText))),
         ],
       ),
     );
@@ -146,7 +146,7 @@ class Avatar extends StatelessWidget {
       radius: size / 2,
       backgroundColor: AppColors.sky,
       foregroundImage: photoUrl != null ? NetworkImage(photoUrl!) : null,
-      child: Text(initial, style: TextStyle(color: AppColors.navy, fontWeight: FontWeight.w700, fontSize: size * 0.4)),
+      child: Text(initial, style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700, fontSize: size * 0.4)),
     );
   }
 }
@@ -167,7 +167,7 @@ class RangeAyahsText extends StatelessWidget {
       builder: (context, snap) {
         final q = snap.data;
         if (q == null) return const SizedBox(height: 18);
-        return Text(rangeAyahs(t, q, locale, from, to), style: const TextStyle(fontSize: 13, color: AppColors.textMuted));
+        return Text(rangeAyahs(t, q, locale, from, to), style: TextStyle(fontSize: 13, color: AppColors.textMuted));
       },
     );
   }
@@ -209,7 +209,7 @@ Future<bool> confirmDialog(
         TextButton(onPressed: () => Navigator.pop(context, false), child: Text(t.cancel)),
         TextButton(
           onPressed: () => Navigator.pop(context, true),
-          child: Text(t.confirm, style: TextStyle(color: destructive ? AppColors.statusLate : AppColors.navy, fontWeight: FontWeight.w700)),
+          child: Text(t.confirm, style: TextStyle(color: destructive ? AppColors.statusLate : AppColors.accent, fontWeight: FontWeight.w700)),
         ),
       ],
     ),

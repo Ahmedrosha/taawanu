@@ -109,7 +109,7 @@ class _RecordSheetState extends State<_RecordSheet> {
           children: [
             Text(widget.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
-            Text(rangeLabel(t, widget.from, widget.to), style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w600)),
+            Text(rangeLabel(t, widget.from, widget.to), style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             InfoBanner(text: widget.selfDone ? t.undoSelfDoneNote : t.recordProgressNote),
             const SizedBox(height: 16),

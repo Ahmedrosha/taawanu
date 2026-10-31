@@ -33,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
           children: [
-            Text(t.greeting, style: const TextStyle(color: AppColors.textMuted)),
+            Text(t.greeting, style: TextStyle(color: AppColors.textMuted)),
             Text(name.isEmpty ? t.defaultUserName : name,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
@@ -74,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   return AppCard(
                     child: Column(
                       children: [
-                        Text(t.homeNoGroups, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+                        Text(t.homeNoGroups, textAlign: TextAlign.center, style: TextStyle(color: AppColors.textMuted)),
                         const SizedBox(height: 12),
                         FilledButton(onPressed: () => context.go('/groups'), child: Text(t.tabGroups)),
                       ],
@@ -130,7 +130,7 @@ class _HomeGroupCardState extends State<_HomeGroupCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(g.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
-                          Text(subtitle, style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
+                          Text(subtitle, style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
                         ],
                       ),
                     ),
@@ -139,20 +139,20 @@ class _HomeGroupCardState extends State<_HomeGroupCard> {
                 ),
                 const SizedBox(height: 12),
                 if (!g.isActive)
-                  Text(t.khatmaNotStarted, style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w600))
+                  Text(t.khatmaNotStarted, style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600))
                 else
                   StreamBuilder<Assignment?>(
                     stream: GroupsService.instance.myAssignment(g.id, g.currentCycle),
                     builder: (context, aSnap) {
                       final a = aSnap.data;
-                      if (a == null) return Text(t.noPortionThisCycle, style: const TextStyle(color: AppColors.textMuted));
+                      if (a == null) return Text(t.noPortionThisCycle, style: TextStyle(color: AppColors.textMuted));
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Row(
                             children: [
                               Text(rangeLabel(t, a.fromQuarter, a.toQuarter),
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.navy, fontWeight: FontWeight.w700)),
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w700)),
                               const Spacer(),
                               if (a.isDone) StatusPill(label: t.portionDone, color: AppColors.statusDone),
                             ],
@@ -161,7 +161,7 @@ class _HomeGroupCardState extends State<_HomeGroupCard> {
                           const SizedBox(height: 10),
                           ProgressLine(value: a.progress),
                           const SizedBox(height: 6),
-                          Text(t.quartersProgress(a.quartersRead, a.quarterCount), style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                          Text(t.quartersProgress(a.quartersRead, a.quarterCount), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                           if (!a.isDone && !a.closed) ...[
                             const SizedBox(height: 12),
                             FilledButton.icon(

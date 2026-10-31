@@ -14,6 +14,10 @@ class Prefs {
   }
 
   Locale get locale => Locale(_p.getString('locale') ?? 'ar');
+
+  /// system | light | dark
+  ThemeMode get themeMode => ThemeMode.values.firstWhere((m) => m.name == _p.getString('themeMode'), orElse: () => ThemeMode.system);
+  Future<void> setThemeMode(String v) => _p.setString('themeMode', v);
   Future<void> setLocale(Locale l) => _p.setString('locale', l.languageCode);
 
   double get readerFontSize => _p.getDouble('readerFontSize') ?? 26;

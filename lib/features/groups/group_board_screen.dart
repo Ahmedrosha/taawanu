@@ -137,7 +137,7 @@ class _FormingCardState extends State<_FormingCard> {
         children: [
           Text(t.groupForming, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
-          Text(t.groupFormingBody(g.memberCount, g.slots), style: const TextStyle(color: AppColors.textMuted)),
+          Text(t.groupFormingBody(g.memberCount, g.slots), style: TextStyle(color: AppColors.textMuted)),
           const SizedBox(height: 16),
           if (widget.isManager) ...[
             FilledButton(onPressed: _busy ? null : _start, child: Text(t.startKhatma)),
@@ -148,7 +148,7 @@ class _FormingCardState extends State<_FormingCard> {
               label: Text(t.invite),
             ),
           ] else
-            Text(t.waitingForAdmin, style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w600)),
+            Text(t.waitingForAdmin, style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -228,20 +228,20 @@ class _MyPortionCard extends StatelessWidget {
     final a = assignment;
     if (loading) return const AppCard(child: Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator())));
     if (a == null) {
-      return AppCard(child: Text(t.noPortionThisCycle, style: const TextStyle(color: AppColors.textMuted)));
+      return AppCard(child: Text(t.noPortionThisCycle, style: TextStyle(color: AppColors.textMuted)));
     }
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.yourPortion, style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+          Text(t.yourPortion, style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
           const SizedBox(height: 4),
           Row(
             children: [
               Expanded(
                 child: Text(
                   rangeLabel(t, a.fromQuarter, a.toQuarter),
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: AppColors.navy, fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w700),
                 ),
               ),
               if (a.isDone) StatusPill(label: t.portionDone, color: AppColors.statusDone),
@@ -250,13 +250,13 @@ class _MyPortionCard extends StatelessWidget {
           if (a.recordedBy != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
-              child: Text(t.recordedByAdminNote, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+              child: Text(t.recordedByAdminNote, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
             ),
           RangeAyahsText(from: a.fromQuarter, to: a.toQuarter),
           const SizedBox(height: 12),
           ProgressLine(value: a.progress),
           const SizedBox(height: 6),
-          Text(t.quartersProgress(a.quartersRead, a.quarterCount), style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          Text(t.quartersProgress(a.quartersRead, a.quarterCount), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
           if (!a.isDone && !a.closed) ...[
             const SizedBox(height: 14),
             FilledButton.icon(
@@ -323,7 +323,7 @@ Color segmentColor(String status) => switch (status) {
       'in_progress' => AppColors.statusInProgress,
       'late' => AppColors.statusLate,
       'open' => AppColors.statusEmpty,
-      _ => const Color(0xFFCBD5E1),
+      _ => AppColors.statusPending,
     };
 
 Color segmentTextColor(String status) => switch (status) {
@@ -355,7 +355,7 @@ class _KhatmaMap extends StatelessWidget {
           Text(t.khatmaMap, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
           if (canRecord) ...[
             const SizedBox(height: 2),
-            Text(t.tapToRecordHint, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+            Text(t.tapToRecordHint, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
           ],
           const SizedBox(height: 12),
           GridView.count(
@@ -386,7 +386,7 @@ class _KhatmaMap extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: segmentColor(s.status),
                         borderRadius: BorderRadius.circular(showNumbers ? 8 : 3),
-                        border: s.status == 'open' ? Border.all(color: const Color(0xFF94A3B8)) : null,
+                        border: s.status == 'open' ? Border.all(color: AppColors.mutedLine) : null,
                       ),
                       child: showNumbers
                           ? Text('${s.seg + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: segmentTextColor(s.status)))
@@ -407,7 +407,7 @@ class _KhatmaMap extends StatelessWidget {
                   children: [
                     Container(width: 10, height: 10, decoration: BoxDecoration(color: segmentColor(st), borderRadius: BorderRadius.circular(3))),
                     const SizedBox(width: 4),
-                    Text(segmentStatusLabel(t, st), style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    Text(segmentStatusLabel(t, st), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                   ],
                 ),
             ],
@@ -465,7 +465,7 @@ class _ExtraPortions extends StatelessWidget {
       children: [
         SectionTitle(t.extraPortions),
         const SizedBox(height: 4),
-        Text(t.extraPortionsBody, style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
+        Text(t.extraPortionsBody, style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
         const SizedBox(height: 10),
         for (final p in portions)
           Padding(
@@ -474,9 +474,9 @@ class _ExtraPortions extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 // الورد اللي خلص: أخضر فاتح.
-                color: p.isDone ? const Color(0xFFE8F5EC) : AppColors.surface,
+                color: p.isDone ? AppColors.doneTint : AppColors.surface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: p.isDone ? const Color(0xFFA7D7B5) : AppColors.border),
+                border: Border.all(color: p.isDone ? AppColors.doneBorder : AppColors.border),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -484,7 +484,7 @@ class _ExtraPortions extends StatelessWidget {
                   Row(
                     children: [
                       if (p.isDone) ...[
-                        const Icon(Icons.check_circle, color: AppColors.statusDone, size: 22),
+                        Icon(Icons.check_circle, color: AppColors.statusDone, size: 22),
                         const SizedBox(width: 8),
                       ],
                       Expanded(
@@ -500,7 +500,7 @@ class _ExtraPortions extends StatelessWidget {
                                 if (p.assignee != null) t.assignedTo(names[p.assignee] ?? '—'),
                                 if (p.recordedBy != null) t.recordedByAdminNote,
                               ].join(' · '),
-                              style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                             ),
                           ],
                         ),
@@ -529,7 +529,7 @@ class _ExtraPortions extends StatelessWidget {
                     const SizedBox(height: 10),
                     ProgressLine(value: p.progress),
                     const SizedBox(height: 4),
-                    Text(t.quartersProgress(p.quartersRead, p.quarterCount), style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    Text(t.quartersProgress(p.quartersRead, p.quarterCount), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                   ],
                 ],
               ),
@@ -595,7 +595,7 @@ class _MembersList extends StatelessWidget {
                 '${segmentLabel(t, segmentForSlot(members[i].slot, group.isActive ? group.currentCycle : 1, group.slots), group.wardQuarters)} · ${roleLabel(t, members[i].role)}',
                 style: const TextStyle(fontSize: 12),
               ),
-              trailing: Text(t.pointsN(members[i].points), style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w700)),
+              trailing: Text(t.pointsN(members[i].points), style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700)),
               onLongPress: _canOpen(members[i]) ? () => _manage(context, members[i]) : null,
               onTap: _canOpen(members[i]) ? () => _manage(context, members[i]) : null,
             ),
@@ -639,8 +639,8 @@ class _MembersList extends StatelessWidget {
               ListTile(leading: const Icon(Icons.star_outline), title: Text(t.makeAdmin), onTap: () => Navigator.pop(context, 'admin')),
             if (canManage)
               ListTile(
-              leading: const Icon(Icons.person_remove_outlined, color: AppColors.statusLate),
-              title: Text(t.removeFromGroup, style: const TextStyle(color: AppColors.statusLate)),
+              leading: Icon(Icons.person_remove_outlined, color: AppColors.statusLate),
+              title: Text(t.removeFromGroup, style: TextStyle(color: AppColors.statusLate)),
               onTap: () => Navigator.pop(context, 'remove'),
             ),
           ],
@@ -719,7 +719,7 @@ class _BoardMenu extends StatelessWidget {
         if (me?.isManager ?? false) PopupMenuItem(value: 'settings', child: Text(t.groupSettings)),
         if (me != null && !me!.isAdmin) PopupMenuItem(value: 'leave', child: Text(t.leaveGroup)),
         if (me?.isAdmin ?? false)
-          PopupMenuItem(value: 'delete', child: Text(t.deleteGroup, style: const TextStyle(color: AppColors.statusLate))),
+          PopupMenuItem(value: 'delete', child: Text(t.deleteGroup, style: TextStyle(color: AppColors.statusLate))),
       ],
     );
   }
@@ -741,6 +741,6 @@ class TimeLeftChip extends StatelessWidget {
             ? t.daysLeft(left.inDays)
             : t.hoursLeft(left.inHours.clamp(1, 24));
     final full = DateFormat.MMMEd(Localizations.localeOf(context).toLanguageTag()).add_jm().format(endsAt);
-    return Tooltip(message: full, child: StatusPill(label: label, color: AppColors.navy, light: true));
+    return Tooltip(message: full, child: StatusPill(label: label, color: AppColors.accent, light: true));
   }
 }
