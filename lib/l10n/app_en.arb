@@ -130,7 +130,7 @@
   "explore": "Explore groups",
   "exploreEmpty": "No public groups with free slots right now.",
   "extraPortions": "Extra portions",
-  "extraPortionsBody": "Unfinished portions and empty slots. Take one to help complete the khatma.",
+  "extraPortionsBody": "Your own portion is in the \"Your portion\" card above. These are empty slots and late portions you can take on to help finish the khatma.",
   "finishPortionExtra": "I finished this portion",
   "finishedPortion": "I finished my portion",
   "freeSlots": "{n} free slots",
@@ -521,7 +521,7 @@
     }
   },
   "recordFromExtraPortions": "This cell is an extra portion. Record it from the ⋮ menu under Extra portions.",
-  "open": "Open",
+  "open": "Review",
   "undo": "Undo",
   "undone": "Last quarter undone.",
   "undoneWithPoints": "Portion set back to in progress; {n} points removed.",
