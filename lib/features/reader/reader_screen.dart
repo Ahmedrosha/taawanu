@@ -45,6 +45,9 @@ class _ReaderScreenState extends State<ReaderScreen> {
   late bool _qpc = Prefs.instance.pageStyle == 'qpc';
   PageController? _pager;
   int _page = 1;
+
+  /// آخر صفحة مسموح يوصلها: صفحة نهاية الربع اللي عليه (أو آخر الورد لو خلص).
+  int _limitPage = 1;
   QuranData? _pageQuran;
   MushafLayout? _layout;
   final _pointers = <int, Offset>{};
@@ -209,6 +212,11 @@ class _ReaderScreenState extends State<ReaderScreen> {
     final (s2, a2) = q.quarterEnd(r.toQuarter);
     final first = layout.pageOf(s1, a1);
     final last = layout.endPageOf(s2, a2);
+    // القارئ مبيعديش الربع اللي عليه غير لما يسجّله.
+    final allDone = _read >= r.quarterCount;
+    final (es, ea) = allDone ? (s2, a2) : q.quarterEnd(r.fromQuarter + _read);
+    final limit = allDone ? last : layout.endPageOf(es, ea).clamp(first, last);
+    _limitPage = limit;
     if (_pager == null) {
       final saved = _AyahPos.parse(Prefs.instance.readPosition(_posKey));
       var start = first;
@@ -218,11 +226,19 @@ class _ReaderScreenState extends State<ReaderScreen> {
         final (s, a) = q.quarterStart(r.fromQuarter + _read);
         start = layout.pageOf(s, a);
       }
-      _page = start.clamp(first, last);
+      _page = start.clamp(first, limit);
       _pager = PageController(initialPage: _page - first);
       if (_qpc) MushafFonts.instance.prefetch(_page);
     }
-    bool inRange(int s, int a) => _cmp(s, a, s1, a1) >= 0 && _cmp(s, a, s2, a2) <= 0;
+    // بعد التراجع: لو واقف بعد الحد الجديد نرجع لصفحة نهاية الربع.
+    if (_page > limit) {
+      _page = limit;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_pager?.hasClients ?? false) _pager!.jumpToPage(limit - first);
+      });
+    }
+    // الآيات برا الورد، أو في الأرباع اللي لسه متفتحتش، بتظهر باهتة.
+    bool inRange(int s, int a) => _cmp(s, a, s1, a1) >= 0 && _cmp(s, a, es, ea) <= 0;
     return Listener(
       onPointerDown: _onPointer,
       onPointerMove: _onPointer,
@@ -233,9 +249,9 @@ class _ReaderScreenState extends State<ReaderScreen> {
         textDirection: TextDirection.rtl,
         child: PageView.builder(
           controller: _pager,
-          itemCount: last - first + 1,
+          itemCount: limit - first + 1,
           onPageChanged: (i) {
-            _page = first + i;
+            setState(() => _page = first + i);
             if (_qpc) MushafFonts.instance.prefetch(_page);
             _saveTimer?.cancel();
             _saveTimer = Timer(const Duration(milliseconds: 800), _savePosition);
@@ -384,7 +400,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
             key: _viewportKey,
             controller: _scroll,
             slivers: [
-              for (var i = 0; i < r.quarterCount; i++) ...[
+              // الأرباع اللي بعد الربع الحالي مبتظهرش غير لما يسجّله.
+              for (var i = 0; i < r.quarterCount && i <= _read; i++) ...[
                 SliverToBoxAdapter(
                   child: _QuarterHeader(
                     key: _keyFor(r.fromQuarter + i),
@@ -406,6 +423,13 @@ class _ReaderScreenState extends State<ReaderScreen> {
                       ),
                     ),
                   ),
+                if (i == _read && i < r.quarterCount - 1)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                      child: Text(t.nextQuarterLocked, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    ),
+                  ),
               ],
               const SliverToBoxAdapter(child: SizedBox(height: 40)),
             ],
@@ -420,8 +444,13 @@ class _ReaderScreenState extends State<ReaderScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // في وضع الصفحات زرار تسجيل الربع تحت على طول.
-              if (_pages && _read < r.quarterCount)
+              // في وضع الصفحات زرار تسجيل الربع بيظهر في صفحة نهاية الربع بس.
+              if (_pages && _read < r.quarterCount && _page < _limitPage)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, bottom: 8),
+                  child: Text(t.readToQuarterEnd, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                ),
+              if (_pages && _read < r.quarterCount && _page >= _limitPage)
                 Padding(
                   padding: const EdgeInsets.only(left: 8, bottom: 8),
                   child: FilledButton(

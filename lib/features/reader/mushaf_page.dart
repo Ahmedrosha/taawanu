@@ -170,7 +170,7 @@ class _PageBody extends StatelessWidget {
     final lineH = height / _slots;
     final m = _PageMetrics.of(page: page, qpc: qpc, family: _family, width: width, lineH: lineH, lines: lines, word: _word);
     final ink = AppColors.text;
-    final dim = AppColors.textMuted.withValues(alpha: 0.45);
+    final dim = AppColors.textMuted.withValues(alpha: 0.3);
     final style = TextStyle(fontFamily: _family, fontSize: m.fontSize, height: 1.0, color: ink);
     // صفحة ١ و٢ في المصحف سطورها في النص.
     final allCentered = page <= 2;

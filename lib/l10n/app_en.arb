@@ -724,5 +724,7 @@
   "segmentTakenError": "Someone else has that portion. Pick an open one.",
   "alreadyStartedError": "The khatma has started, so only an admin can change portions now.",
   "changeMyPortion": "Change my portion",
-  "changeMyPortionNote": "You can pick an open portion only, before the khatma starts. After that, only admins can change it. Taken ones are greyed out."
+  "changeMyPortionNote": "You can pick an open portion only, before the khatma starts. After that, only admins can change it. Taken ones are greyed out.",
+  "readToQuarterEnd": "Keep reading to the end of the quarter; the button appears on its last page.",
+  "nextQuarterLocked": "The next quarter opens after you mark this one as done."
 }
