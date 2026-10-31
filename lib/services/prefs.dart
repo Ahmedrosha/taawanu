@@ -93,4 +93,11 @@ class Prefs {
   /// تذكير قبل الصلاة بالدقايق (٠ = من غير).
   int get prayerReminderMinutes => _p.getInt('prayerReminderMinutes') ?? 0;
   Future<void> setPrayerReminderMinutes(int v) => _p.setInt('prayerReminderMinutes', v);
+
+  // ---------- مكان القراءة ----------
+  // آخر آية كانت أول الشاشة في كل ورد: "ربع:سورة:آية".
+
+  String? readPosition(String key) => _p.getString('readPos:$key');
+  Future<void> setReadPosition(String key, String v) => _p.setString('readPos:$key', v);
+  Future<void> clearReadPosition(String key) => _p.remove('readPos:$key');
 }

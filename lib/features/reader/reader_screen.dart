@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -28,17 +31,105 @@ class _ReaderScreenState extends State<ReaderScreen> {
   bool _busy = false;
   final _keys = <int, GlobalKey>{};
   bool _scrolled = false;
+  final _scroll = ScrollController();
+  final _viewportKey = GlobalKey();
+  final _anchors = _Anchors();
+  Timer? _saveTimer;
 
   ReadRequest get r => widget.request;
 
+  /// مفتاح حفظ مكان القراءة لكل ورد.
+  String get _posKey => '${r.groupId}|${r.portionId ?? 'main'}|${r.fromQuarter}-${r.toQuarter}';
+
   GlobalKey _keyFor(int q) => _keys.putIfAbsent(q, GlobalKey.new);
 
+  @override
+  void dispose() {
+    _saveTimer?.cancel();
+    _savePosition();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  /// أول ما الشاشة تفتح: نرجع لآخر آية كانت أول الشاشة، أو لأول ربع لسه مسجّلتهوش.
   void _scrollToCurrent() {
-    if (_scrolled || _read == 0 || _read >= r.quarterCount) return;
+    if (_scrolled) return;
     _scrolled = true;
+    final saved = _AyahPos.parse(Prefs.instance.readPosition(_posKey));
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = _keyFor(r.fromQuarter + _read).currentContext;
-      if (ctx != null) Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 400));
+      if (saved != null) {
+        _jumpToAyah(saved);
+      } else if (_read > 0 && _read < r.quarterCount) {
+        _revealQuarter(r.fromQuarter + _read, then: () {});
+      }
+    });
+  }
+
+  double? get _viewTop {
+    final box = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+    return box?.localToGlobal(Offset.zero).dy;
+  }
+
+  /// أول آية ظاهرة فوق في الشاشة.
+  _AyahPos? _topAyah() {
+    final top = _viewTop;
+    if (top == null) return null;
+    _AyahPos? best;
+    var bestY = double.negativeInfinity;
+    _AyahPos? firstBelow;
+    var firstBelowY = double.infinity;
+    for (final p in _anchors.paragraphs.values) {
+      final rp = p.key.currentContext?.findRenderObject();
+      if (rp is! RenderParagraph || !rp.attached) continue;
+      final paraTop = rp.localToGlobal(Offset.zero).dy;
+      for (final a in p.starts) {
+        final y = paraTop + rp.getOffsetForCaret(TextPosition(offset: a.offset), Rect.zero).dy;
+        if (y <= top + 4 && y > bestY) {
+          best = a.pos;
+          bestY = y;
+        } else if (y > top + 4 && y < firstBelowY) {
+          firstBelow = a.pos;
+          firstBelowY = y;
+        }
+      }
+    }
+    return best ?? firstBelow;
+  }
+
+  void _savePosition() {
+    final pos = _topAyah();
+    if (pos != null) Prefs.instance.setReadPosition(_posKey, pos.toString());
+  }
+
+  /// بيوصل لربع حتى لو لسه مش متبني في القايمة (بيقرّب بالتقدير وبعدين بيظبط).
+  void _revealQuarter(int quarter, {required VoidCallback then, int tries = 0}) {
+    final ctx = _keyFor(quarter).currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(ctx);
+      WidgetsBinding.instance.addPostFrameCallback((_) => then());
+      return;
+    }
+    if (tries > 6 || !_scroll.hasClients) return;
+    final frac = (quarter - r.fromQuarter) / r.quarterCount;
+    _scroll.jumpTo((_scroll.position.maxScrollExtent * frac).clamp(0, _scroll.position.maxScrollExtent));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _revealQuarter(quarter, then: then, tries: tries + 1));
+  }
+
+  /// بيخلي الآية دي أول سطر في الشاشة.
+  void _jumpToAyah(_AyahPos pos) {
+    _revealQuarter(pos.quarter, then: () {
+      final top = _viewTop;
+      if (top == null || !_scroll.hasClients) return;
+      for (final p in _anchors.paragraphs.values) {
+        final rp = p.key.currentContext?.findRenderObject();
+        if (rp is! RenderParagraph || !rp.attached) continue;
+        for (final a in p.starts) {
+          if (a.pos != pos) continue;
+          final y = rp.localToGlobal(Offset.zero).dy + rp.getOffsetForCaret(TextPosition(offset: a.offset), Rect.zero).dy;
+          _scroll.jumpTo((_scroll.offset + y - top).clamp(0, _scroll.position.maxScrollExtent));
+          return;
+        }
+      }
     });
   }
 
@@ -70,6 +161,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
     final points = await _save(next);
     if (points == null || !mounted) return;
     if (finishing) {
+      await Prefs.instance.clearReadPosition(_posKey);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.earnedPoints(points))));
       context.pop();
     }
@@ -90,7 +183,10 @@ class _ReaderScreenState extends State<ReaderScreen> {
 
   Future<void> _changeFont(double delta) async {
     final v = (_fontSize + delta).clamp(18.0, 40.0);
+    // نثبّت أول آية في الشاشة وإحنا بنكبّر أو بنصغّر.
+    final anchor = _topAyah();
     setState(() => _fontSize = v);
+    if (anchor != null) WidgetsBinding.instance.addPostFrameCallback((_) => _jumpToAyah(anchor));
     await Prefs.instance.setReaderFontSize(v);
   }
 
@@ -119,7 +215,16 @@ class _ReaderScreenState extends State<ReaderScreen> {
           final q = snap.data;
           if (q == null) return const Center(child: CircularProgressIndicator());
           _scrollToCurrent();
-          return CustomScrollView(
+          // بنحفظ المكان بعد ما التمرير يقف بثانية.
+          return NotificationListener<ScrollEndNotification>(
+            onNotification: (_) {
+              _saveTimer?.cancel();
+              _saveTimer = Timer(const Duration(milliseconds: 800), _savePosition);
+              return false;
+            },
+            child: CustomScrollView(
+            key: _viewportKey,
+            controller: _scroll,
             slivers: [
               for (var i = 0; i < r.quarterCount; i++) ...[
                 SliverToBoxAdapter(
@@ -131,7 +236,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 18),
-                  sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize)),
+                  sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize, anchors: _anchors)),
                 ),
                 if (i == _read)
                   SliverToBoxAdapter(
@@ -146,6 +251,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
               ],
               const SliverToBoxAdapter(child: SizedBox(height: 40)),
             ],
+          ),
           );
         },
       ),
@@ -207,11 +313,12 @@ class _QuarterHeader extends StatelessWidget {
 
 /// نص الربع: عنوان السورة والبسملة عند بداية كل سورة، وأرقام الآيات.
 class _QuarterText extends StatelessWidget {
-  const _QuarterText({required this.data, required this.quarter, required this.fontSize});
+  const _QuarterText({required this.data, required this.quarter, required this.fontSize, required this.anchors});
 
   final QuranData data;
   final int quarter;
   final double fontSize;
+  final _Anchors anchors;
 
   static const _digits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
 
@@ -226,10 +333,17 @@ class _QuarterText extends StatelessWidget {
     // نقسم الآيات لمجموعات حسب السورة، عشان نحط عنوان السورة قبل أول آية فيها.
     final blocks = <Widget>[];
     var spans = <InlineSpan>[];
+    var starts = <_AyahStart>[];
+    var length = 0;
+    var paraIndex = 0;
     void flush() {
       if (spans.isEmpty) return;
-      blocks.add(Text.rich(TextSpan(children: spans), textAlign: TextAlign.justify, textDirection: TextDirection.rtl));
+      // كل فقرة ليها مفتاح وأماكن بداية آياتها، عشان نعرف أنهي آية أول الشاشة.
+      final para = anchors.paragraph('$quarter:${paraIndex++}', starts);
+      blocks.add(Text.rich(TextSpan(children: spans), key: para.key, textAlign: TextAlign.justify, textDirection: TextDirection.rtl));
       spans = [];
+      starts = [];
+      length = 0;
     }
 
     for (final a in ayahs) {
@@ -240,9 +354,16 @@ class _QuarterText extends StatelessWidget {
           blocks.add(Text(data.basmala, textAlign: TextAlign.center, textDirection: TextDirection.rtl, style: quranStyle));
         }
       }
-      spans.add(TextSpan(text: '${a.text} ', style: quranStyle));
+      starts.add(_AyahStart(_AyahPos(quarter, a.surah, a.number), length));
+      final text = '${a.text} ';
+      spans.add(TextSpan(text: text, style: quranStyle));
+      length += text.length;
       // مصحف المدينة: رقم الآية جوه النص بشكل المصحف المطبوع.
-      if (!data.numbersInText) spans.add(TextSpan(text: '﴿${_arabicNumber(a.number)}﴾ ', style: markStyle));
+      if (!data.numbersInText) {
+        final mark = '﴿${_arabicNumber(a.number)}﴾ ';
+        spans.add(TextSpan(text: mark, style: markStyle));
+        length += mark.length;
+      }
     }
     flush();
 
@@ -275,5 +396,58 @@ class _SurahTitle extends StatelessWidget {
         style: GoogleFonts.amiri(fontSize: fontSize * 0.8, fontWeight: FontWeight.w700, color: AppColors.accent),
       ),
     );
+  }
+}
+
+/// مكان آية: الربع والسورة ورقم الآية.
+class _AyahPos {
+  const _AyahPos(this.quarter, this.surah, this.ayah);
+
+  final int quarter;
+  final int surah;
+  final int ayah;
+
+  static _AyahPos? parse(String? s) {
+    final p = s?.split(':');
+    if (p == null || p.length != 3) return null;
+    final v = p.map(int.tryParse).toList();
+    if (v.contains(null)) return null;
+    return _AyahPos(v[0]!, v[1]!, v[2]!);
+  }
+
+  @override
+  String toString() => '$quarter:$surah:$ayah';
+
+  @override
+  bool operator ==(Object other) => other is _AyahPos && other.quarter == quarter && other.surah == surah && other.ayah == ayah;
+
+  @override
+  int get hashCode => Object.hash(quarter, surah, ayah);
+}
+
+class _AyahStart {
+  const _AyahStart(this.pos, this.offset);
+
+  final _AyahPos pos;
+
+  /// مكان أول حرف في الآية جوه نص الفقرة.
+  final int offset;
+}
+
+class _Paragraph {
+  _Paragraph(this.key, this.starts);
+
+  final GlobalKey key;
+  List<_AyahStart> starts;
+}
+
+/// فقرات النص اللي على الشاشة وأماكن آياتها.
+class _Anchors {
+  final paragraphs = <String, _Paragraph>{};
+
+  _Paragraph paragraph(String id, List<_AyahStart> starts) {
+    final p = paragraphs.putIfAbsent(id, () => _Paragraph(GlobalKey(), starts));
+    p.starts = starts;
+    return p;
   }
 }
