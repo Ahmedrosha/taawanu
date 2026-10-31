@@ -564,5 +564,18 @@
         "type": "String"
       }
     }
+  },
+  "prayerAlerts": "Prayer time alerts",
+  "prayerAlertsHint": "A gentle alert with the normal notification sound.",
+  "prayerReminder": "Reminder before prayer",
+  "reminderOff": "Off",
+  "minutesShort": "{n} min",
+  "notificationsDenied": "Notifications are off for this app. Turn them on in your phone settings.",
+  "@minutesShort": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
   }
 }

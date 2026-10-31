@@ -79,4 +79,18 @@ class Prefs {
 
   bool get asrHanafi => _p.getBool('asrHanafi') ?? false;
   Future<void> setAsrHanafi(bool v) => _p.setBool('asrHanafi', v);
+
+  // ---------- تنبيهات الصلاة ----------
+
+  bool get prayerAlerts => _p.getBool('prayerAlerts') ?? false;
+  Future<void> setPrayerAlerts(bool v) => _p.setBool('prayerAlerts', v);
+
+  /// الصلوات اللي عليها تنبيه (أسماء الـenum). الافتراضي: الخمسة.
+  Set<String> get prayerAlertsFor =>
+      (_p.getStringList('prayerAlertsFor') ?? const ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha']).toSet();
+  Future<void> setPrayerAlertsFor(Set<String> v) => _p.setStringList('prayerAlertsFor', v.toList());
+
+  /// تذكير قبل الصلاة بالدقايق (٠ = من غير).
+  int get prayerReminderMinutes => _p.getInt('prayerReminderMinutes') ?? 0;
+  Future<void> setPrayerReminderMinutes(int v) => _p.setInt('prayerReminderMinutes', v);
 }

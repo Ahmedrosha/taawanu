@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../../l10n/gen/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/ui.dart';
+import '../../services/prefs.dart';
+import 'prayer_alerts.dart';
 import 'prayer_controller.dart';
 import 'prayer_times.dart';
 import 'qibla_screen.dart';
@@ -351,6 +353,19 @@ class _PrayerSettingsSheet extends StatefulWidget {
 
 class _PrayerSettingsSheetState extends State<_PrayerSettingsSheet> {
   final _c = PrayerController.instance;
+  Prefs get _prefs => Prefs.instance;
+
+  Future<void> _toggleAlerts(bool on) async {
+    final t = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    if (on && !await PrayerAlerts.instance.requestPermission()) {
+      messenger.showSnackBar(SnackBar(content: Text(t.notificationsDenied)));
+      return;
+    }
+    await _prefs.setPrayerAlerts(on);
+    if (mounted) setState(() {});
+    await PrayerAlerts.instance.reschedule();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -393,6 +408,53 @@ class _PrayerSettingsSheetState extends State<_PrayerSettingsSheet> {
                 if (mounted) setState(() {});
               },
             ),
+            const SizedBox(height: 20),
+            const Divider(height: 1),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(t.prayerAlerts, style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text(t.prayerAlertsHint, style: const TextStyle(fontSize: 12)),
+              value: _prefs.prayerAlerts,
+              onChanged: _toggleAlerts,
+            ),
+            if (_prefs.prayerAlerts) ...[
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final p in [Prayer.fajr, Prayer.dhuhr, Prayer.asr, Prayer.maghrib, Prayer.isha])
+                    FilterChip(
+                      label: Text(prayerName(t, p)),
+                      selected: _prefs.prayerAlertsFor.contains(p.name),
+                      onSelected: (on) async {
+                        final set = {..._prefs.prayerAlertsFor};
+                        on ? set.add(p.name) : set.remove(p.name);
+                        await _prefs.setPrayerAlertsFor(set);
+                        if (mounted) setState(() {});
+                        await PrayerAlerts.instance.reschedule();
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(t.prayerReminder, style: const TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              SegmentedButton<int>(
+                showSelectedIcon: false,
+                segments: [
+                  ButtonSegment(value: 0, label: Text(t.reminderOff)),
+                  for (final m in const [10, 15, 30]) ButtonSegment(value: m, label: Text(t.minutesShort(m))),
+                ],
+                selected: {_prefs.prayerReminderMinutes},
+                onSelectionChanged: (s) async {
+                  await _prefs.setPrayerReminderMinutes(s.first);
+                  if (mounted) setState(() {});
+                  await PrayerAlerts.instance.reschedule();
+                },
+              ),
+            ],
           ],
         ),
       ),

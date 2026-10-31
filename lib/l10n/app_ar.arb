@@ -272,5 +272,11 @@
   "themeLight": "فاتح",
   "themeDark": "غامق",
   "moveAppliesNext": "العضو كان بدأ يقرا، فالتغيير هيبدأ من الدورة الجاية: {label}",
-  "fromNextCycle": "من الدورة الجاية: {label}"
+  "fromNextCycle": "من الدورة الجاية: {label}",
+  "prayerAlerts": "تنبيه وقت الصلاة",
+  "prayerAlertsHint": "تنبيه هادي بصوت الإشعارات العادي.",
+  "prayerReminder": "تذكير قبل الصلاة",
+  "reminderOff": "من غير",
+  "minutesShort": "{n} د",
+  "notificationsDenied": "الإشعارات مقفولة للتطبيق. افتحها من إعدادات الموبايل."
 }
