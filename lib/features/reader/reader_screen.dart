@@ -47,7 +47,17 @@ class _ReaderScreenState extends State<ReaderScreen> {
   int _page = 1;
 
   /// آخر صفحة مسموح يوصلها: صفحة نهاية الربع اللي عليه (أو آخر الورد لو خلص).
-  int _limitPage = 1;
+  /// بتتحسب من [_read] كل مرة، عشان الزرار تحت ميبقاش متأخر عن الصفحات.
+  int get _limitPage {
+    final q = _pageQuran, layout = _layout;
+    if (q == null || layout == null) return 1 << 30;
+    final (s2, a2) = q.quarterEnd(r.toQuarter);
+    final last = layout.endPageOf(s2, a2);
+    if (_read >= r.quarterCount) return last;
+    final (es, ea) = q.quarterEnd(r.fromQuarter + _read);
+    final (s1, a1) = q.quarterStart(r.fromQuarter);
+    return layout.endPageOf(es, ea).clamp(layout.pageOf(s1, a1), last);
+  }
   QuranData? _pageQuran;
   MushafLayout? _layout;
   final _pointers = <int, Offset>{};
@@ -216,7 +226,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
     final allDone = _read >= r.quarterCount;
     final (es, ea) = allDone ? (s2, a2) : q.quarterEnd(r.fromQuarter + _read);
     final limit = allDone ? last : layout.endPageOf(es, ea).clamp(first, last);
-    _limitPage = limit;
     if (_pager == null) {
       final saved = _AyahPos.parse(Prefs.instance.readPosition(_posKey));
       var start = first;
