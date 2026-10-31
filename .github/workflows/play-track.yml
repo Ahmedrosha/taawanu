@@ -1,0 +1,51 @@
+name: Play track
+
+# يدوي بس: بيحط نسخة اترفعت قبل كده على مسار تاني في Play Console من غير بناء جديد.
+on:
+  workflow_dispatch:
+    inputs:
+      versionCode:
+        description: "رقم النسخة (versionCode)"
+        required: true
+      track:
+        description: "المسار"
+        type: choice
+        options: [internal, alpha, production]
+        default: internal
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign version to track
+        env:
+          PLAY_KEY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          VERSION_CODE: ${{ inputs.versionCode }}
+          TRACK: ${{ inputs.track }}
+        run: |
+          pip install --quiet google-auth requests
+          python3 - <<'PY'
+          import json, os
+          from google.oauth2 import service_account
+          from google.auth.transport.requests import AuthorizedSession
+          key = json.loads(os.environ['PLAY_KEY'], strict=False)
+          creds = service_account.Credentials.from_service_account_info(
+              key, scopes=['https://www.googleapis.com/auth/androidpublisher'])
+          s = AuthorizedSession(creds)
+          base = 'https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.taawanu.taawanu'
+          def check(r):
+              if r.status_code >= 300:
+                  msg = r.text.replace('%', '%25').replace('\n', ' ')[:900]
+                  print(f'::error title=Play API {r.status_code}::{msg}')
+                  raise SystemExit(1)
+              return r.json()
+          edit = check(s.post(f'{base}/edits'))['id']
+          track = os.environ['TRACK']
+          body = {'track': track, 'releases': [{
+              'versionCodes': [os.environ['VERSION_CODE']], 'status': 'completed',
+              'releaseNotes': [{'language': 'ar', 'text': 'نسخة تجريبية'}],
+          }]}
+          check(s.put(f'{base}/edits/{edit}/tracks/{track}', json=body))
+          check(s.post(f'{base}/edits/{edit}:commit'))
+          print(f"::notice title=Done::Version {os.environ['VERSION_CODE']} is on {track}")
+          PY
