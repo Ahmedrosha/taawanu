@@ -59,7 +59,9 @@ class MushafLayout {
 
   static Future<MushafLayout> load() => _loading ??= () async {
         final raw = await rootBundle.loadString('assets/mushaf/pages.json');
-        return _cached = await compute(_parse, raw);
+        final layout = await compute(_parse, raw);
+        _cached = layout;
+        return layout;
       }();
 
   static MushafLayout? get cached => _cached;
