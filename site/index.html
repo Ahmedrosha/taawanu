@@ -4,38 +4,133 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>تعاونوا · ختمات القرآن الجماعية</title>
-  <meta name="description" content="تطبيق لختمات القرآن الجماعية: ورد ثابت لكل عضو، وتدوير تلقائي كل دورة، وتشجيع بالنقاط.">
+  <meta name="description" content="تطبيق مجاني لختمات القرآن الجماعية: ورد ثابت لكل عضو، وتدوير تلقائي كل دورة، وصفحات مصحف المدينة، ومواقيت الصلاة والقبلة والأذكار.">
+  <meta property="og:title" content="تعاونوا · ختمات القرآن الجماعية">
+  <meta property="og:description" content="نختم القرآن مع بعض، كل واحد بورده.">
+  <meta property="og:image" content="https://taawanu.app/img/1-home.jpg">
+  <meta name="theme-color" content="#1E3A8A">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Reem+Kufi:wght@700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
 </head>
-<body>
+<body class="home">
+  <nav class="top">
+    <a class="brand" href="/">
+      <svg width="34" height="34" viewBox="0 0 200 200" aria-hidden="true">
+        <path id="h" d="M100 84 C80 70 50 64 28 72 Q15 76 19 86 Q12 93 19 103 Q12 110 20 120 Q15 128 24 134 L32 148 C54 140 80 142 100 154 Z" fill="#FFFFFF"/>
+        <use href="#h" fill="#BFDBFE" transform="translate(200 0) scale(-1 1)"/>
+        <circle cx="100" cy="56" r="9" fill="#D4A537"/>
+      </svg>
+      <span data-ar="تعاونوا" data-en="Taawanu">تعاونوا</span>
+    </a>
+    <button id="lang" class="lang" type="button">English</button>
+  </nav>
+
   <header class="hero">
-    <svg width="96" height="96" viewBox="0 0 200 200" role="img" aria-label="لوجو تعاونوا">
-      <path id="h" d="M100 84 C80 70 50 64 28 72 Q15 76 19 86 Q12 93 19 103 Q12 110 20 120 Q15 128 24 134 L32 148 C54 140 80 142 100 154 Z" fill="#FFFFFF"/>
-      <use href="#h" fill="#BFDBFE" transform="translate(200 0) scale(-1 1)"/>
-      <circle cx="100" cy="56" r="9" fill="#D4A537"/>
-    </svg>
-    <h1>تعاونوا</h1>
-    <p>نختم القرآن مع بعض، كل واحد بورده</p>
+    <div class="hero-text">
+      <h1 data-ar="نختم القرآن مع بعض،<br>كل واحد بورده" data-en="Complete the Quran together,<br>each with their portion">نختم القرآن مع بعض،<br>كل واحد بورده</h1>
+      <p data-ar="اعمل ختمة مع أهلك وأصحابك: كل عضو ليه ورد ثابت، والأوراد بتلف كل دورة لوحدها، والمجموعة كلها بتختم مع بعض." data-en="Start a khatma with family and friends: everyone has a fixed portion, portions rotate automatically every cycle, and the whole group completes the Quran together.">اعمل ختمة مع أهلك وأصحابك: كل عضو ليه ورد ثابت، والأوراد بتلف كل دورة لوحدها، والمجموعة كلها بتختم مع بعض.</p>
+      <div class="stores">
+        <a class="store" href="https://play.google.com/store/apps/details?id=com.taawanu.taawanu">
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M3.6 1.8 13.4 12l-9.8 10.2c-.4-.2-.6-.6-.6-1.1V2.9c0-.5.2-.9.6-1.1Zm11 11.4 2.5 2.6-11.3 6.4 8.8-9Zm4.1-4.3 2.4 1.4c.8.5.8 1.6 0 2.1l-2.4 1.4-2.8-2.9 2.8-2Zm-13.9-7.1 11.3 6.4-2.5 2.6-8.8-9Z"/></svg>
+          <span><small data-ar="نزّله من" data-en="Get it on">نزّله من</small>Google Play</span>
+        </a>
+        <span class="store soon">
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.8 1.2 1.8 2.6 3.1 2.6 1.3-.1 1.7-.8 3.3-.8 1.5 0 1.9.8 3.3.8 1.4 0 2.2-1.2 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9-.1 0-2.5-1-2.5-4.1Zm-2.5-7.6c.7-.9 1.2-2.1 1.1-3.3-1 0-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.2 1.1.1 2.3-.6 3-1.5Z"/></svg>
+          <span><small data-ar="قريبًا على" data-en="Coming soon to">قريبًا على</small>App Store</span>
+        </span>
+      </div>
+      <p class="free" data-ar="مجاني بالكامل · من غير إعلانات" data-en="Completely free · No ads">مجاني بالكامل · من غير إعلانات</p>
+    </div>
+    <div class="hero-phone"><img src="/img/1-home.jpg" alt="" width="270" height="480"></div>
   </header>
 
-  <main class="card">
-    <h2>إزاي بيشتغل؟</h2>
-    <ol class="steps">
-      <li>اعمل مجموعة خاصة لأصحابك أو أهلك، أو ادخل مجموعة عامة.</li>
-      <li>كل عضو له ورد ثابت: من ربع حزب لحد ٥ أجزاء، والمدة يوم أو أسبوع أو شهر.</li>
-      <li>كل دورة، كل واحد بيقرا الجزء اللي بعد اللي خلصه، والمجموعة الكاملة بتختم مع بعض.</li>
-      <li>القراءة من جوه التطبيق، وكل ربع بتخلصه بيبان للمجموعة على طول.</li>
-      <li>نقاط وأوسمة وسلسلة التزام بتشجعكم تكملوا.</li>
-    </ol>
-    <p class="muted">التطبيق قريبًا على App Store وGoogle Play.</p>
+  <main>
+    <section class="section">
+      <h2 data-ar="كل اللي تحتاجه للختمة" data-en="Everything your khatma needs">كل اللي تحتاجه للختمة</h2>
+      <div class="features">
+        <div class="feature"><div class="ic">👥</div>
+          <h3 data-ar="ختمات جماعية" data-en="Group khatmas">ختمات جماعية</h3>
+          <p data-ar="مجموعات خاصة لأهلك وأصحابك، أو عامة لأي حد. الورد من ربع حزب لحد ٥ أجزاء، والدورة يوم أو أسبوع أو شهر." data-en="Private groups for family and friends, or public ones for anyone. Portions from a quarter hizb up to five juz, with daily, weekly or monthly cycles.">مجموعات خاصة لأهلك وأصحابك، أو عامة لأي حد. الورد من ربع حزب لحد ٥ أجزاء، والدورة يوم أو أسبوع أو شهر.</p></div>
+        <div class="feature"><div class="ic">📖</div>
+          <h3 data-ar="صفحات مصحف المدينة" data-en="Madinah Mushaf pages">صفحات مصحف المدينة</h3>
+          <p data-ar="تقرا وردك من جوه التطبيق بنفس سطور وصفحات المصحف المطبوع، أو بنص متصل وتكبّر الخط براحتك." data-en="Read inside the app with the same lines and pages as the printed Mushaf, or as continuous text you can enlarge.">تقرا وردك من جوه التطبيق بنفس سطور وصفحات المصحف المطبوع، أو بنص متصل وتكبّر الخط براحتك.</p></div>
+        <div class="feature"><div class="ic">🗺️</div>
+          <h3 data-ar="توزيع الأوراد والخريطة" data-en="Assignments and the khatma map">توزيع الأوراد والخريطة</h3>
+          <p data-ar="خريطة بالأجزاء بتوضح مين خلص ومين لسه، ونسبة انتهاء الختمة. والأدمن يوزّع ويبدّل الأوراد بسهولة." data-en="A juz-by-juz map shows who's done and who isn't, plus overall progress. Admins assign and swap portions easily.">خريطة بالأجزاء بتوضح مين خلص ومين لسه، ونسبة انتهاء الختمة. والأدمن يوزّع ويبدّل الأوراد بسهولة.</p></div>
+        <div class="feature"><div class="ic">🕌</div>
+          <h3 data-ar="مواقيت الصلاة والقبلة" data-en="Prayer times and Qibla">مواقيت الصلاة والقبلة</h3>
+          <p data-ar="مواقيت حسب مكانك، وتنبيه هادي وقت كل صلاة، وبوصلة للقبلة. وكله بيتحسب على موبايلك." data-en="Prayer times for your location, gentle alerts at each prayer, and a Qibla compass, all calculated on your phone.">مواقيت حسب مكانك، وتنبيه هادي وقت كل صلاة، وبوصلة للقبلة. وكله بيتحسب على موبايلك.</p></div>
+        <div class="feature"><div class="ic">📿</div>
+          <h3 data-ar="الأذكار وحصن المسلم" data-en="Adhkar and Hisn al-Muslim">الأذكار وحصن المسلم</h3>
+          <p data-ar="أذكار الصباح والمساء وبعد الصلاة والنوم بعدّاد، وحصن المسلم كامل بالبحث." data-en="Morning, evening, after-prayer and sleep adhkar with counters, and the full Hisn al-Muslim with search.">أذكار الصباح والمساء وبعد الصلاة والنوم بعدّاد، وحصن المسلم كامل بالبحث.</p></div>
+        <div class="feature"><div class="ic">⭐</div>
+          <h3 data-ar="نقاط وتذكير" data-en="Points and reminders">نقاط وتذكير</h3>
+          <p data-ar="تذكير قبل آخر الدورة، ونقاط وأوسمة للي بيخلص بدري، عشان المجموعة تفضل متحمسة." data-en="Reminders before the cycle ends, plus points and badges for finishing early, to keep the group motivated.">تذكير قبل آخر الدورة، ونقاط وأوسمة للي بيخلص بدري، عشان المجموعة تفضل متحمسة.</p></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 data-ar="من جوه التطبيق" data-en="Inside the app">من جوه التطبيق</h2>
+      <div class="shots">
+        <img src="/img/1-home.jpg" alt="" loading="lazy" width="216" height="384">
+        <img src="/img/2-reader.jpg" alt="" loading="lazy" width="216" height="384">
+        <img src="/img/3-create.jpg" alt="" loading="lazy" width="216" height="384">
+        <img src="/img/4-join.jpg" alt="" loading="lazy" width="216" height="384">
+        <img src="/img/5-profile.jpg" alt="" loading="lazy" width="216" height="384">
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 data-ar="تبدأ إزاي؟" data-en="How to start">تبدأ إزاي؟</h2>
+      <div class="howto">
+        <div class="step"><b>١</b><h3 data-ar="اعمل مجموعة" data-en="Create a group">اعمل مجموعة</h3><p data-ar="اختار حجم الورد ومدة الدورة." data-en="Choose the portion size and cycle length.">اختار حجم الورد ومدة الدورة.</p></div>
+        <div class="step"><b>٢</b><h3 data-ar="ادعِ أهلك وأصحابك" data-en="Invite family and friends">ادعِ أهلك وأصحابك</h3><p data-ar="ابعتلهم رابط الدعوة على الواتساب." data-en="Send them the invite link on WhatsApp.">ابعتلهم رابط الدعوة على الواتساب.</p></div>
+        <div class="step"><b>٣</b><h3 data-ar="كل واحد يقرا ورده" data-en="Everyone reads their portion">كل واحد يقرا ورده</h3><p data-ar="والأوراد بتلف لوحدها كل دورة لحد ما تختموا." data-en="Portions rotate every cycle until you complete the Quran.">والأوراد بتلف لوحدها كل دورة لحد ما تختموا.</p></div>
+      </div>
+    </section>
+
+    <section class="section narrow">
+      <h2 data-ar="أسئلة شائعة" data-en="FAQ">أسئلة شائعة</h2>
+      <details><summary data-ar="التطبيق مجاني؟" data-en="Is the app free?">التطبيق مجاني؟</summary>
+        <p data-ar="أيوه، مجاني بالكامل ومن غير إعلانات ولا اشتراكات." data-en="Yes, completely free with no ads or subscriptions.">أيوه، مجاني بالكامل ومن غير إعلانات ولا اشتراكات.</p></details>
+      <details><summary data-ar="محتاج نت؟" data-en="Do I need internet?">محتاج نت؟</summary>
+        <p data-ar="محتاج نت لتسجيل التقدم ومتابعة المجموعة. القراءة ومواقيت الصلاة والأذكار شغالين من غير نت." data-en="Internet is needed to record progress and follow your group. Reading, prayer times and adhkar work offline.">محتاج نت لتسجيل التقدم ومتابعة المجموعة. القراءة ومواقيت الصلاة والأذكار شغالين من غير نت.</p></details>
+      <details><summary data-ar="لو حد مقراش ورده؟" data-en="What if someone misses their portion?">لو حد مقراش ورده؟</summary>
+        <p data-ar="الأدمن يختار: الورد يتنقل للدورة الجاية، أو يتوزّع على الباقيين، أو يبقى متاح لأي متطوع، عشان الختمة تكمل." data-en="The admin chooses: carry it to the next cycle, split it among the others, or leave it open for a volunteer, so the khatma still completes.">الأدمن يختار: الورد يتنقل للدورة الجاية، أو يتوزّع على الباقيين، أو يبقى متاح لأي متطوع، عشان الختمة تكمل.</p></details>
+      <details><summary data-ar="إزاي أحذف حسابي؟" data-en="How do I delete my account?">إزاي أحذف حسابي؟</summary>
+        <p data-ar="من التطبيق: حسابي ← حذف الحساب. أو ابعتلنا على support@taawanu.app. التفاصيل في سياسة الخصوصية." data-en="In the app: Profile → Delete account. Or email support@taawanu.app. Details are in the privacy policy.">من التطبيق: حسابي ← حذف الحساب. أو ابعتلنا على support@taawanu.app. التفاصيل في سياسة الخصوصية.</p></details>
+      <details><summary data-ar="نص القرآن منين؟" data-en="Where does the Quran text come from?">نص القرآن منين؟</summary>
+        <p data-ar="نص وخطوط مجمع الملك فهد لطباعة المصحف الشريف، ونص مشروع تنزيل، من غير أي تعديل." data-en="Text and fonts from the King Fahd Glorious Quran Printing Complex, and the Tanzil text, unmodified.">نص وخطوط مجمع الملك فهد لطباعة المصحف الشريف، ونص مشروع تنزيل، من غير أي تعديل.</p></details>
+    </section>
   </main>
 
-  <footer class="muted">
-    <a href="/privacy">سياسة الخصوصية</a> ·
-    <a href="mailto:support@taawanu.app">support@taawanu.app</a> ·
-    <a href="https://github.com/Ahmedrosha/taawanu">الكود على GitHub</a>
+  <footer class="foot">
+    <a href="/privacy" data-ar="سياسة الخصوصية" data-en="Privacy policy">سياسة الخصوصية</a> ·
+    <a href="/privacy#delete" data-ar="حذف الحساب" data-en="Delete account">حذف الحساب</a> ·
+    <a href="mailto:support@taawanu.app">support@taawanu.app</a>
   </footer>
+
+  <script>
+    (function () {
+      var btn = document.getElementById('lang');
+      function apply(lang) {
+        var en = lang === 'en';
+        document.documentElement.lang = en ? 'en' : 'ar';
+        document.documentElement.dir = en ? 'ltr' : 'rtl';
+        document.querySelectorAll('[data-ar]').forEach(function (el) {
+          el.innerHTML = el.getAttribute(en ? 'data-en' : 'data-ar');
+        });
+        document.title = en ? 'Taawanu · Group Quran khatmas' : 'تعاونوا · ختمات القرآن الجماعية';
+        btn.textContent = en ? 'عربي' : 'English';
+        try { localStorage.setItem('lang', lang); } catch (e) {}
+      }
+      var saved = null;
+      try { saved = localStorage.getItem('lang'); } catch (e) {}
+      if (!saved && navigator.language && navigator.language.indexOf('ar') !== 0) saved = 'en';
+      if (saved === 'en') apply('en');
+      btn.addEventListener('click', function () { apply(document.documentElement.lang === 'en' ? 'ar' : 'en'); });
+    })();
+  </script>
 </body>
 </html>

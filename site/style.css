@@ -67,3 +67,58 @@ footer { text-align: center; padding: 24px 16px 40px; }
 .doc h1 { color: var(--navy); }
 .doc h2 { margin-top: 28px; }
 hr { border: 0; border-top: 1px solid var(--border); margin: 40px 0; }
+
+/* ---------- الصفحة الرئيسية ---------- */
+.home { background: var(--bg); }
+.home .top {
+  background: var(--navy);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; max-width: 100%;
+}
+.home .brand { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; font-family: 'Reem Kufi', sans-serif; font-size: 24px; }
+.home .lang { background: transparent; color: #DBEAFE; border: 1px solid #3B5BB5; border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 14px; cursor: pointer; }
+.home .hero {
+  display: flex; align-items: center; justify-content: center; gap: 48px; flex-wrap: wrap;
+  text-align: start; padding: 32px 20px 64px;
+  background: linear-gradient(180deg, var(--navy) 0%, #2544A3 100%);
+}
+.home .hero-text { max-width: 520px; }
+.home .hero h1 { font-family: 'Reem Kufi', sans-serif; font-size: 40px; line-height: 1.35; margin: 0 0 14px; }
+.home .hero p { color: #DBEAFE; font-size: 17px; margin: 0 0 22px; }
+.home .hero .free { font-size: 14px; color: #BFDBFE; margin: 14px 0 0; }
+.home .hero-phone img { width: 240px; height: auto; border-radius: 28px; border: 6px solid #0B1530; box-shadow: 0 24px 60px rgba(0,0,0,.35); display: block; }
+.home .stores { display: flex; gap: 12px; flex-wrap: wrap; }
+.home .store {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: #0B1530; color: #fff; text-decoration: none;
+  padding: 8px 18px; border-radius: 14px; min-height: 52px; border: 1px solid #3B5BB5;
+}
+.home .store span { display: flex; flex-direction: column; line-height: 1.2; font-weight: 700; font-size: 17px; }
+.home .store small { font-weight: 400; font-size: 11px; color: #BFDBFE; }
+.home .store:hover { background: #050B1C; color: #fff; }
+.home .store.soon { opacity: .6; }
+.home .section { max-width: 1040px; margin: 0 auto; padding: 48px 20px 8px; }
+.home .section.narrow { max-width: 720px; }
+.home .section h2 { text-align: center; color: var(--navy); font-size: 28px; margin: 0 0 24px; }
+.home .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.home .feature { background: #fff; border: 1px solid var(--border); border-radius: 20px; padding: 20px; }
+.home .feature .ic { width: 46px; height: 46px; border-radius: 14px; background: var(--sky); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+.home .feature h3 { margin: 12px 0 4px; font-size: 18px; }
+.home .feature p { margin: 0; color: var(--muted); font-size: 15px; }
+.home .shots { display: flex; gap: 16px; overflow-x: auto; padding: 4px 4px 16px; scroll-snap-type: x mandatory; }
+.home .shots img { width: 200px; height: auto; flex: none; border-radius: 22px; border: 1px solid var(--border); scroll-snap-align: start; box-shadow: 0 8px 24px rgba(30,58,138,.12); }
+.home .howto { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.home .step { background: #fff; border: 1px solid var(--border); border-radius: 20px; padding: 20px; text-align: center; }
+.home .step b { display: inline-flex; width: 40px; height: 40px; border-radius: 50%; background: var(--navy); color: #fff; align-items: center; justify-content: center; font-size: 18px; }
+.home .step h3 { margin: 10px 0 4px; font-size: 17px; }
+.home .step p { margin: 0; color: var(--muted); font-size: 15px; }
+.home details { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 14px 18px; margin-bottom: 10px; }
+.home summary { font-weight: 700; cursor: pointer; }
+.home details p { margin: 8px 0 0; color: var(--muted); }
+.home .foot { text-align: center; padding: 40px 16px 48px; color: var(--muted); font-size: 14px; }
+@media (max-width: 640px) {
+  .home .hero { padding-top: 20px; gap: 28px; text-align: center; }
+  .home .hero h1 { font-size: 30px; }
+  .home .stores { justify-content: center; }
+  .home .hero-phone img { width: 200px; }
+}
