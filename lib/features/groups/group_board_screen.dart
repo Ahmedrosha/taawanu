@@ -372,7 +372,6 @@ class _KhatmaMap extends StatelessWidget {
     // نسبة الانتهاء: الأرباع اللي خلصت من الـ٢٤٠.
     final done = (240 - cycle.remainingQuarters).clamp(0, 240);
     final percent = (done * 100 / 240).round();
-    final byJuz = group.wardQuarters < 8;
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,12 +384,10 @@ class _KhatmaMap extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           ProgressLine(value: done / 240),
-          if (_canRecord || byJuz) ...[
-            const SizedBox(height: 6),
-            Text(byJuz ? t.tapJuzHint : t.tapToRecordHint, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-          ],
+          const SizedBox(height: 6),
+          Text(t.tapJuzHint, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
           const SizedBox(height: 12),
-          if (byJuz) _juzGrid(context, t, names) else _segmentGrid(context, t, names),
+          _juzGrid(context, t, names),
           const SizedBox(height: 12),
           Wrap(
             spacing: 12,
@@ -412,42 +409,26 @@ class _KhatmaMap extends StatelessWidget {
     );
   }
 
-  /// ورد جزء أو أكبر: خانة لكل ورد زي ما هو.
-  Widget _segmentGrid(BuildContext context, AppLocalizations t, Map<String, String> names) {
-    final n = cycle.segments.length;
-    final columns = n <= 6 ? 3 : n <= 10 ? 5 : n <= 30 ? 6 : 10;
-    return GridView.count(
-      crossAxisCount: columns,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 6,
-      crossAxisSpacing: 6,
-      childAspectRatio: 1.1,
-      children: [
-        for (final s in cycle.segments)
-          Tooltip(
-            message: '${segmentLabel(t, s.seg, group.wardQuarters)} · ${segmentStatusLabel(t, s.status)}${s.uid != null ? ' · ${names[s.uid] ?? ''}' : ''}',
-            child: GestureDetector(
-              onTap: _recordable(s) ? () => _record(context, s, names) : null,
-              child: Container(
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: segmentColor(s.status),
-                  borderRadius: BorderRadius.circular(8),
-                  border: s.status == 'open' ? Border.all(color: AppColors.mutedLine) : null,
-                ),
-                child: Text('${s.seg + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: segmentTextColor(s.status))),
-              ),
-            ),
-          ),
-      ],
-    );
+  /// الأوراد اللي في الجزء ده بالترتيب: (رقم الورد، عدد أرباعه جوه الجزء، الورد بيبدأ هنا؟).
+  List<(int, int, bool)> _partsOf(int juz) {
+    final w = group.wardQuarters;
+    final parts = <(int, int, bool)>[];
+    var q = juz * 8;
+    final end = q + 8;
+    while (q < end) {
+      final seg = q ~/ w;
+      final stop = ((seg + 1) * w).clamp(q + 1, end);
+      parts.add((seg, stop - q, q == seg * w));
+      q = stop;
+    }
+    return parts;
   }
 
-  /// ورد أصغر من جزء: ٣٠ مربع (جزء لكل مربع)، وتحت رقمه أوراده بألوانها.
+  /// ٣٠ مربع (جزء لكل مربع)، وتحت رقمه أوراده بألوانها.
+  /// لو الورد أكبر من جزء: خط على جنب الجزء اللي بيبدأ منه ورد جديد، وعلامة في الشريط مكان البداية.
   Widget _juzGrid(BuildContext context, AppLocalizations t, Map<String, String> names) {
-    final per = 8 ~/ group.wardQuarters; // أوراد في الجزء: ٢ أو ٤ أو ٨
     final bySeg = {for (final s in cycle.segments) s.seg: s};
+    final big = group.wardQuarters > 8;
     return GridView.count(
       crossAxisCount: 6,
       shrinkWrap: true,
@@ -457,49 +438,64 @@ class _KhatmaMap extends StatelessWidget {
       childAspectRatio: 1.15,
       children: [
         for (var juz = 0; juz < 30; juz++)
-          Material(
-            color: AppColors.surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-              side: BorderSide(color: AppColors.border),
-            ),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: () => _juzSheet(context, juz, per, bySeg, names),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(4, 4, 4, 6),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Builder(builder: (context) {
+            final parts = _partsOf(juz);
+            final startsWard = big && (juz * 8) % group.wardQuarters == 0;
+            final bar = <Widget>[];
+            for (var k = 0; k < parts.length; k++) {
+              final (seg, len, starts) = parts[k];
+              final st = bySeg[seg]?.status ?? 'open';
+              if (big && starts) {
+                bar.add(Container(width: 2, height: 12, margin: const EdgeInsetsDirectional.only(end: 1.5), color: AppColors.text));
+              } else if (k > 0) {
+                bar.add(SizedBox(width: parts.length > 4 ? 1.5 : 2));
+              }
+              bar.add(Expanded(
+                flex: len,
+                child: Container(
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: segmentColor(st),
+                    borderRadius: BorderRadius.circular(2),
+                    border: st == 'open' ? Border.all(color: AppColors.mutedLine, width: 0.6) : null,
+                  ),
+                ),
+              ));
+            }
+            return Material(
+              color: AppColors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(color: AppColors.border),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => _juzSheet(context, juz, bySeg, names),
+                child: Stack(
                   children: [
-                    Text('${juz + 1}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.text)),
-                    Row(
-                      children: [
-                        for (var k = 0; k < per; k++) ...[
-                          if (k > 0) SizedBox(width: per > 4 ? 1.5 : 2),
-                          Expanded(
-                            child: Container(
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: segmentColor(bySeg[juz * per + k]?.status ?? 'open'),
-                                borderRadius: BorderRadius.circular(2),
-                                border: (bySeg[juz * per + k]?.status ?? 'open') == 'open' ? Border.all(color: AppColors.mutedLine, width: 0.6) : null,
-                              ),
-                            ),
-                          ),
+                    if (startsWard)
+                      PositionedDirectional(start: 0, top: 0, bottom: 0, child: Container(width: 3, color: AppColors.accent)),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(5, 4, 5, 6),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('${juz + 1}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.text)),
+                          Row(crossAxisAlignment: CrossAxisAlignment.center, children: bar),
                         ],
-                      ],
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ),
+            );
+          }),
       ],
     );
   }
 
   /// أوراد الجزء: مين معاه كل ورد وحالته. الأدمن يدوس على ورد يسجّله.
-  Future<void> _juzSheet(BuildContext context, int juz, int per, Map<int, Segment> bySeg, Map<String, String> names) async {
+  Future<void> _juzSheet(BuildContext context, int juz, Map<int, Segment> bySeg, Map<String, String> names) async {
     final t = AppLocalizations.of(context);
     final picked = await showModalBottomSheet<Segment>(
       context: context,
@@ -513,8 +509,8 @@ class _KhatmaMap extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: Text(t.juzLabel(juz + 1), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             ),
-            for (var k = 0; k < per; k++)
-              if (bySeg[juz * per + k] case final s?)
+            for (final (seg, _, _) in _partsOf(juz))
+              if (bySeg[seg] case final s?)
                 ListTile(
                   leading: Container(width: 14, height: 14, decoration: BoxDecoration(color: segmentColor(s.status), borderRadius: BorderRadius.circular(4))),
                   title: Text(segmentLabel(t, s.seg, group.wardQuarters), style: const TextStyle(fontWeight: FontWeight.w600)),
