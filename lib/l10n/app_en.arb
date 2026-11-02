@@ -787,7 +787,7 @@
     }
   },
   "tafsirUnavailable": "Tafsir isn't available for this ayah.",
-  "tafsirTip": "Tap any ayah to see its tafsir.",
+  "tafsirTip": "Tap any ayah to listen from it or read its tafsir.",
   "tafsirOffline": "This tafsir downloads once per surah and needs internet the first time.",
   "tafsirGroup": "Tafsir of ayahs {from}–{to} together",
   "@tafsirGroup": {
@@ -817,5 +817,6 @@
       }
     }
   },
-  "recitationWaiting": "Recitation paused at the end of the quarter. Tap \"Mark quarter done\" and it continues with the next one."
+  "recitationWaiting": "Recitation paused at the end of the quarter. Tap \"Mark quarter done\" and it continues with the next one.",
+  "tafsir": "Tafsir"
 }

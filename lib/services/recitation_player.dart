@@ -83,6 +83,33 @@ class RecitationPlayer extends ChangeNotifier {
   /// بيشغّل الآيات دي بالترتيب (لحد آخر الربع اللي عليه، القارئ هو اللي بيحدد).
   Future<void> play(List<(int, int)> ayahs, {required String Function(int surah, int ayah) title}) async {
     if (ayahs.isEmpty) return;
+    final (items, sources) = await _build(ayahs, title);
+    _items = items;
+    _active = true;
+    _waiting = false;
+    await _player.setLoopMode(repeat == 0 ? LoopMode.one : LoopMode.off);
+    await _player.setAudioSources(sources, initialIndex: 0, initialPosition: Duration.zero);
+    notifyListeners();
+    unawaited(_player.play());
+  }
+
+  /// بيزوّد آيات على قايمة التشغيل من غير ما يقطعها (لما ربع جديد يتفتح).
+  /// لو التلاوة كانت واقفة مستنية آخر الربع، بتكمّل من أول الآيات الجديدة.
+  Future<void> extend(List<(int, int)> ayahs, {required String Function(int surah, int ayah) title}) async {
+    if (!_active || ayahs.isEmpty) return;
+    final (items, sources) = await _build(ayahs, title);
+    final firstNew = _items.length;
+    _items = [..._items, ...items];
+    await _player.addAudioSources(sources);
+    if (_waiting) {
+      _waiting = false;
+      await _player.seek(Duration.zero, index: firstNew);
+      unawaited(_player.play());
+    }
+    notifyListeners();
+  }
+
+  Future<(List<(int, int)>, List<AudioSource>)> _build(List<(int, int)> ayahs, String Function(int, int) title) async {
     final r = reciter;
     final dir = await _dir(r);
     final times = repeat == 0 ? 1 : repeat;
@@ -100,13 +127,7 @@ class RecitationPlayer extends ChangeNotifier {
         sources.add(await _source(dir, r, s, a, title(s, a)));
       }
     }
-    _items = items;
-    _active = true;
-    _waiting = false;
-    await _player.setLoopMode(repeat == 0 ? LoopMode.one : LoopMode.off);
-    await _player.setAudioSources(sources, initialIndex: 0, initialPosition: Duration.zero);
-    notifyListeners();
-    unawaited(_player.play());
+    return (items, sources);
   }
 
   Future<AudioSource> _source(Directory dir, Reciter r, int s, int a, String title) async {

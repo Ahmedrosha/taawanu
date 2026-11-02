@@ -117,6 +117,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     }
   }
 
+  /// كل آيات الربع ده بالترتيب.
+  List<(int, int)> _quarterAyahs(QuranData q, int quarter) => [for (final a in q.ayahsOfQuarter(quarter)) (a.surah, a.number)];
+
   /// الآيات من مكان القراءة الحالي لحد آخر الربع اللي عليه (التلاوة بتقف هناك).
   List<(int, int)> _recitationAyahs({(int, int)? from}) {
     final q = _pages ? _pageQuran : _textQuran;
@@ -284,6 +287,31 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     messenger.showSnackBar(SnackBar(content: Text(t.switchedToText), duration: const Duration(seconds: 5)));
   }
 
+  /// الضغط على آية: قايمة صغيرة: استمع من هنا، أو التفسير.
+  Future<void> _ayahMenu(int surah, int ayah) async {
+    final t = AppLocalizations.of(context);
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(_ayahTitle(surah, ayah), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+            ),
+            ListTile(leading: const Icon(Icons.play_circle_outline), title: Text(t.listenFromHere), onTap: () => Navigator.pop(context, 'listen')),
+            ListTile(leading: const Icon(Icons.menu_book_outlined), title: Text(t.tafsir), onTap: () => Navigator.pop(context, 'tafsir')),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (choice == 'listen') await _startRecitation(from: (surah, ayah));
+    if (choice == 'tafsir') _openTafsir(surah, ayah);
+  }
+
   void _openTafsir(int surah, int ayah) =>
       showTafsirSheet(context, surah: surah, ayah: ayah, onPlay: (s, a) => _startRecitation(from: (s, a)));
 
@@ -373,7 +401,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             inRange: inRange,
             highlight: _audio.current,
             onUseHafs: _useHafs,
-            onAyahTap: _openTafsir,
+            onAyahTap: _ayahMenu,
           ),
         ),
       ),
@@ -439,10 +467,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (!mounted) return;
     final points = await _save(next);
     if (points == null || !mounted) return;
-    // التلاوة كانت مستنية آخر الربع: تكمّل من أول الربع اللي اتفتح.
-    if (!finishing && _audio.active && _audio.waiting) {
+    // التلاوة شغالة (أو مستنية آخر الربع): الربع اللي اتفتح بيتضاف عليها وتكمّل من غير ما تقف.
+    if (!finishing && _audio.active) {
       final q = _pages ? _pageQuran : _textQuran;
-      if (q != null) unawaited(_startRecitation(from: q.quarterStart(r.fromQuarter + _read)));
+      if (q != null) unawaited(_audio.extend(_quarterAyahs(q, r.fromQuarter + _read), title: _ayahTitle));
     }
     if (finishing) {
       if (_audio.active) unawaited(_audio.stop());
@@ -461,6 +489,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (!mounted) return;
     final points = await _save(_read - 1);
     if (points == null || !mounted) return;
+    // الربع اتقفل تاني، فالتلاوة بتقف عشان متعديهوش.
+    if (_audio.active) unawaited(_audio.stop());
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(points < 0 ? t.undoneWithPoints(-points) : t.undone),
     ));
@@ -535,7 +565,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 18),
-                  sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize, anchors: _anchors, onAyahTap: _openTafsir, highlight: _audio.current)),
+                  sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize, anchors: _anchors, onAyahTap: _ayahMenu, highlight: _audio.current)),
                 ),
                 if (i == _read)
                   SliverToBoxAdapter(
@@ -568,11 +598,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (_audio.active)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8, bottom: 8),
-                  child: RecitationBar(ayahs: () => _recitationAyahs(from: _audio.current), onRestart: _startRecitation),
-                ),
               // في وضع الصفحات زرار تسجيل الربع بيظهر في صفحة نهاية الربع بس.
               if (_pages && _read < r.quarterCount && _page < _limitPage)
                 Padding(
@@ -588,6 +613,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                         ? (r.isPortion ? t.finishPortionExtra : t.finishedPortion)
                         : '${t.markQuarterDone} · ${rangeLabel(t, r.fromQuarter + _read, r.fromQuarter + _read)}'),
                   ),
+                ),
+              // شريط التلاوة تحت زرار "خلصت الربع" ومنفصل عنه، عشان ميتداسش عليه بالغلط.
+              if (_audio.active)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, top: 4, bottom: 8),
+                  child: RecitationBar(ayahs: () => _recitationAyahs(from: _audio.current), onRestart: _startRecitation),
                 ),
               Row(
             children: [
