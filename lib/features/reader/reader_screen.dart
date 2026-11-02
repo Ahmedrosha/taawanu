@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../l10n/gen/app_localizations.dart';
 import '../../services/groups_service.dart';
@@ -172,6 +173,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     super.initState();
     _audio.addListener(_onAudio);
     WidgetsBinding.instance.addObserver(this);
+    // الشاشة متقفلش طول ما المصحف مفتوح (قراءة أو تلاوة).
+    WakelockPlus.enable();
     if (!Prefs.instance.tafsirTipShown) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -188,6 +191,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void dispose() {
     _audio.removeListener(_onAudio);
     WidgetsBinding.instance.removeObserver(this);
+    WakelockPlus.disable();
     // التلاوة بتقف لما يقفل شاشة القراءة.
     if (_audio.active) _audio.stop();
     _saveTimer?.cancel();

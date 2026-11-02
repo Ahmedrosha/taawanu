@@ -818,5 +818,6 @@
     }
   },
   "recitationWaiting": "Recitation paused at the end of the quarter. Tap \"Mark quarter done\" and it continues with the next one.",
-  "tafsir": "Tafsir"
+  "tafsir": "Tafsir",
+  "followRecitation": "Follow the recitation"
 }

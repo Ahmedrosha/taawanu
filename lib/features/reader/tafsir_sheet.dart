@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/gen/app_localizations.dart';
 import '../../services/prefs.dart';
 import '../../services/quran_repository.dart';
+import '../../services/recitation_player.dart';
 import '../../services/tafsir_repository.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/quran_style.dart';
@@ -43,6 +44,35 @@ class _TafsirBodyState extends State<_TafsirBody> {
   late String _tafsir = Prefs.instance.tafsirId;
   int _retry = 0;
   final _quran = QuranRepository.instance.loadMadinah();
+  final _audio = RecitationPlayer.instance;
+
+  /// التفسير بيمشي مع الآية اللي بتتقري في التلاوة (لو التلاوة شغالة).
+  bool _follow = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _audio.addListener(_onAudio);
+    _onAudio();
+  }
+
+  @override
+  void dispose() {
+    _audio.removeListener(_onAudio);
+    super.dispose();
+  }
+
+  void _onAudio() {
+    final cur = _audio.current;
+    if (!mounted || !_follow || cur == null) return;
+    final (s, a) = cur;
+    if (s == _surah && a == _ayah) return;
+    setState(() {
+      _surah = s;
+      _ayah = a;
+    });
+    if (widget.scroll.hasClients) widget.scroll.jumpTo(0);
+  }
 
   void _go(QuranData q, int delta) {
     var s = _surah, a = _ayah + delta;
@@ -58,6 +88,8 @@ class _TafsirBodyState extends State<_TafsirBody> {
     setState(() {
       _surah = s;
       _ayah = a;
+      // التنقل باليد بيوقف المتابعة (ويرجع لها من الزرار).
+      _follow = false;
     });
     if (widget.scroll.hasClients) widget.scroll.jumpTo(0);
   }
@@ -98,6 +130,17 @@ class _TafsirBodyState extends State<_TafsirBody> {
                 ),
               ],
             ),
+            if (_audio.active)
+              SwitchListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                value: _follow,
+                title: Text(t.followRecitation, style: const TextStyle(fontSize: 14)),
+                onChanged: (v) {
+                  setState(() => _follow = v);
+                  if (v) _onAudio();
+                },
+              ),
             if (widget.onPlay != null)
               Align(
                 alignment: AlignmentDirectional.centerStart,
