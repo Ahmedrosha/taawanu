@@ -54,6 +54,12 @@ class AuthService extends ChangeNotifier {
       account = await GoogleSignIn.instance.authenticate();
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) return false;
+      // بعض موبايلات أندرويد (خدمات Google Play قديمة أو معدّلة) بترفض نافذة الحسابات
+      // ("No credentials available"). بنجرّب صفحة دخول جوجل في المتصفح بدلها.
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        debugPrint('Google sign-in fell back to the web flow: ${e.code} ${e.description}');
+        return _signInWithGoogleWeb(locale: locale, fallbackName: fallbackName);
+      }
       rethrow;
     }
     final idToken = account.authentication.idToken;
@@ -61,6 +67,21 @@ class AuthService extends ChangeNotifier {
     final result = await _auth.signInWithCredential(credential);
     await _ensureProfile(result.user!, locale: locale, fallbackName: fallbackName);
     return true;
+  }
+
+  /// دخول جوجل من صفحة الويب (Firebase) بدل نافذة الحسابات بتاعة أندرويد.
+  Future<bool> _signInWithGoogleWeb({required String locale, required String fallbackName}) async {
+    final provider = GoogleAuthProvider()
+      ..addScope('email')
+      ..setCustomParameters({'prompt': 'select_account'});
+    try {
+      final result = await _auth.signInWithProvider(provider);
+      await _ensureProfile(result.user!, locale: locale, fallbackName: fallbackName);
+      return true;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'canceled' || e.code == 'web-context-canceled') return false;
+      rethrow;
+    }
   }
 
   Future<bool> signInWithApple({required String locale, required String fallbackName}) async {
