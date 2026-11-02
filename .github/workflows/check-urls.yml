@@ -1,0 +1,20 @@
+name: Check URLs
+
+# بيجرّب قايمة روابط ويكتب حالة كل واحد (لاختيار مصادر التلاوة).
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: "روابط مفصولة بمسافة"
+        required: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for u in ${{ inputs.urls }}; do
+            r=$(curl -s -o /dev/null -I -L -A "Mozilla/5.0" -w "%{http_code} %{size_download} %{content_type}" "$u")
+            len=$(curl -s -I -L -A "Mozilla/5.0" "$u" | grep -i '^content-length' | tail -1 | tr -d '\r')
+            echo "::notice title=$r::$u $len"
+          done
