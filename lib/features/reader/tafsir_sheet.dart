@@ -170,7 +170,7 @@ class _TafsirBodyState extends State<_TafsirBody> {
   }
 }
 
-/// النص بعلامات <q> (قرآن) <b> (عنوان) <r> (تنبيه) <h> (فاصل) => نص منسّق.
+/// النص بعلامات `<q>` (قرآن) `<b>` (عنوان) `<r>` (تنبيه) `<h>` (فاصل) => نص منسّق.
 TextSpan tafsirSpans(String text, {required double fontSize}) {
   final base = TextStyle(fontSize: fontSize, height: 1.9, color: AppColors.text);
   final spans = <InlineSpan>[];

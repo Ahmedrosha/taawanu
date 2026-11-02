@@ -26,7 +26,7 @@ class TafsirInfo {
   final bool bundled;
 }
 
-/// تفسير آية: النص (بعلامات <q> <b> <r> <h>)، والآيات اللي بيغطيها لو كذا آية مع بعض.
+/// تفسير آية: النص (بعلامات `<q>` `<b>` `<r>` `<h>`)، والآيات اللي بيغطيها لو كذا آية مع بعض.
 class TafsirEntry {
   const TafsirEntry(this.text, this.fromAyah, this.toAyah);
 
@@ -100,7 +100,7 @@ class TafsirRepository {
           await dir.create(recursive: true);
           await file.writeAsString(raw, flush: true);
         }
-        return compute(_parseSurah, raw);
+        return await compute(_parseSurah, raw);
       } catch (e) {
         _surahs.remove(key);
         rethrow;
