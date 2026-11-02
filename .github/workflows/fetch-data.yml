@@ -1,0 +1,27 @@
+name: Fetch data
+
+# أداة صغيرة: بتنزّل ملف بيانات من رابط وترفعه كـ artifact (لملفات مصادر القرآن والتفسير).
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "الرابط"
+        required: true
+      name:
+        description: "اسم الملف"
+        required: true
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download
+        run: |
+          mkdir out
+          curl -fsSL -A "Mozilla/5.0" -o "out/${{ inputs.name }}" "${{ inputs.url }}"
+          ls -la out
+          echo "::notice title=Fetched::$(wc -c < "out/${{ inputs.name }}") bytes, sha256 $(sha256sum "out/${{ inputs.name }}" | cut -c1-16)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: data
+          path: out
