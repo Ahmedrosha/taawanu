@@ -19,6 +19,9 @@
 - Page and line layout (604 pages, 15 lines, which words sit on each line): Quran.com data, via [zonetecde/mushaf-layout](https://github.com/zonetecde/mushaf-layout) (QPC V2 edition), generated into `assets/mushaf/pages.json` by `tools/build_mushaf_layout.py`. The words themselves are the KFGQPC text above.
 - Page fonts (optional "identical to print" mode): KFGQPC QPC V2 page fonts and basmala font, from the same repository. Glyphs unmodified; converted from WOFF2 to TTF only so the app can load them, served free of charge from taawanu.app and downloaded on demand.
 
+## Tafsir
+- Al-Muyassar: King Fahd Glorious Quran Printing Complex, via [Tanzil.net](https://tanzil.net/trans/) (`ar.muyassar`), used verbatim (`assets/tafsir/muyassar.json`, built by `tools/build_tafsir_muyassar.py`). Tanzil terms: free use with a clear reference to the source; no modification.
+
 ## Adhkar
 - Daily adhkar and duas: from *Hisn al-Muslim* by Sa'id ibn Ali ibn Wahf al-Qahtani, via [nawafalqari/azkar-api](https://github.com/nawafalqari/azkar-api) (cleaned: elongation characters removed, spacing fixed). Quranic verses are shown from the bundled mushaf text.
 - Full Hisn al-Muslim chapters: via [rn0x/hisn_almuslim_json](https://github.com/rn0x/hisn_almuslim_json). Distributed free of charge, as the book permits.

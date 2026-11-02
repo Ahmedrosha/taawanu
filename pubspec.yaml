@@ -41,6 +41,7 @@ flutter:
     - assets/quran/quran.json
     - assets/quran/madinah.json
     - assets/mushaf/pages.json
+    - assets/tafsir/muyassar.json
     - assets/adhkar/daily.json
     - assets/adhkar/hisn.json
     - assets/fonts/KFGQPC-LICENSE.txt

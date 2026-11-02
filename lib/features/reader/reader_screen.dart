@@ -16,6 +16,7 @@ import '../../widgets/quran_style.dart';
 import '../../widgets/ui.dart';
 import '../groups/group_board_screen.dart' show ReadRequest;
 import 'mushaf_page.dart';
+import 'tafsir_sheet.dart';
 
 
 /// قراءة الورد ربع ربع، وتسجيل كل ربع لما يخلص.
@@ -87,6 +88,21 @@ class _ReaderScreenState extends State<ReaderScreen> {
   String get _posKey => '${r.groupId}|${r.portionId ?? 'main'}|${r.fromQuarter}-${r.toQuarter}';
 
   GlobalKey _keyFor(int q) => _keys.putIfAbsent(q, GlobalKey.new);
+
+  @override
+  void initState() {
+    super.initState();
+    if (!Prefs.instance.tafsirTipShown) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context).tafsirTip),
+          duration: const Duration(seconds: 5),
+        ));
+        Prefs.instance.setTafsirTipShown();
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -187,6 +203,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
     messenger.showSnackBar(SnackBar(content: Text(t.switchedToText), duration: const Duration(seconds: 5)));
   }
 
+  void _openTafsir(int surah, int ayah) => showTafsirSheet(context, surah: surah, ayah: ayah);
+
   void _useHafs() {
     Prefs.instance.setPageStyle('hafs');
     setState(() => _qpc = false);
@@ -272,6 +290,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
             qpc: _qpc,
             inRange: inRange,
             onUseHafs: _useHafs,
+            onAyahTap: _openTafsir,
           ),
         ),
       ),
@@ -420,7 +439,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 18),
-                  sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize, anchors: _anchors)),
+                  sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize, anchors: _anchors, onAyahTap: _openTafsir)),
                 ),
                 if (i == _read)
                   SliverToBoxAdapter(
@@ -526,7 +545,9 @@ class _QuarterHeader extends StatelessWidget {
 
 /// نص الربع: عنوان السورة والبسملة عند بداية كل سورة، وأرقام الآيات.
 class _QuarterText extends StatelessWidget {
-  const _QuarterText({required this.data, required this.quarter, required this.fontSize, required this.anchors});
+  const _QuarterText({required this.data, required this.quarter, required this.fontSize, required this.anchors, required this.onAyahTap});
+
+  final void Function(int surah, int ayah) onAyahTap;
 
   final QuranData data;
   final int quarter;
@@ -553,7 +574,21 @@ class _QuarterText extends StatelessWidget {
       if (spans.isEmpty) return;
       // كل فقرة ليها مفتاح وأماكن بداية آياتها، عشان نعرف أنهي آية أول الشاشة.
       final para = anchors.paragraph('$quarter:${paraIndex++}', starts);
-      blocks.add(Text.rich(TextSpan(children: spans), key: para.key, textAlign: TextAlign.justify, textDirection: TextDirection.rtl));
+      final starts0 = [...starts];
+      // الضغط على أي مكان في الآية بيفتح تفسيرها.
+      blocks.add(GestureDetector(
+        onTapUp: (d) {
+          final rp = para.key.currentContext?.findRenderObject();
+          if (rp is! RenderParagraph) return;
+          final pos = rp.getPositionForOffset(rp.globalToLocal(d.globalPosition)).offset;
+          _AyahStart? hit;
+          for (final a in starts0) {
+            if (a.offset <= pos) hit = a;
+          }
+          if (hit != null) onAyahTap(hit.pos.surah, hit.pos.ayah);
+        },
+        child: Text.rich(TextSpan(children: spans), key: para.key, textAlign: TextAlign.justify, textDirection: TextDirection.rtl),
+      ));
       spans = [];
       starts = [];
       length = 0;

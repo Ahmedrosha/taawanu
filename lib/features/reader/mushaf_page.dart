@@ -18,6 +18,7 @@ class MushafPage extends StatelessWidget {
     required this.qpc,
     this.inRange,
     this.onUseHafs,
+    this.onAyahTap,
   });
 
   final MushafLayout layout;
@@ -29,14 +30,17 @@ class MushafPage extends StatelessWidget {
   /// لو خطوط المجمع مش قادرة تتحمّل: زرار يرجّع لخط حفص.
   final VoidCallback? onUseHafs;
 
+  /// الضغط على كلمة: بيفتح تفسير الآية بتاعتها.
+  final void Function(int surah, int ayah)? onAyahTap;
+
   @override
   Widget build(BuildContext context) {
-    if (!qpc) return _PageBody(page: page, qpc: false, layout: layout, quran: quran, inRange: inRange);
+    if (!qpc) return _PageBody(page: page, qpc: false, layout: layout, quran: quran, inRange: inRange, onAyahTap: onAyahTap);
     final fonts = MushafFonts.instance;
     return ListenableBuilder(
       listenable: fonts,
       builder: (context, _) => fonts.isReady(page)
-          ? _PageBody(page: page, qpc: true, layout: layout, quran: quran, inRange: inRange)
+          ? _PageBody(page: page, qpc: true, layout: layout, quran: quran, inRange: inRange, onAyahTap: onAyahTap)
           : _FontLoader(page: page, onUseHafs: onUseHafs),
     );
   }
@@ -95,7 +99,9 @@ class _FontLoaderState extends State<_FontLoader> {
 }
 
 class _PageBody extends StatelessWidget {
-  const _PageBody({required this.page, required this.qpc, required this.layout, required this.quran, this.inRange});
+  const _PageBody({required this.page, required this.qpc, required this.layout, required this.quran, this.inRange, this.onAyahTap});
+
+  final void Function(int surah, int ayah)? onAyahTap;
 
   final int page;
   final bool qpc;
@@ -195,11 +201,15 @@ class _PageBody extends StatelessWidget {
           final words = [
             for (final w in l.words)
               if (_word(w).isNotEmpty)
-                Text(
-                  _word(w),
-                  softWrap: false,
-                  textDirection: TextDirection.rtl,
-                  style: inRange == null || inRange!(w.surah, w.ayah) ? style : style.copyWith(color: dim),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onAyahTap == null ? null : () => onAyahTap!(w.surah, w.ayah),
+                  child: Text(
+                    _word(w),
+                    softWrap: false,
+                    textDirection: TextDirection.rtl,
+                    style: inRange == null || inRange!(w.surah, w.ayah) ? style : style.copyWith(color: dim),
+                  ),
                 ),
           ];
           final centered = allCentered || m.natural[i] < m.maxNatural * 0.75;

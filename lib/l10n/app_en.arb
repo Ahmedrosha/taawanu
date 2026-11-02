@@ -772,5 +772,20 @@
       }
     }
   },
-  "tapJuzHint": "Tap a juz to see its portions and who has each one."
+  "tapJuzHint": "Tap a juz to see its portions and who has each one.",
+  "previousAyah": "Previous ayah",
+  "nextAyah": "Next ayah",
+  "ayahRef": "{surah} · Ayah {ayah}",
+  "@ayahRef": {
+    "placeholders": {
+      "surah": {
+        "type": "String"
+      },
+      "ayah": {
+        "type": "int"
+      }
+    }
+  },
+  "tafsirUnavailable": "Tafsir isn't available for this ayah.",
+  "tafsirTip": "Tap any ayah to see its tafsir."
 }

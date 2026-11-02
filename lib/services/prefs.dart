@@ -130,4 +130,8 @@ class Prefs {
   /// المجموعات المثبّتة فوق.
   List<String> get pinnedGroups => _p.getStringList('pinnedGroups') ?? const [];
   Future<void> setPinnedGroups(List<String> v) => _p.setStringList('pinnedGroups', v);
+
+  /// نصيحة "دوس على الآية للتفسير" بتظهر مرة واحدة.
+  bool get tafsirTipShown => _p.getBool('tafsirTipShown') ?? false;
+  Future<void> setTafsirTipShown() => _p.setBool('tafsirTipShown', true);
 }
