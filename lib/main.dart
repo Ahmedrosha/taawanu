@@ -1,6 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:just_audio_background/just_audio_background.dart';
 
 import 'app.dart';
 import 'features/prayer/prayer_alerts.dart';
@@ -14,12 +13,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await Prefs.init();
-  // التلاوة بتكمّل والموبايل مقفول، مع التحكم من شاشة القفل.
-  await JustAudioBackground.init(
-    androidNotificationChannelId: 'app.taawanu.recitation',
-    androidNotificationChannelName: 'التلاوة',
-    androidNotificationOngoing: true,
-  );
   localeNotifier.value = Prefs.instance.locale;
   themeModeNotifier.value = Prefs.instance.themeMode;
   // الإشعارات بتبدأ بعد تسجيل الدخول، وبتقف بعد الخروج.

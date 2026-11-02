@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:just_audio_background/just_audio_background.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'prefs.dart';
@@ -107,9 +106,8 @@ class RecitationPlayer extends ChangeNotifier {
   Future<AudioSource> _source(Directory dir, Reciter r, int s, int a, String title) async {
     final name = _file(s, a);
     final local = File('${dir.path}/$name');
-    final tag = MediaItem(id: '${r.id}/$name', title: title, album: r.nameAr, artist: r.nameAr);
-    if (await local.exists()) return AudioSource.file(local.path, tag: tag);
-    return AudioSource.uri(Uri.parse('$_base/${r.folder}/$name'), tag: tag);
+    if (await local.exists()) return AudioSource.file(local.path);
+    return AudioSource.uri(Uri.parse('$_base/${r.folder}/$name'));
   }
 
   Future<void> pause() => _player.pause();

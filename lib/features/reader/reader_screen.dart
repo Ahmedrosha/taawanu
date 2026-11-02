@@ -32,7 +32,7 @@ class ReaderScreen extends StatefulWidget {
   State<ReaderScreen> createState() => _ReaderScreenState();
 }
 
-class _ReaderScreenState extends State<ReaderScreen> {
+class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver {
   late int _read = widget.request.quartersRead;
   late double _fontSize = Prefs.instance.readerFontSize;
   bool _busy = false;
@@ -158,10 +158,17 @@ class _ReaderScreenState extends State<ReaderScreen> {
     await _audio.play(ayahs, title: _ayahTitle);
   }
 
+  /// التلاوة شغالة والتطبيق مفتوح بس: لو خرج من التطبيق أو قفل الشاشة بتقف مؤقتًا.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed && _audio.playing) _audio.pause();
+  }
+
   @override
   void initState() {
     super.initState();
     _audio.addListener(_onAudio);
+    WidgetsBinding.instance.addObserver(this);
     if (!Prefs.instance.tafsirTipShown) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -177,6 +184,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
   @override
   void dispose() {
     _audio.removeListener(_onAudio);
+    WidgetsBinding.instance.removeObserver(this);
     // التلاوة بتقف لما يقفل شاشة القراءة.
     if (_audio.active) _audio.stop();
     _saveTimer?.cancel();
