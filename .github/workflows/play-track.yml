@@ -17,6 +17,7 @@ jobs:
   promote:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Assign version to track
         env:
           PLAY_KEY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
@@ -48,9 +49,15 @@ jobs:
                   print(f"::notice title={t['track']}::{rel or '-'}")
               s.delete(f'{base}/edits/{edit}')
               raise SystemExit(0)
+          # ملاحظات التحديث من distribution/whatsnew (نفس اللي بيستخدمها رفع النسخ).
+          notes = []
+          for lang, f in [('ar', 'whatsnew-ar'), ('en-US', 'whatsnew-en-US')]:
+              p = f'distribution/whatsnew/{f}'
+              if os.path.exists(p):
+                  notes.append({'language': lang, 'text': open(p, encoding='utf-8').read().strip()[:500]})
           body = {'track': track, 'releases': [{
               'versionCodes': [os.environ['VERSION_CODE']], 'status': 'completed',
-              'releaseNotes': [{'language': 'ar', 'text': 'نسخة تجريبية'}],
+              'releaseNotes': notes,
           }]}
           check(s.put(f'{base}/edits/{edit}/tracks/{track}', json=body))
           check(s.post(f'{base}/edits/{edit}:commit'))
