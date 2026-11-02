@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { parseNewGroup, parseSegment, ValidationError } from './validation';
+import { isBlockedSignup, parseNewGroup, parseSegment, ValidationError } from './validation';
 
 const base = { name: 'ختمة الأصحاب', type: 'private', wardQuarters: 8 };
 
@@ -59,5 +59,18 @@ describe('parseSegment', () => {
     assert.throws(() => parseSegment(-1, 30), ValidationError);
     assert.throws(() => parseSegment(2.5, 30), ValidationError);
     assert.throws(() => parseSegment('3', 30), ValidationError);
+  });
+});
+
+describe('حماية التسجيل', () => {
+  test('جوجل وApple مسموحين دايمًا', () => {
+    assert.equal(isBlockedSignup(['google.com'], 'a@gmail.com'), false);
+    assert.equal(isBlockedSignup(['apple.com'], undefined), false);
+  });
+  test('إيميل وباسورد: حساب المراجعة بس', () => {
+    assert.equal(isBlockedSignup(['password'], 'review@taawanu.app'), false);
+    assert.equal(isBlockedSignup(['password'], ' Review@Taawanu.app '), false);
+    assert.equal(isBlockedSignup(['password'], 'hacker@mail.com'), true);
+    assert.equal(isBlockedSignup(['password'], undefined), true);
   });
 });

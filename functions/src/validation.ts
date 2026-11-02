@@ -85,3 +85,12 @@ export function parseSegment(raw: unknown, slots: number): number | null {
   if (raw === undefined || raw === null) return null;
   return intInRange(raw, 0, slots - 1, 'segment');
 }
+
+/** الإيميلات المسموح لها تدخل بإيميل وباسورد (حسابات مراجعة المتاجر). */
+export const PASSWORD_ALLOWLIST = ['review@taawanu.app'];
+
+/** حساب جديد بإيميل وباسورد ومش في القايمة المسموحة؟ (جوجل وApple مسموحين دايمًا) */
+export function isBlockedSignup(providers: string[], email: string | undefined): boolean {
+  if (!providers.includes('password')) return false;
+  return !PASSWORD_ALLOWLIST.includes((email ?? '').trim().toLowerCase());
+}

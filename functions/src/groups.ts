@@ -112,7 +112,7 @@ export const updateGroupSettings = onCall(async (request) => {
   return { ok: true };
 });
 
-async function removeFromGroup(groupId: string, uid: string): Promise<void> {
+export async function removeFromGroup(groupId: string, uid: string): Promise<void> {
   await releaseMemberWork(groupId, uid);
   await db.runTransaction(async (tx) => {
     const gSnap = await tx.get(groupRef(groupId));
@@ -387,7 +387,7 @@ export const deleteGroup = onCall(async (request) => {
 });
 
 
-async function deleteGroupData(groupId: string): Promise<void> {
+export async function deleteGroupData(groupId: string): Promise<void> {
   const members = await groupRef(groupId).collection('members').get();
   const invites = await db.collection('invites').where('groupId', '==', groupId).get();
   const writer = db.bulkWriter();
