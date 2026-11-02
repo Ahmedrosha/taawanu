@@ -375,5 +375,6 @@
   "repeatTimes": "{n, plural, =1{مرة واحدة} other{{n} مرات}}",
   "recitationWaiting": "التلاوة وقفت عند آخر الربع. دوس \"خلصت الربع ده\" وهتكمّل في الربع اللي بعده.",
   "tafsir": "التفسير",
-  "followRecitation": "التفسير يمشي مع التلاوة"
+  "followRecitation": "التفسير يمشي مع التلاوة",
+  "appVersion": "الإصدار {version} ({build})"
 }

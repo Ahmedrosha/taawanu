@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../app.dart';
 import '../../l10n/gen/app_localizations.dart';
@@ -132,6 +133,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   if (done) await AuthService.instance.signOut();
                 },
                 child: Text(t.deleteAccount, style: TextStyle(color: AppColors.statusLate)),
+              ),
+              // رقم الإصدار والبناء، عشان نعرف أنهي نسخة متنزّلة بالظبط.
+              FutureBuilder<PackageInfo>(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snap) => snap.data == null
+                    ? const SizedBox.shrink()
+                    : Padding(
+                        padding: const EdgeInsets.only(top: 8, bottom: 16),
+                        child: Text(
+                          t.appVersion(snap.data!.version, snap.data!.buildNumber),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                        ),
+                      ),
               ),
             ],
           );
