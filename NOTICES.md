@@ -22,6 +22,8 @@
 ## Tafsir
 - Al-Muyassar: King Fahd Glorious Quran Printing Complex, via [Tanzil.net](https://tanzil.net/trans/) (`ar.muyassar`), used verbatim (`assets/tafsir/muyassar.json`, built by `tools/build_tafsir_muyassar.py`). Tanzil terms: free use with a clear reference to the source; no modification.
 
+- As-Saadi (تيسير الكريم الرحمن) and Ibn Kathir (تفسير القرآن العظيم): from the [Quranic Universal Library (QUL)](https://qul.tarteel.ai/resources/tafsir) by Tarteel / Quran.com, converted per surah by `tools/build_tafsir_qul.py` and served from taawanu.app. Text unchanged; Ibn Kathir's manuscript-variant footnotes ([[...]]) are omitted for readability.
+
 ## Adhkar
 - Daily adhkar and duas: from *Hisn al-Muslim* by Sa'id ibn Ali ibn Wahf al-Qahtani, via [nawafalqari/azkar-api](https://github.com/nawafalqari/azkar-api) (cleaned: elongation characters removed, spacing fixed). Quranic verses are shown from the bundled mushaf text.
 - Full Hisn al-Muslim chapters: via [rn0x/hisn_almuslim_json](https://github.com/rn0x/hisn_almuslim_json). Distributed free of charge, as the book permits.

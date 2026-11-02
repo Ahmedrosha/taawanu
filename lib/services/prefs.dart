@@ -134,4 +134,8 @@ class Prefs {
   /// نصيحة "دوس على الآية للتفسير" بتظهر مرة واحدة.
   bool get tafsirTipShown => _p.getBool('tafsirTipShown') ?? false;
   Future<void> setTafsirTipShown() => _p.setBool('tafsirTipShown', true);
+
+  /// التفسير المختار في ورقة التفسير.
+  String get tafsirId => _p.getString('tafsirId') ?? 'muyassar';
+  Future<void> setTafsirId(String v) => _p.setString('tafsirId', v);
 }

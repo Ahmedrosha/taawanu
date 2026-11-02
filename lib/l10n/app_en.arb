@@ -787,5 +787,17 @@
     }
   },
   "tafsirUnavailable": "Tafsir isn't available for this ayah.",
-  "tafsirTip": "Tap any ayah to see its tafsir."
+  "tafsirTip": "Tap any ayah to see its tafsir.",
+  "tafsirOffline": "This tafsir downloads once per surah and needs internet the first time.",
+  "tafsirGroup": "Tafsir of ayahs {from}–{to} together",
+  "@tafsirGroup": {
+    "placeholders": {
+      "from": {
+        "type": "int"
+      },
+      "to": {
+        "type": "int"
+      }
+    }
+  }
 }
