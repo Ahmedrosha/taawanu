@@ -19,7 +19,11 @@ class MushafPage extends StatelessWidget {
     this.inRange,
     this.onUseHafs,
     this.onAyahTap,
+    this.highlight,
   });
+
+  /// الآية اللي بتتقري في التلاوة (بتتلوّن).
+  final (int, int)? highlight;
 
   final MushafLayout layout;
   final QuranData quran;
@@ -35,12 +39,12 @@ class MushafPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!qpc) return _PageBody(page: page, qpc: false, layout: layout, quran: quran, inRange: inRange, onAyahTap: onAyahTap);
+    if (!qpc) return _PageBody(page: page, qpc: false, layout: layout, quran: quran, inRange: inRange, onAyahTap: onAyahTap, highlight: highlight);
     final fonts = MushafFonts.instance;
     return ListenableBuilder(
       listenable: fonts,
       builder: (context, _) => fonts.isReady(page)
-          ? _PageBody(page: page, qpc: true, layout: layout, quran: quran, inRange: inRange, onAyahTap: onAyahTap)
+          ? _PageBody(page: page, qpc: true, layout: layout, quran: quran, inRange: inRange, onAyahTap: onAyahTap, highlight: highlight)
           : _FontLoader(page: page, onUseHafs: onUseHafs),
     );
   }
@@ -99,7 +103,9 @@ class _FontLoaderState extends State<_FontLoader> {
 }
 
 class _PageBody extends StatelessWidget {
-  const _PageBody({required this.page, required this.qpc, required this.layout, required this.quran, this.inRange, this.onAyahTap});
+  const _PageBody({required this.page, required this.qpc, required this.layout, required this.quran, this.inRange, this.onAyahTap, this.highlight});
+
+  final (int, int)? highlight;
 
   final void Function(int surah, int ayah)? onAyahTap;
 
@@ -208,7 +214,9 @@ class _PageBody extends StatelessWidget {
                     _word(w),
                     softWrap: false,
                     textDirection: TextDirection.rtl,
-                    style: inRange == null || inRange!(w.surah, w.ayah) ? style : style.copyWith(color: dim),
+                    style: (inRange == null || inRange!(w.surah, w.ayah) ? style : style.copyWith(color: dim)).copyWith(
+                      backgroundColor: highlight == (w.surah, w.ayah) ? AppColors.goldTint : null,
+                    ),
                   ),
                 ),
           ];

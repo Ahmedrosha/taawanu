@@ -799,5 +799,22 @@
         "type": "int"
       }
     }
+  },
+  "listen": "Listen",
+  "listenFromHere": "Listen from this ayah",
+  "pause": "Pause",
+  "stopRecitation": "Stop recitation",
+  "downloadPortionAudio": "Download recitation to the end of the quarter",
+  "audioDownloaded": "Recitation downloaded for offline listening.",
+  "reciter": "Reciter",
+  "repeatAyah": "Repeat each ayah",
+  "repeatForever": "Until I stop",
+  "repeatTimes": "{n, plural, =1{Once} other{{n} times}}",
+  "@repeatTimes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
   }
 }

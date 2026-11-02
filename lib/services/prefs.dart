@@ -138,4 +138,12 @@ class Prefs {
   /// التفسير المختار في ورقة التفسير.
   String get tafsirId => _p.getString('tafsirId') ?? 'muyassar';
   Future<void> setTafsirId(String v) => _p.setString('tafsirId', v);
+
+  /// القارئ المختار للتلاوة.
+  String get reciterId => _p.getString('reciterId') ?? 'alafasy';
+  Future<void> setReciterId(String v) => _p.setString('reciterId', v);
+
+  /// تكرار كل آية في التلاوة: ١ أو ٣ أو ٥، و٠ = لحد ما يوقّف.
+  int get recitationRepeat => _p.getInt('recitationRepeat') ?? 1;
+  Future<void> setRecitationRepeat(int v) => _p.setInt('recitationRepeat', v);
 }

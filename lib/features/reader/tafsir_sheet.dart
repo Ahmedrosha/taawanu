@@ -8,7 +8,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/quran_style.dart';
 
 /// ورقة التفسير: الآية بخط المصحف وتحتها تفسيرها، مع التنقل للآية اللي قبلها وبعدها.
-Future<void> showTafsirSheet(BuildContext context, {required int surah, required int ayah}) {
+Future<void> showTafsirSheet(BuildContext context, {required int surah, required int ayah, void Function(int surah, int ayah)? onPlay}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -18,13 +18,16 @@ Future<void> showTafsirSheet(BuildContext context, {required int surah, required
       initialChildSize: 0.6,
       minChildSize: 0.35,
       maxChildSize: 0.92,
-      builder: (context, scroll) => _TafsirBody(surah: surah, ayah: ayah, scroll: scroll),
+      builder: (context, scroll) => _TafsirBody(surah: surah, ayah: ayah, scroll: scroll, onPlay: onPlay),
     ),
   );
 }
 
 class _TafsirBody extends StatefulWidget {
-  const _TafsirBody({required this.surah, required this.ayah, required this.scroll});
+  const _TafsirBody({required this.surah, required this.ayah, required this.scroll, this.onPlay});
+
+  /// تشغيل التلاوة من الآية دي.
+  final void Function(int surah, int ayah)? onPlay;
 
   final int surah;
   final int ayah;
@@ -95,6 +98,18 @@ class _TafsirBodyState extends State<_TafsirBody> {
                 ),
               ],
             ),
+            if (widget.onPlay != null)
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    widget.onPlay!(_surah, _ayah);
+                  },
+                  icon: const Icon(Icons.play_arrow),
+                  label: Text(t.listenFromHere),
+                ),
+              ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(color: AppColors.paper, borderRadius: BorderRadius.circular(14)),

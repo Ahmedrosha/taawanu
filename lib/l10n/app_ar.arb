@@ -362,5 +362,15 @@
   "tafsirUnavailable": "التفسير مش متاح للآية دي.",
   "tafsirTip": "دوس على أي آية عشان تشوف تفسيرها.",
   "tafsirOffline": "التفسير ده بيتحمّل أول مرة لكل سورة، ومحتاج نت.",
-  "tafsirGroup": "تفسير الآيات {from}–{to} مع بعض"
+  "tafsirGroup": "تفسير الآيات {from}–{to} مع بعض",
+  "listen": "استمع",
+  "listenFromHere": "استمع من الآية دي",
+  "pause": "إيقاف مؤقت",
+  "stopRecitation": "إيقاف التلاوة",
+  "downloadPortionAudio": "تحميل التلاوة لحد آخر الربع",
+  "audioDownloaded": "التلاوة اتحمّلت وهتشتغل من غير نت.",
+  "reciter": "القارئ",
+  "repeatAyah": "تكرار كل آية",
+  "repeatForever": "لحد ما أوقّف",
+  "repeatTimes": "{n, plural, =1{مرة واحدة} other{{n} مرات}}"
 }

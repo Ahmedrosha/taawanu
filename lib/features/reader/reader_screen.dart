@@ -10,12 +10,14 @@ import '../../services/groups_service.dart';
 import '../../services/mushaf_fonts.dart';
 import '../../services/mushaf_layout.dart';
 import '../../services/prefs.dart';
+import '../../services/recitation_player.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/quran_style.dart';
 import '../../widgets/ui.dart';
 import '../groups/group_board_screen.dart' show ReadRequest;
 import 'mushaf_page.dart';
+import 'recitation_bar.dart';
 import 'tafsir_sheet.dart';
 
 
@@ -89,9 +91,77 @@ class _ReaderScreenState extends State<ReaderScreen> {
 
   GlobalKey _keyFor(int q) => _keys.putIfAbsent(q, GlobalKey.new);
 
+  final _audio = RecitationPlayer.instance;
+  (int, int)? _followed;
+  QuranData? _textQuran;
+
+  /// لما التلاوة تنتقل لآية جديدة: الصفحة بتقلّب لوحدها (أو النص بينزل).
+  void _onAudio() {
+    if (!mounted) return;
+    final cur = _audio.current;
+    setState(() {});
+    if (cur == null || cur == _followed) return;
+    _followed = cur;
+    final (s, a) = cur;
+    if (_pages) {
+      final layout = _layout, q = _pageQuran;
+      if (layout == null || q == null || !(_pager?.hasClients ?? false)) return;
+      final (s1, a1) = q.quarterStart(r.fromQuarter);
+      final first = layout.pageOf(s1, a1);
+      final p = layout.pageOf(s, a);
+      if (p != _page && p <= _limitPage) _pager!.animateToPage(p - first, duration: const Duration(milliseconds: 350), curve: Curves.easeOut);
+    } else {
+      final q = _textQuran;
+      if (q == null) return;
+      _jumpToAyah(_AyahPos(q.quarterOf(s, a).clamp(r.fromQuarter, r.toQuarter), s, a));
+    }
+  }
+
+  /// الآيات من مكان القراءة الحالي لحد آخر الربع اللي عليه (التلاوة بتقف هناك).
+  List<(int, int)> _recitationAyahs({(int, int)? from}) {
+    final q = _pages ? _pageQuran : _textQuran;
+    if (q == null) return const [];
+    final (s1, a1) = q.quarterStart(r.fromQuarter);
+    final endQuarter = _read >= r.quarterCount ? r.toQuarter : r.fromQuarter + _read;
+    final (s2, a2) = q.quarterEnd(endQuarter);
+    var start = from;
+    if (start == null) {
+      final pos = _pages ? _pagePosition() : _topAyah();
+      start = pos == null ? (s1, a1) : (pos.surah, pos.ayah);
+    }
+    var (s, a) = start;
+    if (_cmp(s, a, s1, a1) < 0) (s, a) = (s1, a1);
+    if (_cmp(s, a, s2, a2) > 0) (s, a) = (s1, a1);
+    final out = <(int, int)>[];
+    while (_cmp(s, a, s2, a2) <= 0) {
+      out.add((s, a));
+      if (a < q.ayahCount(s)) {
+        a++;
+      } else {
+        s++;
+        a = 1;
+      }
+    }
+    return out;
+  }
+
+  String _ayahTitle(int s, int a) {
+    final q = _pages ? _pageQuran : _textQuran;
+    final name = q?.surahName(s, 'ar').replaceFirst(RegExp(r'^سُوْرَةُ\s*'), '') ?? '';
+    return '$name $a';
+  }
+
+  Future<void> _startRecitation({(int, int)? from}) async {
+    final ayahs = _recitationAyahs(from: from);
+    if (ayahs.isEmpty) return;
+    _followed = null;
+    await _audio.play(ayahs, title: _ayahTitle);
+  }
+
   @override
   void initState() {
     super.initState();
+    _audio.addListener(_onAudio);
     if (!Prefs.instance.tafsirTipShown) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -106,6 +176,9 @@ class _ReaderScreenState extends State<ReaderScreen> {
 
   @override
   void dispose() {
+    _audio.removeListener(_onAudio);
+    // التلاوة بتقف لما يقفل شاشة القراءة.
+    if (_audio.active) _audio.stop();
     _saveTimer?.cancel();
     _savePosition();
     _scroll.dispose();
@@ -203,7 +276,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
     messenger.showSnackBar(SnackBar(content: Text(t.switchedToText), duration: const Duration(seconds: 5)));
   }
 
-  void _openTafsir(int surah, int ayah) => showTafsirSheet(context, surah: surah, ayah: ayah);
+  void _openTafsir(int surah, int ayah) =>
+      showTafsirSheet(context, surah: surah, ayah: ayah, onPlay: (s, a) => _startRecitation(from: (s, a)));
 
   void _useHafs() {
     Prefs.instance.setPageStyle('hafs');
@@ -289,6 +363,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
             page: first + i,
             qpc: _qpc,
             inRange: inRange,
+            highlight: _audio.current,
             onUseHafs: _useHafs,
             onAyahTap: _openTafsir,
           ),
@@ -401,8 +476,14 @@ class _ReaderScreenState extends State<ReaderScreen> {
           ],
         ),
         actions: _pages
-            ? [IconButton(tooltip: t.enlargeText, onPressed: _enlarge, icon: const Icon(Icons.zoom_in))]
+            ? [
+                if (!_audio.active)
+                  IconButton(tooltip: t.listen, onPressed: _startRecitation, icon: const Icon(Icons.play_circle_outline)),
+                IconButton(tooltip: t.enlargeText, onPressed: _enlarge, icon: const Icon(Icons.zoom_in)),
+              ]
             : [
+                if (!_audio.active)
+                  IconButton(tooltip: t.listen, onPressed: _startRecitation, icon: const Icon(Icons.play_circle_outline)),
                 IconButton(tooltip: t.mushafPagesView, onPressed: () => _setView('pages'), icon: const Icon(Icons.menu_book_outlined)),
                 IconButton(tooltip: t.textSize, onPressed: () => _changeFont(-2), icon: const Icon(Icons.text_decrease)),
                 IconButton(tooltip: t.textSize, onPressed: () => _changeFont(2), icon: const Icon(Icons.text_increase)),
@@ -416,6 +497,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
           if (data == null) return const Center(child: CircularProgressIndicator());
           final (q, layout) = data;
           if (layout != null) return _pagesBody(q, layout);
+          _textQuran = q;
           _scrollToCurrent();
           // بنحفظ المكان بعد ما التمرير يقف بثانية.
           return NotificationListener<ScrollEndNotification>(
@@ -439,7 +521,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 18),
-                  sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize, anchors: _anchors, onAyahTap: _openTafsir)),
+                  sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize, anchors: _anchors, onAyahTap: _openTafsir, highlight: _audio.current)),
                 ),
                 if (i == _read)
                   SliverToBoxAdapter(
@@ -472,6 +554,11 @@ class _ReaderScreenState extends State<ReaderScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (_audio.active)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, bottom: 8),
+                  child: RecitationBar(ayahs: () => _recitationAyahs(from: _audio.current), onRestart: _startRecitation),
+                ),
               // في وضع الصفحات زرار تسجيل الربع بيظهر في صفحة نهاية الربع بس.
               if (_pages && _read < r.quarterCount && _page < _limitPage)
                 Padding(
@@ -545,7 +632,17 @@ class _QuarterHeader extends StatelessWidget {
 
 /// نص الربع: عنوان السورة والبسملة عند بداية كل سورة، وأرقام الآيات.
 class _QuarterText extends StatelessWidget {
-  const _QuarterText({required this.data, required this.quarter, required this.fontSize, required this.anchors, required this.onAyahTap});
+  const _QuarterText({
+    required this.data,
+    required this.quarter,
+    required this.fontSize,
+    required this.anchors,
+    required this.onAyahTap,
+    this.highlight,
+  });
+
+  /// الآية اللي بتتقري في التلاوة.
+  final (int, int)? highlight;
 
   final void Function(int surah, int ayah) onAyahTap;
 
@@ -604,7 +701,8 @@ class _QuarterText extends StatelessWidget {
       }
       starts.add(_AyahStart(_AyahPos(quarter, a.surah, a.number), length));
       final text = '${a.text} ';
-      spans.add(TextSpan(text: text, style: quranStyle));
+      final now = highlight == (a.surah, a.number);
+      spans.add(TextSpan(text: text, style: now ? quranStyle.copyWith(backgroundColor: AppColors.goldTint) : quranStyle));
       length += text.length;
       // مصحف المدينة: رقم الآية جوه النص بشكل المصحف المطبوع.
       if (!data.numbersInText) {

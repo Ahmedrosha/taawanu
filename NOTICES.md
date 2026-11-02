@@ -24,6 +24,9 @@
 
 - As-Saadi (تيسير الكريم الرحمن) and Ibn Kathir (تفسير القرآن العظيم): from the [Quranic Universal Library (QUL)](https://qul.tarteel.ai/resources/tafsir) by Tarteel / Quran.com, converted per surah by `tools/build_tafsir_qul.py` and served from taawanu.app. Text unchanged; Ibn Kathir's manuscript-variant footnotes ([[...]]) are omitted for readability.
 
+## Recitations
+- Ayah-by-ayah recitations streamed from [EveryAyah.com](https://everyayah.com) (Alafasy, Al-Husary, Al-Minshawi, Abdul Basit, As-Sudais, Ash-Shuraym, Al-Muaiqly). Files are not modified; downloads are kept on the device only.
+
 ## Adhkar
 - Daily adhkar and duas: from *Hisn al-Muslim* by Sa'id ibn Ali ibn Wahf al-Qahtani, via [nawafalqari/azkar-api](https://github.com/nawafalqari/azkar-api) (cleaned: elongation characters removed, spacing fixed). Quranic verses are shown from the bundled mushaf text.
 - Full Hisn al-Muslim chapters: via [rn0x/hisn_almuslim_json](https://github.com/rn0x/hisn_almuslim_json). Distributed free of charge, as the book permits.

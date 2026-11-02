@@ -1,5 +1,6 @@
 package com.taawanu.taawanu
 
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 
-class MainActivity : FlutterActivity()
+// AudioServiceActivity عشان التلاوة تشتغل في الخلفية (just_audio_background).
+class MainActivity : AudioServiceActivity()
