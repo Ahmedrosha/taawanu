@@ -98,13 +98,15 @@ class RecitationBar extends StatelessWidget {
             children: [
               Text(t.reciter, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
               for (final r in RecitationPlayer.reciters)
-                RadioListTile<String>(
+                ListTile(
                   contentPadding: EdgeInsets.zero,
-                  value: r.id,
-                  groupValue: Prefs.instance.reciterId,
+                  leading: Icon(
+                    Prefs.instance.reciterId == r.id ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                    color: Prefs.instance.reciterId == r.id ? AppColors.navy : AppColors.textMuted,
+                  ),
                   title: Text(ar ? r.nameAr : r.nameEn),
-                  onChanged: (v) async {
-                    await Prefs.instance.setReciterId(v!);
+                  onTap: () async {
+                    await Prefs.instance.setReciterId(r.id);
                     if (context.mounted) Navigator.pop(context, true);
                   },
                 ),
