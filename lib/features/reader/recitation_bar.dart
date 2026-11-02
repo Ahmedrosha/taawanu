@@ -21,7 +21,7 @@ class RecitationBar extends StatelessWidget {
     final audio = RecitationPlayer.instance;
     final ar = Localizations.localeOf(context).languageCode != 'en';
     final r = audio.reciter;
-    return Container(
+    final bar = Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -56,7 +56,8 @@ class RecitationBar extends StatelessWidget {
           IconButton(tooltip: t.previousAyah, onPressed: audio.previous, icon: const Icon(Icons.skip_previous), visualDensity: VisualDensity.compact),
           IconButton.filled(
             tooltip: audio.playing ? t.pause : t.listen,
-            onPressed: audio.playing ? audio.pause : audio.resume,
+            // وقفت آخر الربع: بتكمّل لوحدها بعد "خلصت الربع ده".
+            onPressed: audio.waiting ? null : (audio.playing ? audio.pause : audio.resume),
             icon: Icon(audio.playing ? Icons.pause : Icons.play_arrow),
           ),
           IconButton(tooltip: t.nextAyah, onPressed: audio.next, icon: const Icon(Icons.skip_next), visualDensity: VisualDensity.compact),
@@ -78,6 +79,18 @@ class RecitationBar extends StatelessWidget {
           IconButton(tooltip: t.stopRecitation, onPressed: audio.stop, icon: const Icon(Icons.close), visualDensity: VisualDensity.compact),
         ],
       ),
+    );
+    if (!audio.waiting) return bar;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Text(t.recitationWaiting, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.accent, fontWeight: FontWeight.w600)),
+        ),
+        bar,
+      ],
     );
   }
 

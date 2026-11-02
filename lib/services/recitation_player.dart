@@ -24,9 +24,10 @@ class RecitationPlayer extends ChangeNotifier {
   RecitationPlayer._() {
     _player.currentIndexStream.listen((_) => notifyListeners());
     _player.playerStateStream.listen((s) {
-      if (s.processingState == ProcessingState.completed) {
-        _player.stop();
-        _active = false;
+      // وصلت آخر الربع: بتستنى لحد ما يسجّل الربع، وبعدها القارئ بيكمّل الربع اللي بعده.
+      if (s.processingState == ProcessingState.completed && _active && !_waiting) {
+        _waiting = true;
+        _player.pause();
       }
       notifyListeners();
     });
@@ -60,6 +61,10 @@ class RecitationPlayer extends ChangeNotifier {
   int get repeat => Prefs.instance.recitationRepeat;
 
   bool get active => _active;
+
+  /// التلاوة وصلت آخر الربع ومستنية تسجيله عشان تكمّل.
+  bool get waiting => _waiting;
+  bool _waiting = false;
   bool get playing => _player.playing;
 
   /// الآية اللي بتتقري دلوقتي (البسملة بتتحسب على أول آية في السورة).
@@ -97,6 +102,7 @@ class RecitationPlayer extends ChangeNotifier {
     }
     _items = items;
     _active = true;
+    _waiting = false;
     await _player.setLoopMode(repeat == 0 ? LoopMode.one : LoopMode.off);
     await _player.setAudioSources(sources, initialIndex: 0, initialPosition: Duration.zero);
     notifyListeners();
@@ -115,6 +121,7 @@ class RecitationPlayer extends ChangeNotifier {
 
   Future<void> stop() async {
     _active = false;
+    _waiting = false;
     await _player.stop();
     notifyListeners();
   }

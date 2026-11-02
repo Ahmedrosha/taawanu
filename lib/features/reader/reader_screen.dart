@@ -439,7 +439,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (!mounted) return;
     final points = await _save(next);
     if (points == null || !mounted) return;
+    // التلاوة كانت مستنية آخر الربع: تكمّل من أول الربع اللي اتفتح.
+    if (!finishing && _audio.active && _audio.waiting) {
+      final q = _pages ? _pageQuran : _textQuran;
+      if (q != null) unawaited(_startRecitation(from: q.quarterStart(r.fromQuarter + _read)));
+    }
     if (finishing) {
+      if (_audio.active) unawaited(_audio.stop());
       await Prefs.instance.clearReadPosition(_posKey);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.earnedPoints(points))));
