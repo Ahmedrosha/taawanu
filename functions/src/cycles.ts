@@ -367,7 +367,7 @@ export async function applyAssignmentProgress(groupId: string, target: string, q
     if (wasDone && c.khatmaComplete) throw new HttpsError('failed-precondition', 'Khatma already complete.');
 
     const status = done ? 'done' : quartersRead > 0 ? 'in_progress' : 'pending';
-    const segments = c.segments.map((s) => (s.seg === a.segment ? { ...s, status } : s));
+    const segments = c.segments.map((s) => (s.seg === a.segment ? { ...s, status, read: quartersRead } : s));
 
     if (done) {
       if (byManager) {
@@ -482,7 +482,7 @@ export async function applyPortionProgress(groupId: string, portionId: string, q
         status: 'done', quartersRead: q, completedAt: FieldValue.serverTimestamp(),
         recordedBy: byManager ? actor.uid : null, pointsAwarded: points, doneCycle: g.currentCycle,
       });
-      setSegment({ status: 'done', ...(p.assignee ? { uid: p.assignee } : {}) });
+      setSegment({ status: 'done', read: q, ...(p.assignee ? { uid: p.assignee } : {}) });
       tx.update(cRef, { remainingQuarters: FieldValue.increment(-count) });
       if (selfDone) return { kind: 'doneSelf', cycle: p.cycle, assignee: p.assignee!, points, rescue: !ownCarry, quarters: count };
       return { kind: 'doneByManager', cycle: p.cycle, assignee: p.assignee };
@@ -492,7 +492,7 @@ export async function applyPortionProgress(groupId: string, portionId: string, q
       status: p.assignee ? 'assigned' : 'open', quartersRead: q, recordedBy: byManager ? actor.uid : null,
       ...(wasDone ? { completedAt: null, pointsAwarded: 0, doneCycle: null } : {}),
     });
-    setSegment({ status: q > 0 ? 'in_progress' : p.assignee ? 'pending' : 'open' });
+    setSegment({ status: q > 0 ? 'in_progress' : p.assignee ? 'pending' : 'open', read: q });
     if (wasDone) tx.update(cRef, { remainingQuarters: FieldValue.increment(count) });
     if (!wasDone) return { kind: 'partial' };
     const selfCounted = !p.recordedBy && p.assignee !== null;

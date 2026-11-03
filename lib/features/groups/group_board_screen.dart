@@ -334,9 +334,33 @@ Color segmentColor(String status) => switch (status) {
       'done' => AppColors.statusDone,
       'in_progress' => AppColors.statusInProgress,
       'late' => AppColors.statusLate,
-      'open' => AppColors.statusEmpty,
+      'open' => Colors.transparent,
       _ => AppColors.statusPending,
     };
+
+/// خانة لون الحالة: "متاح" فاضية بإطار بس، و"جاري" بيتملى أصفر على قد اللي اتقرا (fill من ٠ لـ١).
+Widget segmentSwatch(String status, {double? width, double height = 10, double radius = 3, double fill = 1}) {
+  final open = status == 'open';
+  final partial = status == 'in_progress' && fill < 1;
+  return Container(
+    width: width,
+    height: height,
+    clipBehavior: Clip.antiAlias,
+    decoration: BoxDecoration(
+      color: partial ? AppColors.statusPending : segmentColor(status),
+      borderRadius: BorderRadius.circular(radius),
+      border: open ? Border.all(color: AppColors.mutedLine, width: 1) : null,
+    ),
+    child: partial
+        ? FractionallySizedBox(
+            alignment: AlignmentDirectional.centerStart,
+            widthFactor: fill.clamp(0.0, 1.0),
+            heightFactor: 1,
+            child: ColoredBox(color: AppColors.statusInProgress),
+          )
+        : null,
+  );
+}
 
 Color segmentTextColor(String status) => switch (status) {
       'done' || 'late' => Colors.white,
@@ -397,7 +421,7 @@ class _KhatmaMap extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(width: 10, height: 10, decoration: BoxDecoration(color: segmentColor(st), borderRadius: BorderRadius.circular(3))),
+                    segmentSwatch(st, width: 14, fill: st == 'in_progress' ? 0.5 : 1),
                     const SizedBox(width: 4),
                     Text(segmentStatusLabel(t, st), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                   ],
@@ -442,9 +466,15 @@ class _KhatmaMap extends StatelessWidget {
             final parts = _partsOf(juz);
             final startsWard = big && (juz * 8) % group.wardQuarters == 0;
             final bar = <Widget>[];
+            var q = juz * 8;
             for (var k = 0; k < parts.length; k++) {
               final (seg, len, starts) = parts[k];
-              final st = bySeg[seg]?.status ?? 'open';
+              final s = bySeg[seg];
+              final st = s?.status ?? 'open';
+              // الجزء ده من الورد: الأرباع اللي اتقرت منه (الورد بيتقري بالترتيب).
+              final offset = q - seg * group.wardQuarters;
+              q += len;
+              final fill = s?.read == null ? 1.0 : ((s!.read! - offset).clamp(0, len) / len);
               if (big && starts) {
                 bar.add(Container(width: 2, height: 12, margin: const EdgeInsetsDirectional.only(end: 1.5), color: AppColors.text));
               } else if (k > 0) {
@@ -452,14 +482,7 @@ class _KhatmaMap extends StatelessWidget {
               }
               bar.add(Expanded(
                 flex: len,
-                child: Container(
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: segmentColor(st),
-                    borderRadius: BorderRadius.circular(2),
-                    border: st == 'open' ? Border.all(color: AppColors.mutedLine, width: 0.6) : null,
-                  ),
-                ),
+                child: segmentSwatch(st, height: 8, radius: 2, fill: fill),
               ));
             }
             return Material(
@@ -512,7 +535,8 @@ class _KhatmaMap extends StatelessWidget {
             for (final (seg, _, _) in _partsOf(juz))
               if (bySeg[seg] case final s?)
                 ListTile(
-                  leading: Container(width: 14, height: 14, decoration: BoxDecoration(color: segmentColor(s.status), borderRadius: BorderRadius.circular(4))),
+                  leading: segmentSwatch(s.status, width: 14, height: 14, radius: 4,
+                      fill: s.read == null ? 1 : s.read! / group.wardQuarters),
                   title: Text(segmentLabel(t, s.seg, group.wardQuarters), style: const TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: Text([
                     if (s.uid != null) names[s.uid] ?? '—',

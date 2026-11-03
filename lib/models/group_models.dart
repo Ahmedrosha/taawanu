@@ -114,11 +114,14 @@ class Member {
 }
 
 class Segment {
-  const Segment({required this.seg, required this.uid, required this.status});
+  const Segment({required this.seg, required this.uid, required this.status, this.read});
 
   final int seg;
   final String? uid;
   final String status; // pending | in_progress | done | late | open
+
+  /// الأرباع اللي اتقرت من الورد (null في البيانات القديمة).
+  final int? read;
 }
 
 class Cycle {
@@ -150,7 +153,8 @@ class Cycle {
       segments: [
         for (final s in raw)
           if (s is Map)
-            Segment(seg: _int(s['seg']), uid: s['uid'] as String?, status: (s['status'] as String?) ?? 'pending'),
+            Segment(seg: _int(s['seg']), uid: s['uid'] as String?, status: (s['status'] as String?) ?? 'pending',
+                read: (s['read'] as num?)?.toInt()),
       ],
       remainingQuarters: _int(d['remainingQuarters'], 240),
       khatmaComplete: (d['khatmaComplete'] as bool?) ?? false,

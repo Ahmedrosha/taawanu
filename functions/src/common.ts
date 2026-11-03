@@ -48,6 +48,8 @@ export interface Segment {
   seg: number;
   uid: string | null;
   status: 'pending' | 'in_progress' | 'done' | 'late' | 'open';
+  /** الأرباع اللي اتقرت (بتتحدّث مع كل تسجيل؛ الخريطة بتستخدمها مع in_progress بس). */
+  read?: number;
 }
 
 export function requireUid(request: CallableRequest): string {
