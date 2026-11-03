@@ -60,11 +60,19 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time;
 
       allow update: if isSelf(uid)
-        && changedOnly(['name', 'photoUrl', 'locale', 'settings', 'fcmTokens'])
+        && changedOnly(['name', 'photoUrl', 'locale', 'settings', 'fcmTokens', 'notifSeenAt'])
         && (!('name' in request.resource.data) || isShortText(request.resource.data.name, 60))
         && (!('fcmTokens' in request.resource.data)
             || (request.resource.data.fcmTokens is list && request.resource.data.fcmTokens.size() <= 10))
-        && (!('locale' in request.resource.data) || request.resource.data.locale in ['ar', 'en']);
+        && (!('locale' in request.resource.data) || request.resource.data.locale in ['ar', 'en'])
+        && (request.resource.data.get('notifSeenAt', null) == resource.data.get('notifSeenAt', null)
+            || request.resource.data.notifSeenAt == request.time);
+
+      // الجرس: صاحب الحساب يقرا إشعاراته بس، والسيرفر بس اللي بيكتبها.
+      match /notifications/{id} {
+        allow read: if isSelf(uid);
+        allow write: if false;
+      }
 
       allow delete: if false;
 

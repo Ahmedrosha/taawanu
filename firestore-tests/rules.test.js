@@ -60,6 +60,16 @@ describe('المستخدمين', () => {
   test('محدش يعدل ملف حد تاني', async () => {
     await assertFails(updateDoc(doc(as('m2'), 'users/m1'), { name: 'تغيير' }));
   });
+  test('المستخدم يعلّم إشعاراته مقروءة بوقت السيرفر بس، والتحديثات التانية تفضل شغالة', async () => {
+    await assertSucceeds(updateDoc(doc(as('m1'), 'users/m1'), { notifSeenAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(as('m1'), 'users/m1'), { notifSeenAt: new Date(2000, 0, 1) }));
+    await assertSucceeds(updateDoc(doc(as('m1'), 'users/m1'), { fcmTokens: ['token-2'] }));
+  });
+  test('الإشعارات: صاحبها بس يقراها، ومحدش يكتبها', async () => {
+    await assertSucceeds(getDoc(doc(as('m1'), 'users/m1/notifications/n1')));
+    await assertFails(getDoc(doc(as('m2'), 'users/m1/notifications/n1')));
+    await assertFails(setDoc(doc(as('m1'), 'users/m1/notifications/n2'), { ar: {} }));
+  });
   test('غير المسجّل ميقراش', async () => {
     await assertFails(getDoc(doc(anon(), 'users/m1')));
   });

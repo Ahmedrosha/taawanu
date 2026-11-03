@@ -376,5 +376,12 @@
   "recitationWaiting": "التلاوة وقفت عند آخر الربع. دوس \"خلصت الربع ده\" وهتكمّل في الربع اللي بعده.",
   "tafsir": "التفسير",
   "followRecitation": "التفسير يمشي مع التلاوة",
-  "appVersion": "الإصدار {version} ({build})"
+  "appVersion": "الإصدار {version} ({build})",
+  "notifications": "الإشعارات",
+  "notificationsEmpty": "مفيش إشعارات لسه.\nهنا هتلاقي أخبار مجموعاتك: الدورات الجديدة، والأعضاء اللي انضموا، وأي تغيير في وردك.",
+  "notificationsKeepNote": "الإشعارات بتفضل هنا ٣٠ يوم.",
+  "timeJustNow": "دلوقتي",
+  "timeMinutesAgo": "من {n} دقيقة",
+  "timeHoursAgo": "من {n} ساعة",
+  "timeDaysAgo": "من {n} يوم"
 }

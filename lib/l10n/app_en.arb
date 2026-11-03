@@ -830,5 +830,33 @@
         "type": "String"
       }
     }
+  },
+  "notifications": "Notifications",
+  "notificationsEmpty": "No notifications yet.\nNews from your groups will show up here: new cycles, members who joined, and changes to your portion.",
+  "notificationsKeepNote": "Notifications are kept for 30 days.",
+  "timeJustNow": "Just now",
+  "timeMinutesAgo": "{n} min ago",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "{n} h ago",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "{n} d ago",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
   }
 }

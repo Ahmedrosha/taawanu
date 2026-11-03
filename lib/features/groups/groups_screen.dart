@@ -9,6 +9,7 @@ import '../../models/group_options.dart';
 import '../../services/groups_service.dart';
 import '../../services/prefs.dart';
 import '../../theme/app_colors.dart';
+import '../notifications/notifications_screen.dart';
 import 'join_screen.dart';
 
 /// حالة كل مجموعة اللي بنحتاجها للترتيب والكارت: المجموعة نفسها، ووردي في الدورة الحالية.
@@ -181,6 +182,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
       appBar: AppBar(
         title: Text(t.tabGroups, style: const TextStyle(fontWeight: FontWeight.w700)),
         actions: [
+          const NotificationBell(),
           IconButton(tooltip: t.explore, icon: const Icon(Icons.travel_explore), onPressed: () => context.push('/explore')),
           IconButton(tooltip: t.joinWithCode, icon: const Icon(Icons.link), onPressed: () => showJoinWithCode(context)),
           IconButton(tooltip: t.newGroup, icon: const Icon(Icons.add), onPressed: () => context.push('/create-group')),
