@@ -47,8 +47,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final authName = AuthService.instance.user?.displayName ?? '';
     return Scaffold(
       body: SafeArea(
-        child: ListView(
+        // مش ListView: القايمة الكسولة كانت بتشيل الكروت اللي برا الشاشة وترجع تحمّلها من الأول.
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(t.greeting, style: TextStyle(color: AppColors.textMuted)),
             StreamBuilder<UserStats>(
@@ -115,13 +118,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     for (final (i, g) in groups.indexed)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: _HomeGroupCard(groupId: g.id, cardKey: i == 0 ? _kCard : null, readKey: i == 0 ? _kRead : null),
+                        // المفتاح بالمجموعة: لو الترتيب اتغيّر، كل كارت يفضل بحالته وبياناته.
+                        child: _HomeGroupCard(key: ValueKey(g.id), groupId: g.id, cardKey: i == 0 ? _kCard : null, readKey: i == 0 ? _kRead : null),
                       ),
                   ],
                 );
               },
             ),
           ],
+          ),
         ),
       ),
     );
@@ -129,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _HomeGroupCard extends StatefulWidget {
-  const _HomeGroupCard({required this.groupId, this.cardKey, this.readKey});
+  const _HomeGroupCard({super.key, required this.groupId, this.cardKey, this.readKey});
 
   final String groupId;
 
@@ -142,6 +147,18 @@ class _HomeGroupCard extends StatefulWidget {
 
 class _HomeGroupCardState extends State<_HomeGroupCard> {
   late final Stream<Group?> _group = GroupsService.instance.group(widget.groupId);
+
+  // ورد الدورة الحالية: اشتراك واحد لكل دورة، مش جديد مع كل تحديث في المجموعة.
+  int? _cycleN;
+  Stream<Assignment?>? _mine;
+
+  Stream<Assignment?> _mineFor(Group g) {
+    if (_cycleN != g.currentCycle || _mine == null) {
+      _cycleN = g.currentCycle;
+      _mine = GroupsService.instance.myAssignment(g.id, g.currentCycle);
+    }
+    return _mine!;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -180,9 +197,11 @@ class _HomeGroupCardState extends State<_HomeGroupCard> {
                   Text(t.khatmaNotStarted, style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600))
                 else
                   StreamBuilder<Assignment?>(
-                    stream: GroupsService.instance.myAssignment(g.id, g.currentCycle),
+                    stream: _mineFor(g),
                     builder: (context, aSnap) {
                       final a = aSnap.data;
+                      // لسه بيحمّل: مكان فاضي بدل "ملكش ورد" اللي كان بيظهر لحظة.
+                      if (a == null && aSnap.connectionState == ConnectionState.waiting) return const SizedBox(height: 60);
                       if (a == null) return Text(t.noPortionThisCycle, style: TextStyle(color: AppColors.textMuted));
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
