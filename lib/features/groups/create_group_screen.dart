@@ -22,7 +22,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
   bool _isPrivate = true;
   int _ward = 8; // جزء
-  int _startSegment = 0; // الأدمن بيبدأ بأنهي جزء
+  int? _startSegment; // ورد الأدمن في أول دورة — لازم يختاره بنفسه
   int _cycleCount = 1;
   CycleUnit _unit = CycleUnit.week;
   int _startDay = 5; // الجمعة (٠ = الأحد)
@@ -38,7 +38,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   }
 
   Future<void> _submit() async {
-    if (_busy || !_formKey.currentState!.validate()) return;
+    final start = _startSegment;
+    if (_busy || start == null || !_formKey.currentState!.validate()) return;
     final t = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
@@ -53,7 +54,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         cycleStartHour: _startHour,
         cycleStartDayOfMonth: _startDayOfMonth,
         lateDefault: _late,
-        startSegment: _startSegment,
+        startSegment: start,
       );
       messenger.showSnackBar(SnackBar(content: Text(t.groupCreated)));
       if (mounted) context.pushReplacement('/group/$groupId');
@@ -131,7 +132,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                     labelStyle: TextStyle(color: _ward == w ? Colors.white : AppColors.text),
                     onSelected: (_) => setState(() {
                       _ward = w;
-                      _startSegment = 0;
+                      _startSegment = null;
                     }),
                   ),
               ],
@@ -148,7 +149,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             Text(t.adminStartHint, style: text.bodySmall?.copyWith(color: AppColors.textMuted)),
             const SizedBox(height: 8),
             SegmentChoiceTile(
-              label: _startSegment == 0 ? '${segmentLabel(t, 0, _ward)} ${t.fromMushafStart}' : segmentLabel(t, _startSegment, _ward),
+              label: _startSegment == null ? t.pickYourWard : segmentLabel(t, _startSegment!, _ward),
+              empty: _startSegment == null,
               onTap: () async {
                 final seg = await showSegmentPicker(
                   context,
@@ -238,10 +240,10 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
           child: FilledButton(
-            onPressed: _busy ? null : _submit,
+            onPressed: _busy || _startSegment == null ? null : _submit,
             child: _busy
                 ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                : Text(t.createGroup),
+                : Text(_startSegment == null ? t.pickWardFirst : t.createGroup),
           ),
         ),
       ),
