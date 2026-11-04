@@ -157,6 +157,10 @@ class Prefs {
   Future<void> setReciterId(String v) => _p.setString('reciterId', v);
 
   /// تكرار كل آية في التلاوة: ١ أو ٣ أو ٥، و٠ = لحد ما يوقّف.
+  /// سرعة القراءة التلقائية (×١ = ٦٠ كلمة في الدقيقة).
+  double get autoReadSpeed => _p.getDouble('autoReadSpeed') ?? 1.0;
+  Future<void> setAutoReadSpeed(double v) => _p.setDouble('autoReadSpeed', v);
+
   int get recitationRepeat => _p.getInt('recitationRepeat') ?? 1;
   Future<void> setRecitationRepeat(int v) => _p.setInt('recitationRepeat', v);
 }

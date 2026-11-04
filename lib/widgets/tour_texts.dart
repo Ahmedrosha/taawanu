@@ -47,6 +47,11 @@ const tourTexts = <String, (String, String)>{
     'اسمع وردك بصوت ٧ قراء. التلاوة بتقف في آخر الربع لحد ما تسجّله.',
     'Listen to your portion with 7 reciters. Recitation pauses at the end of the quarter until you record it.',
   ),
+  'reader.auto': (
+    'قراءة تلقائية من غير صوت: الآية بتتنوّر وتمشي لوحدها على قد طولها. وبتقف في آخر الربع زي التلاوة.',
+    'Silent auto-read: each ayah lights up and moves on by itself, timed to its length. It pauses at the end of the quarter, like recitation.',
+  ),
+  'auto.speed': ('غيّر سرعة القراءة من هنا.', 'Change the reading speed here.'),
   'reader.zoom': ('كبّر الخط، وهيتحول لنص متصل. وتقدر ترجع للصفحات.', 'Enlarge the text; it switches to continuous text. You can switch back to pages.'),
   'reader.mark': (
     'الزرار ده بيظهر في آخر صفحة من الربع. مش هتعدّي للي بعده قبل ما تسجّله.',

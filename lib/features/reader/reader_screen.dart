@@ -19,6 +19,8 @@ import '../../widgets/ui.dart';
 import '../groups/group_board_screen.dart' show ReadRequest;
 import 'mushaf_page.dart';
 import 'recitation_bar.dart';
+import 'auto_read_bar.dart';
+import '../../services/auto_reader.dart';
 import 'tafsir_sheet.dart';
 import '../../widgets/tour.dart';
 import '../../widgets/tour_texts.dart';
@@ -95,13 +97,20 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   GlobalKey _keyFor(int q) => _keys.putIfAbsent(q, GlobalKey.new);
 
   final _audio = RecitationPlayer.instance;
+  final _auto = AutoReader.instance;
   (int, int)? _followed;
+
+  /// الآية المنوّرة دلوقتي: من التلاوة أو من القراءة التلقائية.
+  (int, int)? get _current => _audio.current ?? _auto.current;
+
+  /// التلاوة أو القراءة التلقائية شغالة.
+  bool get _following => _audio.active || _auto.active;
   QuranData? _textQuran;
 
   /// لما التلاوة تنتقل لآية جديدة: الصفحة بتقلّب لوحدها (أو النص بينزل).
   void _onAudio() {
     if (!mounted) return;
-    final cur = _audio.current;
+    final cur = _current;
     setState(() {});
     if (cur == null || cur == _followed) return;
     _followed = cur;
@@ -151,6 +160,26 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     return out;
   }
 
+  /// (سورة، آية، عدد الكلمات) للقراءة التلقائية.
+  List<(int, int, int)> _withWords(List<(int, int)> ayahs) {
+    final q = _pages ? _pageQuran : _textQuran;
+    if (q == null) return const [];
+    return [for (final (s, a) in ayahs) (s, a, q.ayahText(s, a).trim().split(RegExp(r'\s+')).length)];
+  }
+
+  Future<void> _startAutoRead({(int, int)? from}) async {
+    final ayahs = _withWords(_recitationAyahs(from: from));
+    if (ayahs.isEmpty) return;
+    _followed = null;
+    if (_audio.active) await _audio.stop();
+    _auto.play(ayahs);
+    if (mounted) {
+      Tour.schedule(context, 'autoread', () => [
+            TourStep(_kSpeed, tourText(context, 'auto.speed')),
+          ], delay: const Duration(milliseconds: 600));
+    }
+  }
+
   String _ayahTitle(int s, int a) {
     final q = _pages ? _pageQuran : _textQuran;
     final name = q?.surahName(s, 'ar').replaceFirst(RegExp(r'^سُوْرَةُ\s*'), '') ?? '';
@@ -161,6 +190,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final ayahs = _recitationAyahs(from: from);
     if (ayahs.isEmpty) return;
     _followed = null;
+    if (_auto.active) _auto.stop();
     await _audio.play(ayahs, title: _ayahTitle);
     if (mounted) {
       Tour.schedule(context, 'recitation', () => [
@@ -172,24 +202,27 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   // الجولة التعريفية.
   final _kPage = GlobalKey(), _kPlay = GlobalKey(), _kZoom = GlobalKey(), _kMark = GlobalKey(), _kUndo = GlobalKey();
-  final _kReciter = GlobalKey(), _kDownload = GlobalKey();
+  final _kReciter = GlobalKey(), _kDownload = GlobalKey(), _kAuto = GlobalKey(), _kSpeed = GlobalKey();
 
   /// التلاوة شغالة والتطبيق مفتوح بس: لو خرج من التطبيق أو قفل الشاشة بتقف مؤقتًا.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed && _audio.playing) _audio.pause();
+    if (state != AppLifecycleState.resumed && _auto.playing) _auto.pause();
   }
 
   @override
   void initState() {
     super.initState();
     _audio.addListener(_onAudio);
+    _auto.addListener(_onAudio);
     WidgetsBinding.instance.addObserver(this);
     // الشاشة متقفلش طول ما المصحف مفتوح (قراءة أو تلاوة).
     WakelockPlus.enable();
     Tour.schedule(context, 'reader', () => [
           TourStep(_kPage, tourText(context, 'reader.page'), padding: 0),
           TourStep(_kPlay, tourText(context, 'reader.play'), radius: 24),
+          TourStep(_kAuto, tourText(context, 'reader.auto'), radius: 24),
           TourStep(_kZoom, tourText(context, 'reader.zoom'), radius: 24),
           TourStep(_kMark, tourText(context, 'reader.mark')),
           TourStep(_kUndo, tourText(context, 'reader.undo')),
@@ -211,10 +244,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   @override
   void dispose() {
     _audio.removeListener(_onAudio);
+    _auto.removeListener(_onAudio);
     WidgetsBinding.instance.removeObserver(this);
     WakelockPlus.disable();
     // التلاوة بتقف لما يقفل شاشة القراءة.
     if (_audio.active) _audio.stop();
+    if (_auto.active) _auto.stop();
     _saveTimer?.cancel();
     _savePosition();
     _scroll.dispose();
@@ -327,6 +362,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               child: Text(_ayahTitle(surah, ayah), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             ),
             ListTile(leading: const Icon(Icons.play_circle_outline), title: Text(t.listenFromHere), onTap: () => Navigator.pop(context, 'listen')),
+            ListTile(leading: const Icon(Icons.visibility_outlined), title: Text(t.autoReadFromHere), onTap: () => Navigator.pop(context, 'auto')),
             ListTile(leading: const Icon(Icons.menu_book_outlined), title: Text(t.tafsir), onTap: () => Navigator.pop(context, 'tafsir')),
           ],
         ),
@@ -334,6 +370,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
     if (!mounted) return;
     if (choice == 'listen') await _startRecitation(from: (surah, ayah));
+    if (choice == 'auto') await _startAutoRead(from: (surah, ayah));
     if (choice == 'tafsir') _openTafsir(surah, ayah);
   }
 
@@ -425,7 +462,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             page: first + i,
             qpc: _qpc,
             inRange: inRange,
-            highlight: _audio.current,
+            highlight: _current,
             onUseHafs: _useHafs,
             onAyahTap: _ayahMenu,
           ),
@@ -498,8 +535,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       final q = _pages ? _pageQuran : _textQuran;
       if (q != null) unawaited(_audio.extend(_quarterAyahs(q, r.fromQuarter + _read), title: _ayahTitle));
     }
+    if (!finishing && _auto.active) {
+      final q = _pages ? _pageQuran : _textQuran;
+      if (q != null) _auto.extend(_withWords(_quarterAyahs(q, r.fromQuarter + _read)));
+    }
     if (finishing) {
       if (_audio.active) unawaited(_audio.stop());
+      if (_auto.active) _auto.stop();
       await Prefs.instance.clearReadPosition(_posKey);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.earnedPoints(points))));
@@ -517,6 +559,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (points == null || !mounted) return;
     // الربع اتقفل تاني، فالتلاوة بتقف عشان متعديهوش.
     if (_audio.active) unawaited(_audio.stop());
+    if (_auto.active) _auto.stop();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(points < 0 ? t.undoneWithPoints(-points) : t.undone),
     ));
@@ -547,13 +590,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         ),
         actions: _pages
             ? [
-                if (!_audio.active)
+                if (!_following) ...[
                   IconButton(key: _kPlay, tooltip: t.listen, onPressed: _startRecitation, icon: const Icon(Icons.play_circle_outline)),
+                  IconButton(key: _kAuto, tooltip: t.autoRead, onPressed: _startAutoRead, icon: const Icon(Icons.visibility_outlined)),
+                ],
                 IconButton(key: _kZoom, tooltip: t.enlargeText, onPressed: _enlarge, icon: const Icon(Icons.zoom_in)),
               ]
             : [
-                if (!_audio.active)
+                if (!_following) ...[
                   IconButton(tooltip: t.listen, onPressed: _startRecitation, icon: const Icon(Icons.play_circle_outline)),
+                  IconButton(tooltip: t.autoRead, onPressed: _startAutoRead, icon: const Icon(Icons.visibility_outlined)),
+                ],
                 IconButton(tooltip: t.mushafPagesView, onPressed: () => _setView('pages'), icon: const Icon(Icons.menu_book_outlined)),
                 IconButton(tooltip: t.textSize, onPressed: () => _changeFont(-2), icon: const Icon(Icons.text_decrease)),
                 IconButton(tooltip: t.textSize, onPressed: () => _changeFont(2), icon: const Icon(Icons.text_increase)),
@@ -591,7 +638,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 18),
-                  sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize, anchors: _anchors, onAyahTap: _ayahMenu, highlight: _audio.current)),
+                  sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize, anchors: _anchors, onAyahTap: _ayahMenu, highlight: _current)),
                 ),
                 if (i == _read)
                   SliverToBoxAdapter(
@@ -643,6 +690,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               // شريط التلاوة تحت زرار "خلصت الربع" ومنفصل عنه، عشان ميتداسش عليه بالغلط.
+              if (_auto.active)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, top: 4, bottom: 8),
+                  child: AutoReadBar(speedKey: _kSpeed),
+                ),
               if (_audio.active)
                 Padding(
                   padding: const EdgeInsets.only(left: 8, top: 4, bottom: 8),

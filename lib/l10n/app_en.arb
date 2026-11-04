@@ -878,5 +878,10 @@
   "replayTours": "Replay the app tour",
   "replayToursHint": "Show the on-screen tips again",
   "replayToursDone": "The tour will show again on each screen.",
-  "@tourStepOf": {"placeholders": {"n": {"type": "int"}, "total": {"type": "int"}}}
+  "@tourStepOf": {"placeholders": {"n": {"type": "int"}, "total": {"type": "int"}}},
+  "autoRead": "Auto-read",
+  "autoReadFromHere": "Auto-read from here",
+  "speed": "Speed",
+  "stopAutoRead": "Stop auto-read",
+  "autoReadWaiting": "Auto-read paused at the end of the quarter. Tap \"Finished this quarter\" to continue with the next one."
 }
