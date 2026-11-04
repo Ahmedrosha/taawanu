@@ -11,6 +11,7 @@ import 'features/groups/groups_screen.dart';
 import 'features/groups/invite_screen.dart';
 import 'features/groups/join_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/guide/guide_screen.dart';
 import 'features/notifications/notifications_screen.dart';
 import 'features/prayer/prayer_screen.dart';
 import 'features/profile/profile_screen.dart';
@@ -48,6 +49,7 @@ final appRouter = GoRouter(
     GoRoute(path: '/create-group', builder: (context, state) => const CreateGroupScreen()),
     GoRoute(path: '/explore', builder: (context, state) => const ExploreScreen()),
     GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
+    GoRoute(path: '/guide', builder: (context, state) => const GuideScreen()),
     GoRoute(
       path: '/group/:id',
       builder: (context, state) => GroupBoardScreen(groupId: state.pathParameters['id']!),

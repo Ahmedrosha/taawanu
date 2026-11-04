@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../app.dart';
@@ -83,6 +84,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   for (final b in _badgeDefs(t)) _Badge(icon: b.$2, label: b.$3, earned: s.badges.contains(b.$1)),
                 ],
+              ),
+              const SizedBox(height: 22),
+              Material(
+                color: AppColors.surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: AppColors.border)),
+                child: ListTile(
+                  leading: Icon(Icons.menu_book_outlined, color: AppColors.accent),
+                  title: Text(t.guideTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: Text(t.guideSubtitle),
+                  trailing: const Icon(Icons.chevron_left),
+                  onTap: () => context.push('/guide'),
+                ),
               ),
               const SizedBox(height: 28),
               SectionTitle(t.mushafSettings),

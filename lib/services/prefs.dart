@@ -132,6 +132,10 @@ class Prefs {
   Future<void> setPinnedGroups(List<String> v) => _p.setStringList('pinnedGroups', v);
 
   /// نصيحة "دوس على الآية للتفسير" بتظهر مرة واحدة.
+  /// كارت "دليل الاستخدام" في الرئيسية اتقفل (أو الدليل اتفتح).
+  bool get guideCardDone => _p.getBool('guideCardDone') ?? false;
+  Future<void> setGuideCardDone() => _p.setBool('guideCardDone', true);
+
   bool get tafsirTipShown => _p.getBool('tafsirTipShown') ?? false;
   Future<void> setTafsirTipShown() => _p.setBool('tafsirTipShown', true);
 

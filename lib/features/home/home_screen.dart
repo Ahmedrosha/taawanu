@@ -6,6 +6,7 @@ import '../../models/group_models.dart';
 import '../../models/group_options.dart';
 import '../../services/auth_service.dart';
 import '../../services/groups_service.dart';
+import '../../services/prefs.dart';
 import '../../services/quran_repository.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_colors.dart';
@@ -56,6 +57,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 12),
             const NextPrayerTile(),
+            if (!Prefs.instance.guideCardDone) ...[
+              const SizedBox(height: 12),
+              _GuideCard(onDone: () => setState(() {})),
+            ],
             const SizedBox(height: 20),
             Row(
               children: [
@@ -179,6 +184,57 @@ class _HomeGroupCardState extends State<_HomeGroupCard> {
           ),
         );
       },
+    );
+  }
+}
+
+/// كارت للمستخدم الجديد: بيفتح دليل الاستخدام، وبيختفي بعد ما يتفتح أو يتقفل.
+class _GuideCard extends StatelessWidget {
+  const _GuideCard({required this.onDone});
+
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Material(
+      color: AppColors.goldTint,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () async {
+          context.push('/guide');
+          await Prefs.instance.setGuideCardDone();
+          onDone();
+        },
+        child: Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 4, 12),
+          child: Row(
+            children: [
+              Icon(Icons.menu_book_outlined, color: AppColors.accent),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(t.guideCardTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(t.guideCardBody, style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                icon: const Icon(Icons.close, size: 20),
+                onPressed: () async {
+                  await Prefs.instance.setGuideCardDone();
+                  onDone();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
