@@ -22,21 +22,28 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late final Stream<UserStats> _stats = UserService.instance.stats();
+  late final Stream<UserStats> _stats = UserService.instance.stats().asBroadcastStream();
   late final Stream<List<MyGroup>> _groups = GroupsService.instance.myGroups();
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final name = AuthService.instance.user?.displayName?.split(' ').first ?? '';
+    final authName = AuthService.instance.user?.displayName ?? '';
     return Scaffold(
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
           children: [
             Text(t.greeting, style: TextStyle(color: AppColors.textMuted)),
-            Text(name.isEmpty ? t.defaultUserName : name,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+            StreamBuilder<UserStats>(
+              stream: _stats,
+              builder: (context, snap) {
+                final full = (snap.data?.name.isNotEmpty ?? false) ? snap.data!.name : authName;
+                final name = full.split(' ').first;
+                return Text(name.isEmpty ? t.defaultUserName : name,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700));
+              },
+            ),
             const SizedBox(height: 16),
             StreamBuilder<UserStats>(
               stream: _stats,

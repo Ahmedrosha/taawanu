@@ -94,3 +94,10 @@ export function isBlockedSignup(providers: string[], email: string | undefined):
   if (!providers.includes('password')) return false;
   return !PASSWORD_ALLOWLIST.includes((email ?? '').trim().toLowerCase());
 }
+
+/** الاسم بعد التنضيف: مسافات زيادة بتتشال، ومن ١ لـ٦٠ حرف. */
+export function cleanDisplayName(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const name = value.trim().replace(/\s+/g, ' ');
+  return name.length >= 1 && name.length <= 60 ? name : null;
+}

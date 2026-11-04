@@ -20,17 +20,44 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   late final Stream<UserStats> _stats = UserService.instance.stats();
 
+  Future<void> _editName(BuildContext context, String current) async {
+    final t = AppLocalizations.of(context);
+    final controller = TextEditingController(text: current);
+    final value = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(t.editName),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 60,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(hintText: t.yourNameHint),
+          onSubmitted: (v) => Navigator.pop(context, v),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(t.cancel)),
+          TextButton(onPressed: () => Navigator.pop(context, controller.text), child: Text(t.save)),
+        ],
+      ),
+    );
+    controller.dispose();
+    final name = value?.trim().replaceAll(RegExp(r'\s+'), ' ') ?? '';
+    if (name.isEmpty || name == current || !context.mounted) return;
+    await runAction(context, () => UserService.instance.updateName(name), success: t.nameUpdated);
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final user = AuthService.instance.user;
-    final name = user?.displayName ?? t.defaultUserName;
     return Scaffold(
       appBar: AppBar(title: Text(t.tabProfile, style: const TextStyle(fontWeight: FontWeight.w700))),
       body: StreamBuilder<UserStats>(
         stream: _stats,
         builder: (context, snap) {
           final s = snap.data ?? UserStats.fromMap(null);
+          final name = s.name.isNotEmpty ? s.name : (user?.displayName ?? t.defaultUserName);
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
             children: [
@@ -42,7 +69,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                            ),
+                            IconButton(
+                              tooltip: t.editName,
+                              visualDensity: VisualDensity.compact,
+                              icon: Icon(Icons.edit_outlined, size: 20, color: AppColors.accent),
+                              onPressed: () => _editName(context, name),
+                            ),
+                          ],
+                        ),
                         if (user?.email != null) Text(user!.email!, style: TextStyle(color: AppColors.textMuted)),
                       ],
                     ),

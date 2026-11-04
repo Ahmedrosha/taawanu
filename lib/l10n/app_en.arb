@@ -867,5 +867,8 @@
   "guideSubtitle": "How every screen works",
   "guideIntro": "Tap a section to open it.",
   "guideCardTitle": "New to Taawanu?",
-  "guideCardBody": "Learn how the app works in two minutes."
+  "guideCardBody": "Learn how the app works in two minutes.",
+  "editName": "Edit name",
+  "yourNameHint": "The name your groups will see",
+  "nameUpdated": "Name updated"
 }

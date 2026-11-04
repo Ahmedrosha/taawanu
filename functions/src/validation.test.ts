@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { isBlockedSignup, parseNewGroup, parseSegment, ValidationError } from './validation';
+import { cleanDisplayName, isBlockedSignup, parseNewGroup, parseSegment, ValidationError } from './validation';
 
 const base = { name: 'ختمة الأصحاب', type: 'private', wardQuarters: 8 };
 
@@ -72,5 +72,14 @@ describe('حماية التسجيل', () => {
     assert.equal(isBlockedSignup(['password'], ' Review@Taawanu.app '), false);
     assert.equal(isBlockedSignup(['password'], 'hacker@mail.com'), true);
     assert.equal(isBlockedSignup(['password'], undefined), true);
+  });
+});
+
+describe('cleanDisplayName', () => {
+  test('trims and collapses spaces', () => assert.equal(cleanDisplayName('  أحمد   رشاد '), 'أحمد رشاد'));
+  test('rejects empty, too long and non-strings', () => {
+    assert.equal(cleanDisplayName('   '), null);
+    assert.equal(cleanDisplayName('x'.repeat(61)), null);
+    assert.equal(cleanDisplayName(5), null);
   });
 });

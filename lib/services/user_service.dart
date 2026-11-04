@@ -80,6 +80,18 @@ class UserService {
     await FirebaseFunctions.instanceFor(region: 'me-central1').httpsCallable('deleteAccount').call<Object?>();
   }
 
+  /// بيغيّر الاسم في الحساب وفي كل المجموعات.
+  Future<void> updateName(String name) async {
+    await FirebaseFunctions.instanceFor(region: 'me-central1').httpsCallable('updateName').call<Object?>({'name': name});
+    final user = FirebaseAuth.instance.currentUser;
+    try {
+      await user?.updateDisplayName(name.trim());
+      await user?.reload();
+    } catch (_) {
+      // الاسم اتحفظ على السيرفر، ودي نسخة العرض بس.
+    }
+  }
+
   Future<void> addFcmToken(String token) async {
     final ref = _me;
     if (ref == null) return;
