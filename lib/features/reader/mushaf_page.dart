@@ -144,7 +144,6 @@ class _PageBody extends StatelessWidget {
     final t = AppLocalizations.of(context);
     final ar = Localizations.localeOf(context).languageCode != 'en';
     final lines = layout.page(page);
-    final wordIndex = _wordIndex(lines);
     final (s0, a0) = layout.firstAyahOf(page);
     final juz = (quran.quarterOf(s0, a0) - 1) ~/ 8 + 1;
     final surahNames = layout
@@ -204,6 +203,7 @@ class _PageBody extends StatelessWidget {
   Widget _lines(BuildContext context, List<MushafLine> lines, double width, double height) {
     final lineH = height / _slots;
     final m = _PageMetrics.of(page: page, qpc: qpc, family: _family, width: width, lineH: lineH, lines: lines, word: _word);
+    final wordIndex = _wordIndex(lines);
     final ink = AppColors.text;
     final dim = AppColors.textMuted.withValues(alpha: 0.3);
     final style = TextStyle(fontFamily: _family, fontSize: m.fontSize, height: 1.0, color: ink);
