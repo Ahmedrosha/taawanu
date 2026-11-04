@@ -55,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(t.greeting, style: TextStyle(color: AppColors.textMuted)),
             StreamBuilder<UserStats>(
+              key: const ValueKey('greeting'),
               stream: _stats,
               builder: (context, snap) {
                 final full = (snap.data?.name.isNotEmpty ?? false) ? snap.data!.name : authName;
@@ -65,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 16),
             StreamBuilder<UserStats>(
+              key: const ValueKey('stats'),
               stream: _stats,
               builder: (context, snap) {
                 final s = snap.data ?? UserStats.fromMap(null);
@@ -84,10 +86,14 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 12),
             const NextPrayerTile(),
-            if (!Prefs.instance.guideCardDone) ...[
-              const SizedBox(height: 12),
-              _GuideCard(onDone: () => setState(() {})),
-            ],
+            // الخانة دي بتفضل موجودة حتى بعد ما الكارت يتقفل، عشان اللي تحتها ميتحركش ويتبني من الأول
+            // (بيانات "وردك الحالي" اشتراك بيتعمل مرة واحدة، ولو اتبنى من جديد كان بيفضل يحمّل).
+            KeyedSubtree(
+              key: const ValueKey('guideCard'),
+              child: Prefs.instance.guideCardDone
+                  ? const SizedBox.shrink()
+                  : Padding(padding: const EdgeInsets.only(top: 12), child: _GuideCard(onDone: () => setState(() {}))),
+            ),
             const SizedBox(height: 20),
             Row(
               children: [
@@ -98,6 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 8),
             StreamBuilder<List<MyGroup>>(
+              key: const ValueKey('groups'),
               stream: _groups,
               builder: (context, snap) {
                 if (!snap.hasData) return const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()));
