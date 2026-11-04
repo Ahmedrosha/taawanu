@@ -1,0 +1,12 @@
+name: Mac runner check
+
+# يدوي: بيتأكد إن فيه جهاز ماك فاضي على GitHub قبل بناء الأيفون (مش بيبني حاجة).
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: macos-latest
+    timeout-minutes: 5
+    steps:
+      - run: sw_vers && xcodebuild -version | head -1
