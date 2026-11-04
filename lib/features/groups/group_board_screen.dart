@@ -29,6 +29,18 @@ class _GroupBoardScreenState extends State<GroupBoardScreen> {
   late final Stream<List<Member>> _members = _svc.members(widget.groupId);
   late final Stream<List<Portion>> _portions = _svc.activePortions(widget.groupId);
 
+  // اشتراكات الدورة الحالية: بتتعمل مرة واحدة لكل دورة، مش مع كل إعادة بناء.
+  int? _cycleN;
+  late Stream<Cycle?> _cycle;
+  late Stream<Assignment?> _mine;
+
+  void _ensureCycle(Group g) {
+    if (_cycleN == g.currentCycle) return;
+    _cycleN = g.currentCycle;
+    _cycle = _svc.cycle(g.id, g.currentCycle);
+    _mine = _svc.myAssignment(g.id, g.currentCycle);
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
@@ -38,6 +50,7 @@ class _GroupBoardScreenState extends State<GroupBoardScreen> {
         if (gSnap.hasError) return ErrorScaffold(message: t.actionFailed);
         final g = gSnap.data;
         if (g == null) return const LoadingScaffold();
+        _ensureCycle(g);
         return StreamBuilder<List<Member>>(
           stream: _members,
           builder: (context, mSnap) {
@@ -56,20 +69,24 @@ class _GroupBoardScreenState extends State<GroupBoardScreen> {
                   _BoardMenu(group: g, me: me),
                 ],
               ),
-              body: ListView(
+              // مش ListView: القايمة الكسولة كانت بتشيل الخريطة لما تنزل تحت، وترجع تبنيها فاضية فالشاشة "تنط" لفوق.
+              body: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+                child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _Header(group: g),
                   const SizedBox(height: 16),
                   if (!g.isActive)
                     _FormingCard(group: g, isManager: me?.isManager ?? false)
                   else
-                    _ActiveCycle(group: g, members: members, portionsStream: _portions, me: me),
+                    _ActiveCycle(group: g, members: members, portionsStream: _portions, cycleStream: _cycle, mineStream: _mine, me: me),
                   const SizedBox(height: 20),
                   SectionTitle(t.members),
                   const SizedBox(height: 8),
                   _MembersList(group: g, members: members, me: me),
                 ],
+                ),
               ),
             );
           },
@@ -163,19 +180,27 @@ class _FormingCardState extends State<_FormingCard> {
 }
 
 class _ActiveCycle extends StatelessWidget {
-  const _ActiveCycle({required this.group, required this.members, required this.portionsStream, required this.me});
+  const _ActiveCycle({
+    required this.group,
+    required this.members,
+    required this.portionsStream,
+    required this.cycleStream,
+    required this.mineStream,
+    required this.me,
+  });
 
   final Group group;
   final List<Member> members;
   final Stream<List<Portion>> portionsStream;
+  final Stream<Cycle?> cycleStream;
+  final Stream<Assignment?> mineStream;
   final Member? me;
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final svc = GroupsService.instance;
     return StreamBuilder<Cycle?>(
-      stream: svc.cycle(group.id, group.currentCycle),
+      stream: cycleStream,
       builder: (context, cSnap) {
         final cycle = cSnap.data;
         return Column(
@@ -194,7 +219,7 @@ class _ActiveCycle extends StatelessWidget {
               const SizedBox(height: 10),
             ],
             StreamBuilder<Assignment?>(
-              stream: svc.myAssignment(group.id, group.currentCycle),
+              stream: mineStream,
               builder: (context, aSnap) => _MyPortionCard(
                 group: group,
                 assignment: aSnap.data,
