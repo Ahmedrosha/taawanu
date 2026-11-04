@@ -61,12 +61,13 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/asc" && "$RUNNER_TEMP/asc/bin/pip" -q install 'pyjwt[crypto]'
           "$RUNNER_TEMP/asc/bin/python" tools/asc_dev_certs.py --list
 
+      # توقيع محلي من غير شهادة (ad-hoc): بيحفظ صلاحيات التطبيق (زي الإشعارات) جوه النسخة، وأبل بتعيد التوقيع وقت التصدير.
       - name: Archive without signing
         run: |
           set -o pipefail
           xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release \
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Runner.xcarchive" archive \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO PROVISIONING_PROFILE_SPECIFIER="" \
             DEVELOPMENT_TEAM="$TEAM_ID" 2>&1 | tee archive.log | grep -E "error:|ARCHIVE" || true
           [ -d "$RUNNER_TEMP/Runner.xcarchive" ] || { echo "::error title=Archive failed::$(grep -E 'error:' archive.log | sort -u | tail -4 | tr '\n' ' ')"; exit 1; }
 
