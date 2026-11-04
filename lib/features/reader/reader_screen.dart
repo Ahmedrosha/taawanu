@@ -112,6 +112,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (!mounted) return;
     final cur = _current;
     setState(() {});
+    if (!_pages) {
+      _followText(cur);
+      return;
+    }
     if (cur == null || cur == _followed) return;
     _followed = cur;
     final (s, a) = cur;
@@ -126,6 +130,83 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       final q = _textQuran;
       if (q == null) return;
       _jumpToAyah(_AyahPos(q.quarterOf(s, a).clamp(r.fromQuarter, r.toQuarter), s, a));
+    }
+  }
+
+  // ---------- متابعة النص المتصل ----------
+  // الشاشة بتطلع لفوق بنعومة وبشكل مستمر: أول الآية عند "خط القراية" لما تبدأ،
+  // وآخرها عنده لما تخلص، فالآية اللي بعدها بتبدأ في نفس المكان من غير نطّ.
+
+  /// آخر حالة اتعملها حركة: (الآية، رقمها في قايمة التشغيل، شغالة؟، المدة معروفة؟).
+  Object? _glideState;
+
+  void _followText((int, int)? cur) {
+    final playing = _audio.active ? _audio.playing : _auto.playing;
+    final remaining = _audio.active ? _audio.remaining : (_auto.active ? _auto.remaining : null);
+    final state = (cur, _audio.active ? _audio.index : null, playing, remaining != null);
+    if (state == _glideState) return;
+    _glideState = state;
+    if (cur == null) return;
+    if (!playing || remaining == null) {
+      // وقف (أو المدة لسه مش معروفة): الحركة بتقف مكانها.
+      if (_scroll.hasClients && _scroll.position.isScrollingNotifier.value) _scroll.jumpTo(_scroll.offset);
+      return;
+    }
+    _glide(cur, remaining);
+  }
+
+  /// أول الآية وآخرها على الشاشة (y)، لو الآية متبنية.
+  (double, double)? _ayahSpan((int, int) cur) {
+    final (s, a) = cur;
+    for (final p in _anchors.paragraphs.values) {
+      final rp = p.key.currentContext?.findRenderObject();
+      if (rp is! RenderParagraph || !rp.attached) continue;
+      final starts = [...p.starts]..sort((x, y) => x.offset.compareTo(y.offset));
+      for (var i = 0; i < starts.length; i++) {
+        if (starts[i].pos.surah != s || starts[i].pos.ayah != a) continue;
+        final top = rp.localToGlobal(Offset.zero).dy;
+        double yAt(int offset) => top + rp.getOffsetForCaret(TextPosition(offset: offset), Rect.zero).dy;
+        final y0 = yAt(starts[i].offset);
+        final y1 = i + 1 < starts.length ? yAt(starts[i + 1].offset) : top + rp.size.height;
+        return (y0, y1);
+      }
+    }
+    return null;
+  }
+
+  void _glide((int, int) cur, Duration remaining) {
+    final top = _viewTop;
+    if (top == null || !_scroll.hasClients) return;
+    final span = _ayahSpan(cur);
+    final q = _textQuran;
+    if (span == null) {
+      // الآية لسه مش متبنية (بعيدة): نروح لها الأول، والحركة تكمّل من الإشعار الجاي.
+      if (q != null) {
+        final (s, a) = cur;
+        _glideState = null;
+        _jumpToAyah(_AyahPos(q.quarterOf(s, a).clamp(r.fromQuarter, r.toQuarter), s, a));
+        Future.delayed(const Duration(milliseconds: 400), () {
+          if (mounted && !_pages) _followText(_current);
+        });
+      }
+      return;
+    }
+    final pos = _scroll.position;
+    final line = top + pos.viewportDimension * 0.3;
+    final start = (pos.pixels + span.$1 - line).clamp(0.0, pos.maxScrollExtent);
+    final end = (pos.pixels + span.$2 - line).clamp(0.0, pos.maxScrollExtent);
+    final ms = remaining.inMilliseconds;
+    if (ms <= 0) return;
+    if ((pos.pixels - start).abs() > pos.viewportDimension * 0.35) {
+      // بعيد عن مكان الآية (مثلًا اتحرك بالإيد): نرجع لها بنعومة، وبعدين نكمّل.
+      const back = 350;
+      _scroll.animateTo(start, duration: const Duration(milliseconds: back), curve: Curves.easeOut).then((_) {
+        if (!mounted || !_scroll.hasClients || _glideState == null) return;
+        final rest = ms - back;
+        if (rest > 0) _scroll.animateTo(end, duration: Duration(milliseconds: rest), curve: Curves.linear);
+      });
+    } else {
+      _scroll.animateTo(end, duration: Duration(milliseconds: ms), curve: Curves.linear);
     }
   }
 

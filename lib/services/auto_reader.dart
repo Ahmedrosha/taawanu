@@ -34,6 +34,13 @@ class AutoReader extends ChangeNotifier {
     return speeds.contains(s) ? s : 1.0;
   }
 
+  /// الوقت الباقي للآية الحالية.
+  Duration? get remaining {
+    if (!_active || _waiting) return null;
+    final left = _playing ? _left - _clock.elapsed : _left;
+    return left.isNegative ? Duration.zero : left;
+  }
+
   (int, int)? get current {
     if (!_active || _index >= _items.length) return null;
     final (s, a, _) = _items[_index];

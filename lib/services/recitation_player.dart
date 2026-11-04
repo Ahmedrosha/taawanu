@@ -23,6 +23,8 @@ class Reciter {
 class RecitationPlayer extends ChangeNotifier {
   RecitationPlayer._() {
     _player.currentIndexStream.listen((_) => notifyListeners());
+    // مدة الآية بتتعرف بعد ما تتحمّل (النص المتصل بيتحرك على قدها).
+    _player.durationStream.listen((_) => notifyListeners());
     _player.playerStateStream.listen((s) {
       // وصلت آخر الربع: بتستنى لحد ما يسجّل الربع، وبعدها القارئ بيكمّل الربع اللي بعده.
       if (s.processingState == ProcessingState.completed && _active && !_waiting) {
@@ -66,6 +68,17 @@ class RecitationPlayer extends ChangeNotifier {
   bool get waiting => _waiting;
   bool _waiting = false;
   bool get playing => _player.playing;
+
+  /// رقم العنصر الحالي في قايمة التشغيل (البسملة والتكرار عناصر لوحدها).
+  int? get index => _active ? _player.currentIndex : null;
+
+  /// الوقت الباقي من الآية الحالية (null لو مدتها لسه مش معروفة).
+  Duration? get remaining {
+    final d = _player.duration;
+    if (!_active || d == null) return null;
+    final left = d - _player.position;
+    return left.isNegative ? Duration.zero : left;
+  }
 
   /// الآية اللي بتتقري دلوقتي (البسملة بتتحسب على أول آية في السورة).
   (int, int)? get current {
