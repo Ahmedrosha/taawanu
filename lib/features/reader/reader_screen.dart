@@ -179,7 +179,44 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   DateTime _catchUpUntil = DateTime(2000);
   final _paraRate = <String, (double, double)>{}; // فقرة → (طولها، بكسل لكل كلمة)
 
+  // مسافة فوق وتحت النص وقت القراءة الصامتة.
+  double _autoPadTop = 0, _autoPadBottom = 0;
+
+  /// أول ما القراءة الصامتة تبدأ: المسافة بتتحط والكلمة بتنزل لمكان القراية (تلت الشاشة).
+  /// ولما تقف: المسافة بتتشال من غير ما النص يتحرك.
+  void _syncAutoPad() {
+    if (_pages || !_scroll.hasClients) return;
+    final on = _auto.active;
+    if (on == (_autoPadTop > 0)) return;
+    final h = _scroll.position.viewportDimension;
+    final top = on ? h * 0.3 : 0.0;
+    final shift = top - _autoPadTop;
+    setState(() {
+      _autoPadTop = top;
+      _autoPadBottom = on ? h * 0.7 : 0;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      final pos = _scroll.position;
+      pos.jumpTo((pos.pixels + shift).clamp(0.0, pos.maxScrollExtent));
+      if (on) _alignToLine();
+    });
+  }
+
+  /// بينزّل الكلمة اللي عليها الدور لمكان القراية بنعومة.
+  void _alignToLine() {
+    final top = _viewTop;
+    final focus = _wordY();
+    if (top == null || focus == null || !_scroll.hasClients) return;
+    final pos = _scroll.position;
+    final error = focus.$1 - (top + pos.viewportDimension * 0.3);
+    _catchUpUntil = DateTime.now().add(const Duration(milliseconds: 450));
+    _scroll.animateTo((pos.pixels + error).clamp(0.0, pos.maxScrollExtent),
+        duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+  }
+
   void _syncTicker() {
+    _syncAutoPad();
     final run = !_pages && _auto.active && _auto.playing;
     if (run && !_ticker.isActive) {
       _lastTick = null;
@@ -533,6 +570,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _pager = null;
       _scrolled = false;
       _anchors.paragraphs.clear();
+      _autoPadTop = 0;
+      _autoPadBottom = 0;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => old?.dispose());
     if (autoFrom != null) {
@@ -856,6 +895,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             key: _viewportKey,
             controller: _scroll,
             slivers: [
+              // القراءة الصامتة: مسافة فوق وتحت، عشان أول آية وآخر آية يقدروا يوصلوا لمكان القراية.
+              SliverToBoxAdapter(child: SizedBox(height: _autoPadTop)),
               // الأرباع اللي بعد الربع الحالي مبتظهرش غير لما يسجّله.
               for (var i = 0; i < r.quarterCount && i <= _read; i++) ...[
                 SliverToBoxAdapter(
@@ -888,6 +929,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
               ],
               const SliverToBoxAdapter(child: SizedBox(height: 40)),
+              SliverToBoxAdapter(child: SizedBox(height: _autoPadBottom)),
             ],
           ),
             ),

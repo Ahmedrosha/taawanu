@@ -48,7 +48,15 @@ class TaawanuApp extends StatelessWidget {
                 (mode == ThemeMode.system && MediaQuery.platformBrightnessOf(context) == Brightness.dark);
             final b = dark ? Brightness.dark : Brightness.light;
             AppColors.use(b);
-            return KeyedSubtree(key: ValueKey(b), child: child ?? const SizedBox.shrink());
+            var app = child ?? const SizedBox.shrink();
+            // أندرويد: شريط النظام اللي تحت كان بيغطي آخر الشاشة في كل الصفحات، فبنسيب مكانه.
+            if (defaultTargetPlatform == TargetPlatform.android) {
+              app = ColoredBox(
+                color: AppColors.background,
+                child: SafeArea(top: false, left: false, right: false, child: app),
+              );
+            }
+            return KeyedSubtree(key: ValueKey(b), child: app);
           },
           locale: locale,
           supportedLocales: AppLocalizations.supportedLocales,
