@@ -25,7 +25,7 @@ class JoinScreen extends StatefulWidget {
 class _JoinScreenState extends State<JoinScreen> {
   late Future<GroupPreview> _preview = _load();
   bool _busy = false;
-  /// الجزء اللي العضو اختاره (null = أول جزء فاضي).
+  /// الورد اللي العضو اختاره. لازم يختار بنفسه قبل الانضمام (مفيش اختيار افتراضي).
   int? _segment;
 
   Future<GroupPreview> _load() {
@@ -38,7 +38,8 @@ class _JoinScreenState extends State<JoinScreen> {
       context,
       wardQuarters: p.wardQuarters,
       slots: p.slots,
-      selected: _segment ?? p.firstFreeSegment,
+      selected: _segment,
+      focus: _segment ?? p.firstFreeSegment,
       taken: p.takenSegments,
     );
     if (seg != null && mounted) setState(() => _segment = seg);
@@ -47,7 +48,8 @@ class _JoinScreenState extends State<JoinScreen> {
   Future<void> _join(GroupPreview p) async {
     final t = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final segment = _segment ?? p.firstFreeSegment;
+    final segment = _segment;
+    if (segment == null) return;
     setState(() => _busy = true);
     String? groupId;
     var ok = false;
@@ -162,7 +164,8 @@ class _JoinScreenState extends State<JoinScreen> {
                         ),
                         const SizedBox(height: 8),
                         SegmentChoiceTile(
-                          label: segmentLabel(t, _segment ?? p.firstFreeSegment ?? 0, p.wardQuarters),
+                          label: _segment == null ? t.pickYourWard : segmentLabel(t, _segment!, p.wardQuarters),
+                          empty: _segment == null,
                           onTap: _busy ? null : () => _pick(p),
                         ),
                       ],
@@ -180,7 +183,10 @@ class _JoinScreenState extends State<JoinScreen> {
                       ] else if (p.memberCount >= p.slots)
                         Text(t.groupFull, style: TextStyle(color: AppColors.statusLate, fontWeight: FontWeight.w600))
                       else
-                        FilledButton(onPressed: _busy ? null : () => _join(p), child: Text(t.joinGroup)),
+                        FilledButton(
+                          onPressed: _busy || _segment == null ? null : () => _join(p),
+                          child: Text(_segment == null ? t.pickWardFirst : t.joinGroup),
+                        ),
                       const SizedBox(height: 8),
                       TextButton(onPressed: () => context.go('/home'), child: Text(t.notNow)),
                     ],

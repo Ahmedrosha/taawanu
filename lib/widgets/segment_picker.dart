@@ -20,6 +20,7 @@ Future<int?> showSegmentPicker(
   required int wardQuarters,
   required int slots,
   int? selected,
+  int? focus,
   Set<int> taken = const {},
   Map<int, String> holders = const {},
   String? note,
@@ -56,6 +57,7 @@ Future<int?> showSegmentPicker(
                 wardQuarters: wardQuarters,
                 slots: slots,
                 selected: selected,
+                focus: focus,
                 wide: holders.isNotEmpty,
                 cell: (seg, label) => cell(context, seg, label),
               ),
@@ -77,6 +79,7 @@ class SegmentGrid extends StatelessWidget {
     required this.slots,
     required this.cell,
     this.selected,
+    this.focus,
     this.wide = false,
   });
 
@@ -84,13 +87,16 @@ class SegmentGrid extends StatelessWidget {
   final int wardQuarters;
   final int slots;
   final int? selected;
+
+  /// القطعة اللي القايمة تفتح عندها (لو مفيش اختيار). الافتراضي: المختارة.
+  final int? focus;
   final bool wide;
   final Widget Function(int seg, String label) cell;
 
   @override
   Widget build(BuildContext context) {
     if (wardQuarters < 8) {
-      return _ByJuz(scroll: scroll, wardQuarters: wardQuarters, selected: selected, cell: cell, wide: wide);
+      return _ByJuz(scroll: scroll, wardQuarters: wardQuarters, selected: selected, focus: focus ?? selected, cell: cell, wide: wide);
     }
     return GridView.builder(
       controller: scroll,
@@ -109,11 +115,12 @@ class SegmentGrid extends StatelessWidget {
 
 /// ٣٠ كارت (جزء لكل كارت). جوه كل جزء: الحزبين، وتحت كل حزب أرباعه أو نصّيه.
 class _ByJuz extends StatefulWidget {
-  const _ByJuz({required this.scroll, required this.wardQuarters, required this.selected, required this.cell, required this.wide});
+  const _ByJuz({required this.scroll, required this.wardQuarters, required this.selected, required this.focus, required this.cell, required this.wide});
 
   final ScrollController? scroll;
   final int wardQuarters; // ١ أو ٢ أو ٤
   final int? selected;
+  final int? focus;
   final Widget Function(int seg, String label) cell;
   final bool wide;
 
@@ -139,6 +146,7 @@ class _ByJuzState extends State<_ByJuz> {
     final t = AppLocalizations.of(context);
     final w = widget.wardQuarters;
     final selectedJuz = widget.selected == null ? null : widget.selected! * w ~/ 8;
+    final focusJuz = widget.focus == null ? null : widget.focus! * w ~/ 8;
     final cellSize = widget.wide ? 76.0 : 54.0;
 
     Widget sized(Widget c) => SizedBox(width: cellSize, height: widget.wide ? 62 : 48, child: c);
@@ -151,7 +159,7 @@ class _ByJuzState extends State<_ByJuz> {
         children: [
           for (var juz = 0; juz < 30; juz++)
             Container(
-              key: juz == selectedJuz ? _selectedKey : null,
+              key: juz == focusJuz ? _selectedKey : null,
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
               decoration: BoxDecoration(
@@ -281,10 +289,13 @@ class _SegmentCell extends StatelessWidget {
 
 /// صف بيعرض القطعة المختارة، والضغط عليه بيفتح الجدول.
 class SegmentChoiceTile extends StatelessWidget {
-  const SegmentChoiceTile({super.key, required this.label, required this.onTap});
+  const SegmentChoiceTile({super.key, required this.label, required this.onTap, this.empty = false});
 
   final String label;
   final VoidCallback? onTap;
+
+  /// لسه محدش اختار: الخانة بتلفت النظر.
+  final bool empty;
 
   @override
   Widget build(BuildContext context) {
@@ -292,13 +303,13 @@ class SegmentChoiceTile extends StatelessWidget {
       color: AppColors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.border),
+        side: BorderSide(color: empty ? AppColors.accent : AppColors.border, width: empty ? 2 : 1),
       ),
       child: ListTile(
         onTap: onTap,
         leading: Icon(Icons.menu_book_outlined, color: AppColors.accent),
-        title: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
-        trailing: onTap == null ? null : const Icon(Icons.edit_outlined, size: 20),
+        title: Text(label, style: TextStyle(fontWeight: FontWeight.w700, color: empty ? AppColors.accent : null)),
+        trailing: onTap == null ? null : Icon(empty ? Icons.chevron_left : Icons.edit_outlined, size: 20),
       ),
     );
   }

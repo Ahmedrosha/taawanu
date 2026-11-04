@@ -143,12 +143,12 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             ),
             const SizedBox(height: 20),
 
-            Text(t.yourStartLabel, style: label),
+            Text(t.adminStartLabel, style: label),
             const SizedBox(height: 4),
-            Text(t.yourStartHint, style: text.bodySmall?.copyWith(color: AppColors.textMuted)),
+            Text(t.adminStartHint, style: text.bodySmall?.copyWith(color: AppColors.textMuted)),
             const SizedBox(height: 8),
             SegmentChoiceTile(
-              label: segmentLabel(t, _startSegment, _ward),
+              label: _startSegment == 0 ? '${segmentLabel(t, 0, _ward)} ${t.fromMushafStart}' : segmentLabel(t, _startSegment, _ward),
               onTap: () async {
                 final seg = await showSegmentPicker(
                   context,

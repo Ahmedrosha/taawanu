@@ -858,5 +858,10 @@
         "type": "int"
       }
     }
-  }
+  },
+  "pickYourWard": "Choose your portion",
+  "pickWardFirst": "Choose your portion first",
+  "adminStartLabel": "Your own portion in the group",
+  "adminStartHint": "This is the portion you'll read in the first cycle; members pick from the free ones. Moving a group from WhatsApp? Pick the portion you're currently on.",
+  "fromMushafStart": "(from the start)"
 }
