@@ -14,6 +14,14 @@ jobs:
       TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
       - uses: actions/checkout@v4
+      # أبل بتطلب Xcode 26 أو أحدث للرفع. أجهزة Intel بتشغّل Xcode 16 افتراضي، فبنختار أحدث 26 موجود.
+      - name: Select Xcode 26
+        run: |
+          ls -d /Applications/Xcode*.app
+          X=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$X" ]; then echo "::error title=No Xcode 26::This runner has no Xcode 26"; exit 1; fi
+          sudo xcode-select -s "$X/Contents/Developer"
+          xcodebuild -version
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
