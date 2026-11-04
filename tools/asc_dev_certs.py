@@ -36,12 +36,19 @@ def call(method, path, tok):
 
 def main():
     tok = token()
+    list_only = '--list' in sys.argv
     certs = call('GET', '/certificates?filter[certificateType]=DEVELOPMENT,IOS_DEVELOPMENT&limit=200', tok)['data']
     revoked = 0
     for c in certs:
         a = c['attributes']
         label = f"{a.get('name')} / {a.get('displayName')}"
-        if 'Created via API' in (a.get('name') or '') or 'Created via API' in (a.get('displayName') or ''):
+        api = 'Created via API' in (a.get('name') or '') or 'Created via API' in (a.get('displayName') or '')
+        if list_only:
+            print('found:', label, a.get('expirationDate'))
+            if api:
+                print(f"::notice title=CI certificate exists::{label}")
+            continue
+        if api:
             try:
                 call('DELETE', f"/certificates/{c['id']}", tok)
                 revoked += 1
@@ -50,7 +57,7 @@ def main():
                 print('could not revoke', label, e)
         else:
             print('kept:', label)
-    print(f'revoked {revoked} of {len(certs)} development certificates')
+    print(f'revoked {revoked} of {len(certs)} development certificates' if not list_only else f'{len(certs)} development certificates')
 
 
 if __name__ == '__main__':

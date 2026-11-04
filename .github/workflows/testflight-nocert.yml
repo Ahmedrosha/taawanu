@@ -1,0 +1,114 @@
+name: TestFlight no-cert experiment
+
+# يدوي بس: بيبني نسخة الآيفون ويرفعها على TestFlight.
+on:
+  workflow_dispatch:
+
+jobs:
+  ios:
+    # أجهزة Intel: غالبًا فاضية لما أجهزة Apple Silicon عليها ضغط (البناء أبطأ شوية).
+    runs-on: macos-15-intel
+    env:
+      KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+      ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+      TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      # أبل بتطلب Xcode 26 أو أحدث للرفع. أجهزة Intel بتشغّل Xcode 16 افتراضي، فبنختار أحدث 26 موجود.
+      - name: Select Xcode 26
+        run: |
+          ls -d /Applications/Xcode*.app
+          X=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$X" ]; then echo "::error title=No Xcode 26::This runner has no Xcode 26"; exit 1; fi
+          sudo xcode-select -s "$X/Contents/Developer"
+          xcodebuild -version
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: App Store Connect API key
+        env:
+          PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          for v in KEY_ID ISSUER_ID TEAM_ID PRIVATE_KEY; do
+            if [ -z "${!v}" ]; then echo "::error::Missing secret for $v"; exit 1; fi
+          done
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${KEY_ID}.p8"
+          printf '%s\n' "$PRIVATE_KEY" > "$KEY_PATH"
+          echo "KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - run: flutter pub get
+      - run: flutter gen-l10n
+
+      # رقم البناء بيزيد تلقائيًا مع كل تشغيل، لأن TestFlight مبيقبلش نفس الرقم مرتين.
+      - name: Flutter build (no signing)
+        run: |
+          set +e
+          flutter build ios --release --no-codesign --build-number=${{ github.run_number }} > flutter-build.log 2>&1
+          code=$?
+          tail -40 flutter-build.log
+          if [ $code -ne 0 ]; then
+            msg=$(grep -iE "error|exception|failed|required|minimum|could not|unable" flutter-build.log | sort -u | tail -8 | cut -c1-300 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')
+            echo "::error title=Flutter build failed::$msg"
+          fi
+          exit $code
+
+      # كل بناء بيعمل شهادة تطوير جديدة، وأبل ليها حد أقصى: بنمسح شهادات "Created via API" قبل وبعد.
+      # تجربة: بناء من غير شهادة تطوير، وأبل تمضي وقت التصدير. مش بيرفع حاجة.
+      - name: Count CI certificates (before)
+        run: |
+          python3 -m venv "$RUNNER_TEMP/asc" && "$RUNNER_TEMP/asc/bin/pip" -q install 'pyjwt[crypto]'
+          "$RUNNER_TEMP/asc/bin/python" tools/asc_dev_certs.py --list
+
+      - name: Archive without signing
+        run: |
+          set -o pipefail
+          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Runner.xcarchive" archive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="$TEAM_ID" 2>&1 | tee archive.log | grep -E "error:|ARCHIVE" || true
+          [ -d "$RUNNER_TEMP/Runner.xcarchive" ] || { echo "::error title=Archive failed::$(grep -E 'error:' archive.log | sort -u | tail -4 | tr '\n' ' ')"; exit 1; }
+
+      - name: Export with cloud signing (no upload)
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>export</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          EOF
+          set +e
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID" \
+            > export.log 2>&1
+          code=$?
+          tail -30 export.log
+          [ $code -eq 0 ] || { echo "::error title=Export failed::$(grep -iE 'error' export.log | sort -u | tail -4 | tr '\n' ' ')"; exit $code; }
+
+      - name: Inspect signature and entitlements
+        run: |
+          cd "$RUNNER_TEMP/export" && ls -la && unzip -q -o *.ipa -d ipa
+          APP=$(ls -d ipa/Payload/*.app)
+          codesign -dvv "$APP" 2>&1 | grep -E "Authority|TeamIdentifier" || true
+          codesign -d --entitlements :- "$APP" > ent.plist 2>/dev/null; cat ent.plist
+          if grep -q "aps-environment" ent.plist; then
+            echo "::notice title=Entitlements OK::aps-environment = $(/usr/libexec/PlistBuddy -c 'Print :aps-environment' ent.plist)"
+          else
+            echo "::error title=Missing push entitlement::aps-environment not in the signed app"; exit 1
+          fi
+
+      - name: Count CI certificates (after)
+        if: always()
+        run: |
+          [ -x "$RUNNER_TEMP/asc/bin/python" ] || { python3 -m venv "$RUNNER_TEMP/asc" && "$RUNNER_TEMP/asc/bin/pip" -q install 'pyjwt[crypto]'; }
+          "$RUNNER_TEMP/asc/bin/python" tools/asc_dev_certs.py --list
