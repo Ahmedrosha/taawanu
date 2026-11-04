@@ -136,6 +136,15 @@ class Prefs {
   bool get guideCardDone => _p.getBool('guideCardDone') ?? false;
   Future<void> setGuideCardDone() => _p.setBool('guideCardDone', true);
 
+  /// الجولات التعريفية اللي اتشافت.
+  bool tourDone(String id) => (_p.getStringList('toursDone') ?? const []).contains(id);
+  Future<void> setTourDone(String id) async {
+    final done = {...?_p.getStringList('toursDone'), id};
+    await _p.setStringList('toursDone', done.toList());
+  }
+
+  Future<void> resetTours() => _p.remove('toursDone');
+
   bool get tafsirTipShown => _p.getBool('tafsirTipShown') ?? false;
   Future<void> setTafsirTipShown() => _p.setBool('tafsirTipShown', true);
 

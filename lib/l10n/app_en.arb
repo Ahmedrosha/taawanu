@@ -870,5 +870,13 @@
   "guideCardBody": "Learn how the app works in two minutes.",
   "editName": "Edit name",
   "yourNameHint": "The name your groups will see",
-  "nameUpdated": "Name updated"
+  "nameUpdated": "Name updated",
+  "tourNext": "Next",
+  "tourSkip": "Skip",
+  "tourDone": "Got it",
+  "tourStepOf": "{n} of {total}",
+  "replayTours": "Replay the app tour",
+  "replayToursHint": "Show the on-screen tips again",
+  "replayToursDone": "The tour will show again on each screen.",
+  "@tourStepOf": {"placeholders": {"n": {"type": "int"}, "total": {"type": "int"}}}
 }

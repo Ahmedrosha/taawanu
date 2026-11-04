@@ -6,6 +6,8 @@ import '../../l10n/gen/app_localizations.dart';
 import '../../services/prefs.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/tour.dart';
+import '../../widgets/tour_texts.dart';
 import '../../widgets/ui.dart';
 import 'adhkar_data.dart';
 import 'hisn_screen.dart';
@@ -22,6 +24,18 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
   late final String _today = _dayKey();
   late final Map<String, int> _counts = Prefs.instance.adhkarCounts(_today);
   late final Future<List<AdhkarCategory>> _data = AdhkarRepository.instance.daily();
+  final _kCats = GlobalKey(), _kItem = GlobalKey(), _kReset = GlobalKey(), _kHisn = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    Tour.schedule(context, 'adhkar', () => [
+          TourStep(_kCats, tourText(context, 'adhkar.cats'), padding: 0, radius: 0),
+          TourStep(_kItem, tourText(context, 'adhkar.item')),
+          TourStep(_kReset, tourText(context, 'adhkar.reset'), radius: 24),
+          TourStep(_kHisn, tourText(context, 'adhkar.hisn'), radius: 20),
+        ]);
+  }
 
   static String _dayKey() {
     final n = DateTime.now();
@@ -65,7 +79,7 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
           appBar: AppBar(
             title: Text(t.tabAdhkar, style: const TextStyle(fontWeight: FontWeight.w700)),
             actions: [
-              if (cat != null) IconButton(tooltip: t.reset, onPressed: () => _reset(cat), icon: const Icon(Icons.refresh)),
+              if (cat != null) IconButton(key: _kReset, tooltip: t.reset, onPressed: () => _reset(cat), icon: const Icon(Icons.refresh)),
             ],
           ),
           body: cats == null
@@ -74,6 +88,7 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                   children: [
                     // الأقسام، وآخرها حصن المسلم كله.
                     SizedBox(
+                      key: _kCats,
                       height: 48,
                       child: ListView(
                         scrollDirection: Axis.horizontal,
@@ -92,6 +107,7 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                               ),
                             ),
                           ActionChip(
+                            key: _kHisn,
                             avatar: Icon(Icons.menu_book_outlined, size: 18, color: AppColors.accent),
                             label: Text(t.hisnMuslim),
                             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HisnScreen())),
@@ -114,7 +130,7 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                                 return Text(t.tapToCount, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textMuted));
                               }
                               final d = items[i];
-                              return _DhikrCard(dhikr: d, count: _counts[d.id] ?? 0, quran: q, onTap: () => _tap(d));
+                              return _DhikrCard(key: i == 0 ? _kItem : null, dhikr: d, count: _counts[d.id] ?? 0, quran: q, onTap: () => _tap(d));
                             },
                           );
                         },
@@ -129,7 +145,7 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
 }
 
 class _DhikrCard extends StatelessWidget {
-  const _DhikrCard({required this.dhikr, required this.count, required this.quran, required this.onTap});
+  const _DhikrCard({super.key, required this.dhikr, required this.count, required this.quran, required this.onTap});
 
   final Dhikr dhikr;
   final int count;

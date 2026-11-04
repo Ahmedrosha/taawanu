@@ -7,6 +7,9 @@ import '../../l10n/gen/app_localizations.dart';
 import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_colors.dart';
+import '../../services/prefs.dart';
+import '../../widgets/tour.dart';
+import '../../widgets/tour_texts.dart';
 import '../../widgets/ui.dart';
 import 'mushaf_settings.dart';
 
@@ -19,6 +22,19 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late final Stream<UserStats> _stats = UserService.instance.stats();
+  final _kName = GlobalKey(), _kPoints = GlobalKey(), _kGuide = GlobalKey(), _kMushaf = GlobalKey(), _kReplay = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    Tour.schedule(context, 'profile', () => [
+          TourStep(_kName, tourText(context, 'profile.name'), radius: 24),
+          TourStep(_kPoints, tourText(context, 'profile.points')),
+          TourStep(_kGuide, tourText(context, 'profile.guide')),
+          TourStep(_kMushaf, tourText(context, 'profile.mushaf')),
+          TourStep(_kReplay, tourText(context, 'profile.replay')),
+        ]);
+  }
 
   Future<void> _editName(BuildContext context, String current) async {
     final t = AppLocalizations.of(context);
@@ -75,6 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: Text(name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                             ),
                             IconButton(
+                              key: _kName,
                               tooltip: t.editName,
                               visualDensity: VisualDensity.compact,
                               icon: Icon(Icons.edit_outlined, size: 20, color: AppColors.accent),
@@ -90,6 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 18),
               Container(
+                key: _kPoints,
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(20)),
                 child: Row(
@@ -126,6 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 22),
               Material(
+                key: _kGuide,
                 color: AppColors.surface,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: AppColors.border)),
                 child: ListTile(
@@ -136,10 +155,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onTap: () => context.push('/guide'),
                 ),
               ),
-              const SizedBox(height: 28),
-              SectionTitle(t.mushafSettings),
               const SizedBox(height: 10),
-              const MushafSettings(),
+              Material(
+                key: _kReplay,
+                color: AppColors.surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: AppColors.border)),
+                child: ListTile(
+                  leading: Icon(Icons.tour_outlined, color: AppColors.accent),
+                  title: Text(t.replayTours, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: Text(t.replayToursHint),
+                  onTap: () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    await Prefs.instance.resetTours();
+                    messenger.showSnackBar(SnackBar(content: Text(t.replayToursDone)));
+                  },
+                ),
+              ),
+              const SizedBox(height: 28),
+              KeyedSubtree(
+                key: _kMushaf,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SectionTitle(t.mushafSettings),
+                    const SizedBox(height: 10),
+                    const MushafSettings(),
+                  ],
+                ),
+              ),
               const SizedBox(height: 28),
               SectionTitle(t.appearance),
               const SizedBox(height: 10),

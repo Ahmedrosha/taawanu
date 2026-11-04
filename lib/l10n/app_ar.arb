@@ -395,5 +395,12 @@
   "guideCardBody": "اعرف إزاي التطبيق شغال في دقيقتين.",
   "editName": "تعديل الاسم",
   "yourNameHint": "اسمك اللي هيظهر للمجموعة",
-  "nameUpdated": "الاسم اتغيّر"
+  "nameUpdated": "الاسم اتغيّر",
+  "tourNext": "التالي",
+  "tourSkip": "تخطي",
+  "tourDone": "تمام",
+  "tourStepOf": "{n} من {total}",
+  "replayTours": "إعادة الجولة التعريفية",
+  "replayToursHint": "الشرح على الشاشات هيظهر تاني",
+  "replayToursDone": "الجولة هتظهر تاني أول ما تفتح كل شاشة."
 }

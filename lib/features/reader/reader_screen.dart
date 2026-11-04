@@ -20,6 +20,8 @@ import '../groups/group_board_screen.dart' show ReadRequest;
 import 'mushaf_page.dart';
 import 'recitation_bar.dart';
 import 'tafsir_sheet.dart';
+import '../../widgets/tour.dart';
+import '../../widgets/tour_texts.dart';
 
 
 /// قراءة الورد ربع ربع، وتسجيل كل ربع لما يخلص.
@@ -160,7 +162,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (ayahs.isEmpty) return;
     _followed = null;
     await _audio.play(ayahs, title: _ayahTitle);
+    if (mounted) {
+      Tour.schedule(context, 'recitation', () => [
+            TourStep(_kReciter, tourText(context, 'recite.reciter')),
+            TourStep(_kDownload, tourText(context, 'recite.download'), radius: 24),
+          ], delay: const Duration(milliseconds: 600));
+    }
   }
+
+  // الجولة التعريفية.
+  final _kPage = GlobalKey(), _kPlay = GlobalKey(), _kZoom = GlobalKey(), _kMark = GlobalKey(), _kUndo = GlobalKey();
+  final _kReciter = GlobalKey(), _kDownload = GlobalKey();
 
   /// التلاوة شغالة والتطبيق مفتوح بس: لو خرج من التطبيق أو قفل الشاشة بتقف مؤقتًا.
   @override
@@ -175,6 +187,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     WidgetsBinding.instance.addObserver(this);
     // الشاشة متقفلش طول ما المصحف مفتوح (قراءة أو تلاوة).
     WakelockPlus.enable();
+    Tour.schedule(context, 'reader', () => [
+          TourStep(_kPage, tourText(context, 'reader.page'), padding: 0),
+          TourStep(_kPlay, tourText(context, 'reader.play'), radius: 24),
+          TourStep(_kZoom, tourText(context, 'reader.zoom'), radius: 24),
+          TourStep(_kMark, tourText(context, 'reader.mark')),
+          TourStep(_kUndo, tourText(context, 'reader.undo')),
+        ], delay: const Duration(milliseconds: 1200));
+    // الجولة بتشرح الضغط على الآية، فالتلميح القديم للي شاف الجولة قبل كده بس.
+    if (!Prefs.instance.tourDone('reader')) Prefs.instance.setTafsirTipShown();
     if (!Prefs.instance.tafsirTipShown) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -385,6 +406,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       onPointerMove: _onPointer,
       onPointerUp: _onPointer,
       onPointerCancel: _onPointer,
+      key: _kPage,
       child: Directionality(
         // المصحف بيتقلّب من اليمين للشمال حتى لو التطبيق إنجليزي.
         textDirection: TextDirection.rtl,
@@ -526,8 +548,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         actions: _pages
             ? [
                 if (!_audio.active)
-                  IconButton(tooltip: t.listen, onPressed: _startRecitation, icon: const Icon(Icons.play_circle_outline)),
-                IconButton(tooltip: t.enlargeText, onPressed: _enlarge, icon: const Icon(Icons.zoom_in)),
+                  IconButton(key: _kPlay, tooltip: t.listen, onPressed: _startRecitation, icon: const Icon(Icons.play_circle_outline)),
+                IconButton(key: _kZoom, tooltip: t.enlargeText, onPressed: _enlarge, icon: const Icon(Icons.zoom_in)),
               ]
             : [
                 if (!_audio.active)
@@ -605,11 +627,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               // في وضع الصفحات زرار تسجيل الربع بيظهر في صفحة نهاية الربع بس.
               if (_pages && _read < r.quarterCount && _page < _limitPage)
                 Padding(
+                  key: _kMark,
                   padding: const EdgeInsets.only(left: 8, bottom: 8),
                   child: Text(t.readToQuarterEnd, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                 ),
               if (_pages && _read < r.quarterCount && _page >= _limitPage)
                 Padding(
+                  key: _kMark,
                   padding: const EdgeInsets.only(left: 8, bottom: 8),
                   child: FilledButton(
                     onPressed: _busy ? null : _markQuarter,
@@ -622,7 +646,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               if (_audio.active)
                 Padding(
                   padding: const EdgeInsets.only(left: 8, top: 4, bottom: 8),
-                  child: RecitationBar(ayahs: () => _recitationAyahs(from: _audio.current), onRestart: _startRecitation),
+                  child: RecitationBar(
+                    ayahs: () => _recitationAyahs(from: _audio.current),
+                    onRestart: _startRecitation,
+                    reciterKey: _kReciter,
+                    downloadKey: _kDownload,
+                  ),
                 ),
               Row(
             children: [
@@ -640,6 +669,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               const SizedBox(width: 8),
               // تراجع عن آخر ربع (لو اتسجّل بالغلط).
               TextButton.icon(
+                key: _kUndo,
                 onPressed: _busy || _read == 0 ? null : _undo,
                 icon: const Icon(Icons.undo, size: 18),
                 label: Text(t.undo),

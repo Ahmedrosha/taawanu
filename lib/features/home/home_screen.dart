@@ -13,6 +13,9 @@ import '../../theme/app_colors.dart';
 import '../../widgets/ui.dart';
 import '../groups/group_board_screen.dart' show ReadRequest, TimeLeftChip;
 import '../prayer/next_prayer_tile.dart';
+import '../shell/home_shell.dart' show shellNavKey;
+import '../../widgets/tour.dart';
+import '../../widgets/tour_texts.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,6 +27,19 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final Stream<UserStats> _stats = UserService.instance.stats().asBroadcastStream();
   late final Stream<List<MyGroup>> _groups = GroupsService.instance.myGroups();
+  final _kStats = GlobalKey(), _kCard = GlobalKey(), _kRead = GlobalKey(), _kNew = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    Tour.schedule(context, 'home', () => [
+          TourStep(_kStats, tourText(context, 'home.stats')),
+          TourStep(_kCard, tourText(context, 'home.card')),
+          TourStep(_kRead, tourText(context, 'home.read')),
+          TourStep(_kNew, tourText(context, 'home.newGroup')),
+          TourStep(shellNavKey, tourText(context, 'home.nav'), padding: 0, radius: 0),
+        ], delay: const Duration(milliseconds: 1400));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
               builder: (context, snap) {
                 final s = snap.data ?? UserStats.fromMap(null);
                 return Container(
+                  key: _kStats,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(20)),
                   child: Row(
@@ -73,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 SectionTitle(t.yourPortions),
                 const Spacer(),
-                TextButton.icon(onPressed: () => context.push('/create-group'), icon: const Icon(Icons.add), label: Text(t.newGroup)),
+                TextButton.icon(key: _kNew, onPressed: () => context.push('/create-group'), icon: const Icon(Icons.add), label: Text(t.newGroup)),
               ],
             ),
             const SizedBox(height: 8),
@@ -95,7 +112,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
                 return Column(
                   children: [
-                    for (final g in groups) Padding(padding: const EdgeInsets.only(bottom: 12), child: _HomeGroupCard(groupId: g.id)),
+                    for (final (i, g) in groups.indexed)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _HomeGroupCard(groupId: g.id, cardKey: i == 0 ? _kCard : null, readKey: i == 0 ? _kRead : null),
+                      ),
                   ],
                 );
               },
@@ -108,9 +129,12 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _HomeGroupCard extends StatefulWidget {
-  const _HomeGroupCard({required this.groupId});
+  const _HomeGroupCard({required this.groupId, this.cardKey, this.readKey});
 
   final String groupId;
+
+  /// مفاتيح الجولة التعريفية (لأول كارت بس).
+  final GlobalKey? cardKey, readKey;
 
   @override
   State<_HomeGroupCard> createState() => _HomeGroupCardState();
@@ -122,7 +146,9 @@ class _HomeGroupCardState extends State<_HomeGroupCard> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    return StreamBuilder<Group?>(
+    return KeyedSubtree(
+      key: widget.cardKey,
+      child: StreamBuilder<Group?>(
       stream: _group,
       builder: (context, gSnap) {
         final g = gSnap.data;
@@ -177,6 +203,7 @@ class _HomeGroupCardState extends State<_HomeGroupCard> {
                           if (!a.isDone && !a.closed) ...[
                             const SizedBox(height: 12),
                             FilledButton.icon(
+                              key: widget.readKey,
                               onPressed: () => context.push('/read', extra: ReadRequest.regular(group: g, assignment: a)),
                               icon: const Icon(Icons.menu_book_outlined),
                               label: Text(a.quartersRead > 0 ? t.continueReading : t.readNow),
@@ -191,6 +218,7 @@ class _HomeGroupCardState extends State<_HomeGroupCard> {
           ),
         );
       },
+      ),
     );
   }
 }

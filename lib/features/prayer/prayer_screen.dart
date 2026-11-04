@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 
 import '../../l10n/gen/app_localizations.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/tour.dart';
+import '../../widgets/tour_texts.dart';
 import '../../widgets/ui.dart';
 import '../../services/prefs.dart';
 import 'prayer_alerts.dart';
@@ -62,7 +64,16 @@ class _PrayerScreenState extends State<PrayerScreen> {
     _c.addListener(_refresh);
     // تحديث العد التنازلي كل ٣٠ ثانية.
     _tick = Timer.periodic(const Duration(seconds: 30), (_) => _refresh());
+    // الجولة بعد ما المكان يتحدد بس (قبلها الشاشة فيها زرار تحديد المكان وبس).
+    Tour.schedule(context, 'prayer', () => !_c.hasLocation ? const <TourStep>[] : [
+          TourStep(_kTimes, tourText(context, 'prayer.times')),
+          TourStep(_kLocation, tourText(context, 'prayer.location')),
+          TourStep(_kQibla, tourText(context, 'prayer.qibla')),
+          TourStep(_kSettings, tourText(context, 'prayer.settings'), radius: 24),
+        ]);
   }
+
+  final _kTimes = GlobalKey(), _kLocation = GlobalKey(), _kQibla = GlobalKey(), _kSettings = GlobalKey();
 
   @override
   void dispose() {
@@ -148,7 +159,7 @@ class _PrayerScreenState extends State<PrayerScreen> {
       appBar: AppBar(
         title: Text(t.tabPrayer, style: const TextStyle(fontWeight: FontWeight.w700)),
         actions: [
-          if (_c.hasLocation) IconButton(tooltip: t.prayerSettings, icon: const Icon(Icons.tune), onPressed: _settings),
+          if (_c.hasLocation) IconButton(key: _kSettings, tooltip: t.prayerSettings, icon: const Icon(Icons.tune), onPressed: _settings),
         ],
       ),
       body: !_c.hasLocation
@@ -157,17 +168,27 @@ class _PrayerScreenState extends State<PrayerScreen> {
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
               children: [
                 _LocationRow(
+                  key: _kLocation,
                   name: _c.placeName(locale) ?? t.currentLocation,
                   locating: _locating,
                   onLocate: _locate,
                   onPickCity: _pickCity,
                 ),
                 const SizedBox(height: 12),
-                _NextPrayerCard(controller: _c),
-                const SizedBox(height: 12),
-                _TodayTimes(controller: _c),
+                KeyedSubtree(
+                  key: _kTimes,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _NextPrayerCard(controller: _c),
+                      const SizedBox(height: 12),
+                      _TodayTimes(controller: _c),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 12),
                 AppCard(
+                  key: _kQibla,
                   padding: EdgeInsets.zero,
                   child: ListTile(
                     leading: Icon(Icons.explore_outlined, color: AppColors.accent),
@@ -228,7 +249,7 @@ class _NoLocation extends StatelessWidget {
 }
 
 class _LocationRow extends StatelessWidget {
-  const _LocationRow({required this.name, required this.locating, required this.onLocate, required this.onPickCity});
+  const _LocationRow({super.key, required this.name, required this.locating, required this.onLocate, required this.onPickCity});
 
   final String name;
   final bool locating;

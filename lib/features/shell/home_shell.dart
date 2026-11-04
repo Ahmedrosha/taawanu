@@ -3,6 +3,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../l10n/gen/app_localizations.dart';
 
+/// شريط التبويبات (للجولة التعريفية في الرئيسية).
+final shellNavKey = GlobalKey();
+
 /// الهيكل الرئيسي بالتبويبات تحت.
 class HomeShell extends StatelessWidget {
   const HomeShell({super.key, required this.navigationShell});
@@ -15,6 +18,7 @@ class HomeShell extends StatelessWidget {
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
+        key: shellNavKey,
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (index) => navigationShell.goBranch(
           index,

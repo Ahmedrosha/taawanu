@@ -7,7 +7,10 @@ import '../../theme/app_colors.dart';
 
 /// شريط التلاوة تحت القارئ: القارئ، والسابق والتالي، والتشغيل، والتحميل، والإيقاف.
 class RecitationBar extends StatelessWidget {
-  const RecitationBar({super.key, required this.ayahs, required this.onRestart});
+  const RecitationBar({super.key, required this.ayahs, required this.onRestart, this.reciterKey, this.downloadKey});
+
+  /// مفاتيح الجولة التعريفية.
+  final GlobalKey? reciterKey, downloadKey;
 
   /// الآيات اللي هتتحمّل (من الآية الحالية لآخر الربع).
   final List<(int, int)> Function() ayahs;
@@ -32,6 +35,7 @@ class RecitationBar extends StatelessWidget {
         children: [
           Expanded(
             child: InkWell(
+              key: reciterKey,
               borderRadius: BorderRadius.circular(10),
               onTap: () => _settings(context),
               child: Padding(
@@ -66,6 +70,7 @@ class RecitationBar extends StatelessWidget {
             builder: (context, p, _) => p != null
                 ? SizedBox(width: 40, height: 40, child: Padding(padding: const EdgeInsets.all(10), child: CircularProgressIndicator(value: p, strokeWidth: 2.5)))
                 : IconButton(
+                    key: downloadKey,
                     tooltip: t.downloadPortionAudio,
                     visualDensity: VisualDensity.compact,
                     onPressed: () async {

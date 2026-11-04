@@ -11,6 +11,8 @@ import '../../theme/app_colors.dart';
 import '../../widgets/segment_picker.dart';
 import 'assign_portions_screen.dart';
 import 'record_progress_sheet.dart';
+import '../../widgets/tour.dart';
+import '../../widgets/tour_texts.dart';
 import '../../widgets/ui.dart';
 
 /// لوحة المجموعة: الدورة الحالية، وخريطة الختمة، ووردي، والأوراد الإضافية، والأعضاء.
@@ -33,6 +35,24 @@ class _GroupBoardScreenState extends State<GroupBoardScreen> {
   int? _cycleN;
   late Stream<Cycle?> _cycle;
   late Stream<Assignment?> _mine;
+
+  // الجولة التعريفية.
+  final _kInvite = GlobalKey(), _kMenu = GlobalKey(), _kMembers = GlobalKey();
+  final _cycleKeys = _CycleTourKeys();
+
+  @override
+  void initState() {
+    super.initState();
+    // بنستنى الخريطة: الجولة للمجموعة اللي بدأت بس، ولو لسه مبدأتش بتتأجل لحد ما تبدأ.
+    Tour.schedule(context, 'board', () => _cycleKeys.map.currentContext == null ? const <TourStep>[] : [
+          TourStep(_kInvite, tourText(context, 'board.invite'), radius: 24),
+          TourStep(_kMenu, tourText(context, 'board.menu'), radius: 24),
+          TourStep(_cycleKeys.mine, tourText(context, 'board.mine')),
+          TourStep(_cycleKeys.map, tourText(context, 'board.map')),
+          TourStep(_cycleKeys.extra, tourText(context, 'board.extra')),
+          TourStep(_kMembers, tourText(context, 'board.members')),
+        ], delay: const Duration(milliseconds: 1500));
+  }
 
   void _ensureCycle(Group g) {
     if (_cycleN == g.currentCycle) return;
@@ -62,11 +82,12 @@ class _GroupBoardScreenState extends State<GroupBoardScreen> {
                 actions: [
                   if (me?.isManager ?? false)
                     IconButton(
+                      key: _kInvite,
                       tooltip: t.invite,
                       icon: const Icon(Icons.person_add_alt_1_outlined),
                       onPressed: () => context.push('/group/${g.id}/invite', extra: g),
                     ),
-                  _BoardMenu(group: g, me: me),
+                  KeyedSubtree(key: _kMenu, child: _BoardMenu(group: g, me: me)),
                 ],
               ),
               // مش ListView: القايمة الكسولة كانت بتشيل الخريطة لما تنزل تحت، وترجع تبنيها فاضية فالشاشة "تنط" لفوق.
@@ -80,11 +101,19 @@ class _GroupBoardScreenState extends State<GroupBoardScreen> {
                   if (!g.isActive)
                     _FormingCard(group: g, isManager: me?.isManager ?? false)
                   else
-                    _ActiveCycle(group: g, members: members, portionsStream: _portions, cycleStream: _cycle, mineStream: _mine, me: me),
+                    _ActiveCycle(group: g, members: members, portionsStream: _portions, cycleStream: _cycle, mineStream: _mine, me: me, tourKeys: _cycleKeys),
                   const SizedBox(height: 20),
-                  SectionTitle(t.members),
-                  const SizedBox(height: 8),
-                  _MembersList(group: g, members: members, me: me),
+                  KeyedSubtree(
+                    key: _kMembers,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SectionTitle(t.members),
+                        const SizedBox(height: 8),
+                        _MembersList(group: g, members: members, me: me),
+                      ],
+                    ),
+                  ),
                 ],
                 ),
               ),
@@ -179,6 +208,11 @@ class _FormingCardState extends State<_FormingCard> {
   }
 }
 
+/// مفاتيح الجولة التعريفية للعناصر اللي جوه الدورة.
+class _CycleTourKeys {
+  final mine = GlobalKey(), map = GlobalKey(), extra = GlobalKey();
+}
+
 class _ActiveCycle extends StatelessWidget {
   const _ActiveCycle({
     required this.group,
@@ -187,7 +221,10 @@ class _ActiveCycle extends StatelessWidget {
     required this.cycleStream,
     required this.mineStream,
     required this.me,
+    required this.tourKeys,
   });
+
+  final _CycleTourKeys tourKeys;
 
   final Group group;
   final List<Member> members;
@@ -221,13 +258,14 @@ class _ActiveCycle extends StatelessWidget {
             StreamBuilder<Assignment?>(
               stream: mineStream,
               builder: (context, aSnap) => _MyPortionCard(
+                key: tourKeys.mine,
                 group: group,
                 assignment: aSnap.data,
                 loading: !aSnap.hasData && aSnap.connectionState == ConnectionState.waiting,
               ),
             ),
             const SizedBox(height: 16),
-            if (cycle != null) _KhatmaMap(group: group, cycle: cycle, members: members, me: me),
+            if (cycle != null) KeyedSubtree(key: tourKeys.map, child: _KhatmaMap(group: group, cycle: cycle, members: members, me: me)),
             StreamBuilder<List<Portion>>(
               stream: portionsStream,
               builder: (context, pSnap) => _DonePortions(
@@ -239,7 +277,7 @@ class _ActiveCycle extends StatelessWidget {
                   if (portions.isEmpty) return const SizedBox.shrink();
                   return Padding(
                     padding: const EdgeInsets.only(top: 20),
-                    child: _ExtraPortions(group: group, portions: portions, members: members, me: me),
+                    child: _ExtraPortions(key: tourKeys.extra, group: group, portions: portions, members: members, me: me),
                   );
                 },
               ),
@@ -252,7 +290,7 @@ class _ActiveCycle extends StatelessWidget {
 }
 
 class _MyPortionCard extends StatelessWidget {
-  const _MyPortionCard({required this.group, required this.assignment, required this.loading});
+  const _MyPortionCard({super.key, required this.group, required this.assignment, required this.loading});
 
   final Group group;
   final Assignment? assignment;
@@ -613,7 +651,7 @@ class _DonePortionsState extends State<_DonePortions> {
 }
 
 class _ExtraPortions extends StatelessWidget {
-  const _ExtraPortions({required this.group, required this.portions, required this.members, required this.me});
+  const _ExtraPortions({super.key, required this.group, required this.portions, required this.members, required this.me});
 
   final Group group;
   final List<Portion> portions;
