@@ -4,7 +4,8 @@ import 'package:flutter/foundation.dart';
 
 import 'prefs.dart';
 
-/// القراءة التلقائية من غير صوت: الهايلايت بيمشي آية آية، ومدة كل آية على قد عدد كلماتها.
+/// القراءة التلقائية من غير صوت: المكان بيمشي كلمة كلمة بسرعة ثابتة (×١ = كلمة في الثانية).
+/// العرض بيختار يبيّن إيه: الآية كلها، أو الكلمة، أو ولا حاجة ([AutoReadMode]).
 /// بتتصرف زي التلاوة: بتقف آخر الربع لحد ما يتسجّل، وبعدها بتكمّل.
 class AutoReader extends ChangeNotifier {
   AutoReader._();
@@ -17,7 +18,7 @@ class AutoReader extends ChangeNotifier {
 
   /// كل عنصر: (سورة، آية، عدد الكلمات).
   List<(int, int, int)> _items = const [];
-  int _index = 0;
+  int _index = 0, _word = 0;
   bool _active = false, _playing = false, _waiting = false;
   Timer? _timer;
   final _clock = Stopwatch();
@@ -34,11 +35,15 @@ class AutoReader extends ChangeNotifier {
     return speeds.contains(s) ? s : 1.0;
   }
 
-  /// الوقت الباقي للآية الحالية.
-  Duration? get remaining {
-    if (!_active || _waiting) return null;
-    final left = _playing ? _left - _clock.elapsed : _left;
-    return left.isNegative ? Duration.zero : left;
+  /// آية / كلمة / بدون تنوير.
+  String get mode {
+    final m = Prefs.instance.autoReadMode;
+    return const ['ayah', 'word', 'none'].contains(m) ? m : 'ayah';
+  }
+
+  Future<void> setMode(String m) async {
+    await Prefs.instance.setAutoReadMode(m);
+    notifyListeners();
   }
 
   (int, int)? get current {
@@ -47,20 +52,23 @@ class AutoReader extends ChangeNotifier {
     return (s, a);
   }
 
-  Duration _durationOf(int words) {
-    final ms = words / (wordsPerMinute * speed) * 60000;
-    // أقل مدة للآية القصيرة: ثانية ونص عادي، وبتقل مع السرعات العالية.
-    final min = (1500 / speed).clamp(600, 1500);
-    return Duration(milliseconds: ms.clamp(min, 120000).round());
-  }
+  /// رقم الكلمة الحالية جوه الآية (من ٠).
+  int? get word => _active && _index < _items.length ? _word : null;
+
+  /// عدد كلمات الآية الحالية.
+  int get wordsInAyah => _active && _index < _items.length ? _items[_index].$3 : 0;
+
+  /// مدة الكلمة الواحدة بالسرعة الحالية.
+  Duration get wordDuration => Duration(milliseconds: (60000 / (wordsPerMinute * speed)).round());
 
   void play(List<(int, int, int)> ayahs) {
     if (ayahs.isEmpty) return;
     _items = ayahs;
     _index = 0;
+    _word = 0;
     _active = true;
     _waiting = false;
-    _start(_durationOf(ayahs.first.$3));
+    _start(wordDuration);
     notifyListeners();
   }
 
@@ -72,7 +80,8 @@ class AutoReader extends ChangeNotifier {
     if (_waiting) {
       _waiting = false;
       _index = firstNew;
-      _start(_durationOf(_items[_index].$3));
+      _word = 0;
+      _start(wordDuration);
     }
     notifyListeners();
   }
@@ -88,9 +97,14 @@ class AutoReader extends ChangeNotifier {
   }
 
   void _advance() {
-    if (_index + 1 < _items.length) {
+    final words = _items[_index].$3;
+    if (_word + 1 < words) {
+      _word++;
+      _start(wordDuration);
+    } else if (_index + 1 < _items.length) {
       _index++;
-      _start(_durationOf(_items[_index].$3));
+      _word = 0;
+      _start(wordDuration);
     } else {
       // آخر الآيات المفتوحة: نستنى التسجيل.
       _timer?.cancel();
@@ -112,35 +126,31 @@ class AutoReader extends ChangeNotifier {
 
   void resume() {
     if (!_active || _playing || _waiting) return;
-    _start(_left > Duration.zero ? _left : _durationOf(_items[_index].$3));
+    _start(_left > Duration.zero ? _left : wordDuration);
+    notifyListeners();
+  }
+
+  void _jump(int index) {
+    _index = index;
+    _word = 0;
+    _waiting = false;
+    if (_playing) {
+      _start(wordDuration);
+    } else {
+      _left = wordDuration;
+    }
     notifyListeners();
   }
 
   void next() {
-    if (!_active || _index + 1 >= _items.length) return;
-    _index++;
-    _waiting = false;
-    if (_playing) {
-      _start(_durationOf(_items[_index].$3));
-    } else {
-      _left = _durationOf(_items[_index].$3);
-    }
-    notifyListeners();
+    if (_active && _index + 1 < _items.length) _jump(_index + 1);
   }
 
   void previous() {
-    if (!_active || _index == 0) return;
-    _index--;
-    _waiting = false;
-    if (_playing) {
-      _start(_durationOf(_items[_index].$3));
-    } else {
-      _left = _durationOf(_items[_index].$3);
-    }
-    notifyListeners();
+    if (_active && _index > 0) _jump(_index - 1);
   }
 
-  /// السرعة الجاية (+١) أو اللي قبلها (-١). بتتطبّق من الآية الجاية.
+  /// السرعة الجاية (+١) أو اللي قبلها (-١). بتتطبّق من الكلمة الجاية.
   Future<void> changeSpeed(int step) async {
     final i = (speeds.indexOf(speed) + step).clamp(0, speeds.length - 1);
     await Prefs.instance.setAutoReadSpeed(speeds[i]);
@@ -155,6 +165,21 @@ class AutoReader extends ChangeNotifier {
     _waiting = false;
     _items = const [];
     _index = 0;
+    _word = 0;
     notifyListeners();
   }
 }
+
+/// أماكن بداية الكلمات جوه نص الآية: الكلمة = جزء بين مسافتين فيه حرف عربي
+/// (علامات الوقف والأرقام اللي لوحدها بتتبع الكلمة اللي قبلها).
+List<int> ayahWordStarts(String text) {
+  final out = <int>[];
+  var i = 0;
+  for (final token in text.split(' ')) {
+    if (_letter.hasMatch(token)) out.add(i);
+    i += token.length + 1;
+  }
+  return out;
+}
+
+final _letter = RegExp('[ء-غف-يٱ-ۓۺ-ۼ]');

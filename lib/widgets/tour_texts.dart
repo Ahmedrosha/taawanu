@@ -48,11 +48,18 @@ const tourTexts = <String, (String, String)>{
     'Listen to your portion with 7 reciters. Recitation pauses at the end of the quarter until you record it.',
   ),
   'reader.auto': (
-    'قراءة تلقائية من غير صوت: الآية بتتنوّر وتمشي لوحدها على قد طولها. وبتقف في آخر الربع زي التلاوة.',
-    'Silent auto-read: each ayah lights up and moves on by itself, timed to its length. It pauses at the end of the quarter, like recitation.',
+    'قراءة تلقائية من غير صوت بسرعة ثابتة: تنوّر آية آية أو كلمة كلمة أو من غير تنوير. وبتقف في آخر الربع زي التلاوة.',
+    'Silent auto-read at a steady pace: highlight ayah by ayah, word by word, or nothing. It pauses at the end of the quarter, like recitation.',
+  ),
+  'auto.mode': (
+    'اختار تنوّر الآية كلها، أو كلمة كلمة، أو من غير تنوير خالص.',
+    'Highlight the whole ayah, word by word, or nothing at all.',
   ),
   'auto.speed': ('غيّر سرعة القراءة من هنا.', 'Change the reading speed here.'),
-  'reader.zoom': ('كبّر الخط، وهيتحول لنص متصل. وتقدر ترجع للصفحات.', 'Enlarge the text; it switches to continuous text. You can switch back to pages.'),
+  'reader.view': (
+    'زرار الكتاب بيبدّل بين صفحات المصحف والنص المتصل، ومكانه ثابت في الاتنين. وفي النص المتصل تقدر تكبّر وتصغّر الخط.',
+    'The book button switches between Mushaf pages and continuous text, and stays in the same place in both. In continuous text you can make the font bigger or smaller.',
+  ),
   'reader.mark': (
     'الزرار ده بيظهر في آخر صفحة من الربع. مش هتعدّي للي بعده قبل ما تسجّله.',
     "This button appears on the quarter's last page. You can't move on until you record it.",

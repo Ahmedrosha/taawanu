@@ -883,5 +883,8 @@
   "autoReadFromHere": "Auto-read from here",
   "speed": "Speed",
   "stopAutoRead": "Stop auto-read",
-  "autoReadWaiting": "Auto-read paused at the end of the quarter. Tap \"Finished this quarter\" to continue with the next one."
+  "autoReadWaiting": "Auto-read paused at the end of the quarter. Tap \"Finished this quarter\" to continue with the next one.",
+  "autoModeAyah": "Ayah",
+  "autoModeWord": "Word",
+  "autoModeNone": "None"
 }

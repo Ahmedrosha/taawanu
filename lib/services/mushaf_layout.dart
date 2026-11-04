@@ -115,6 +115,34 @@ class MushafLayout {
   /// الصفحة اللي فيها آخر الآية دي.
   int endPageOf(int surah, int ayah) => _endPage[surah * 1000 + ayah] ?? pageCount;
 
+  int _wordsOn(int page, int surah, int ayah) {
+    var n = 0;
+    for (final l in pages[page - 1]) {
+      for (final w in l.words) {
+        if (w.surah == surah && w.ayah == ayah) n++;
+      }
+    }
+    return n;
+  }
+
+  /// عدد كلمات الآية في الصفحات (للقراءة كلمة كلمة).
+  int wordCount(int surah, int ayah) {
+    var n = 0;
+    for (var p = pageOf(surah, ayah); p <= endPageOf(surah, ayah); p++) {
+      n += _wordsOn(p, surah, ayah);
+    }
+    return n;
+  }
+
+  /// كلمات الآية اللي في الصفحات اللي قبل الصفحة دي (لو الآية بادئة في صفحة قبلها).
+  int wordsBefore(int page, int surah, int ayah) {
+    var n = 0;
+    for (var p = pageOf(surah, ayah); p < page; p++) {
+      n += _wordsOn(p, surah, ayah);
+    }
+    return n;
+  }
+
   /// السور اللي ظاهرة في الصفحة (لعنوان أعلى الصفحة).
   List<int> surahsOn(int page) {
     final out = <int>[];

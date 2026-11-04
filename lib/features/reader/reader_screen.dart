@@ -20,6 +20,7 @@ import '../groups/group_board_screen.dart' show ReadRequest;
 import 'mushaf_page.dart';
 import 'recitation_bar.dart';
 import 'auto_read_bar.dart';
+import 'read_highlight.dart';
 import '../../services/auto_reader.dart';
 import 'tafsir_sheet.dart';
 import '../../widgets/tour.dart';
@@ -37,7 +38,7 @@ class ReaderScreen extends StatefulWidget {
   State<ReaderScreen> createState() => _ReaderScreenState();
 }
 
-class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver {
+class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   late int _read = widget.request.quartersRead;
   late double _fontSize = Prefs.instance.readerFontSize;
   bool _busy = false;
@@ -103,6 +104,19 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// الآية المنوّرة دلوقتي: من التلاوة أو من القراءة التلقائية.
   (int, int)? get _current => _audio.current ?? _auto.current;
 
+  /// اللي بيتنوّر: الآية في التلاوة، وفي القراءة التلقائية حسب الاختيار (آية / كلمة / بدون).
+  ReadHighlight? get _highlight {
+    final a = _audio.current;
+    if (a != null) return ReadHighlight(a.$1, a.$2);
+    final c = _auto.current;
+    if (c == null) return null;
+    return switch (_auto.mode) {
+      'none' => null,
+      'word' => ReadHighlight(c.$1, c.$2, _auto.word),
+      _ => ReadHighlight(c.$1, c.$2),
+    };
+  }
+
   /// التلاوة أو القراءة التلقائية شغالة.
   bool get _following => _audio.active || _auto.active;
   QuranData? _textQuran;
@@ -141,8 +155,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   Object? _glideState;
 
   void _followText((int, int)? cur) {
-    final playing = _audio.active ? _audio.playing : _auto.playing;
-    final remaining = _audio.active ? _audio.remaining : (_auto.active ? _auto.remaining : null);
+    _syncTicker();
+    // القراءة الصامتة: الشاشة بتطلع بسرعة ثابتة (الـticker)، مش آية آية.
+    if (_auto.active) return;
+    final playing = _audio.playing;
+    final remaining = _audio.active ? _audio.remaining : null;
     final state = (cur, _audio.active ? _audio.index : null, playing, remaining != null);
     if (state == _glideState) return;
     _glideState = state;
@@ -153,6 +170,94 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       return;
     }
     _glide(cur, remaining);
+  }
+
+  // ---------- القراءة الصامتة في النص المتصل: الشاشة بسرعة ثابتة ----------
+  late final _ticker = createTicker(_onTick);
+  Duration? _lastTick;
+  DateTime _userScrolledAt = DateTime(2000);
+  DateTime _catchUpUntil = DateTime(2000);
+  final _paraRate = <String, (double, double)>{}; // فقرة → (طولها، بكسل لكل كلمة)
+
+  void _syncTicker() {
+    final run = !_pages && _auto.active && _auto.playing;
+    if (run && !_ticker.isActive) {
+      _lastTick = null;
+      _ticker.start();
+    } else if (!run && _ticker.isActive) {
+      _ticker.stop();
+    }
+  }
+
+  /// مكان الكلمة اللي عليها الدور على الشاشة (y)، وبكسل لكل كلمة في فقرتها.
+  (double, double)? _wordY() {
+    final cur = _auto.current;
+    final q = _textQuran;
+    if (cur == null || q == null) return null;
+    final (s, a) = cur;
+    for (final e in _anchors.paragraphs.entries) {
+      final p = e.value;
+      final rp = p.key.currentContext?.findRenderObject();
+      if (rp is! RenderParagraph || !rp.attached) continue;
+      for (final st in p.starts) {
+        if (st.pos.surah != s || st.pos.ayah != a) continue;
+        final starts = ayahWordStarts(q.ayahText(s, a));
+        final w = (_auto.word ?? 0).clamp(0, starts.isEmpty ? 0 : starts.length - 1);
+        final off = st.offset + (starts.isEmpty ? 0 : starts[w]);
+        final y = rp.localToGlobal(Offset.zero).dy + rp.getOffsetForCaret(TextPosition(offset: off), Rect.zero).dy;
+        // سرعة الشاشة من الفقرة كلها (طولها ÷ عدد كلماتها)، فمبتتغيرش من آية لآية.
+        final h = rp.size.height;
+        var rate = _paraRate[e.key];
+        if (rate == null || rate.$1 != h) {
+          var words = 0;
+          for (final x in p.starts) {
+            words += ayahWordStarts(q.ayahText(x.pos.surah, x.pos.ayah)).length;
+          }
+          rate = (h, words == 0 ? 0 : h / words);
+          _paraRate[e.key] = rate;
+        }
+        return (y, rate.$2);
+      }
+    }
+    return null;
+  }
+
+  void _onTick(Duration elapsed) {
+    final last = _lastTick;
+    _lastTick = elapsed;
+    if (last == null || !mounted || _pages || !_scroll.hasClients) return;
+    final dt = (elapsed - last).inMicroseconds / 1e6;
+    final now = DateTime.now();
+    if (now.difference(_userScrolledAt) < const Duration(milliseconds: 1500) || now.isBefore(_catchUpUntil)) return;
+    final top = _viewTop;
+    final pos = _scroll.position;
+    final focus = _wordY();
+    if (top == null) return;
+    if (focus == null) {
+      // الآية لسه مش متبنية: نروح لها.
+      final cur = _auto.current, q = _textQuran;
+      if (cur != null && q != null) {
+        _catchUpUntil = now.add(const Duration(milliseconds: 600));
+        _jumpToAyah(_AyahPos(q.quarterOf(cur.$1, cur.$2).clamp(r.fromQuarter, r.toQuarter), cur.$1, cur.$2));
+      }
+      return;
+    }
+    final (y, pxPerWord) = focus;
+    final h = pos.viewportDimension;
+    final line = top + h * 0.3;
+    final error = y - line;
+    if (error.abs() > h * 0.45) {
+      // بعيد قوي عن مكان القراية: نرجع له بنعومة.
+      _catchUpUntil = now.add(const Duration(milliseconds: 450));
+      _scroll.animateTo((pos.pixels + error).clamp(0.0, pos.maxScrollExtent),
+          duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+      return;
+    }
+    final wordsPerSec = AutoReader.wordsPerMinute * _auto.speed / 60;
+    // تصحيح بسيط جدًا عشان الكلمة تفضل قدام العين، من غير ما السرعة تتغير بشكل يتحس.
+    final factor = (1 + error / (h * 0.6)).clamp(0.85, 1.15);
+    final next = (pos.pixels + wordsPerSec * pxPerWord * factor * dt).clamp(0.0, pos.maxScrollExtent);
+    if (next != pos.pixels) _scroll.jumpTo(next);
   }
 
   /// أول الآية وآخرها على الشاشة (y)، لو الآية متبنية.
@@ -245,7 +350,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   List<(int, int, int)> _withWords(List<(int, int)> ayahs) {
     final q = _pages ? _pageQuran : _textQuran;
     if (q == null) return const [];
-    return [for (final (s, a) in ayahs) (s, a, q.ayahText(s, a).trim().split(RegExp(r'\s+')).length)];
+    final layout = _layout;
+    int words(int s, int a) {
+      if (_pages && layout != null) return layout.wordCount(s, a);
+      return ayahWordStarts(q.ayahText(s, a)).length;
+    }
+
+    return [for (final (s, a) in ayahs) (s, a, words(s, a).clamp(1, 1000))];
   }
 
   Future<void> _startAutoRead({(int, int)? from}) async {
@@ -256,6 +367,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _auto.play(ayahs);
     if (mounted) {
       Tour.schedule(context, 'autoread', () => [
+            TourStep(_kMode, tourText(context, 'auto.mode')),
             TourStep(_kSpeed, tourText(context, 'auto.speed')),
           ], delay: const Duration(milliseconds: 600));
     }
@@ -282,7 +394,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   // الجولة التعريفية.
-  final _kPage = GlobalKey(), _kPlay = GlobalKey(), _kZoom = GlobalKey(), _kMark = GlobalKey(), _kUndo = GlobalKey();
+  final _kPage = GlobalKey(), _kPlay = GlobalKey(), _kView = GlobalKey(), _kMode = GlobalKey(), _kMark = GlobalKey(), _kUndo = GlobalKey();
   final _kReciter = GlobalKey(), _kDownload = GlobalKey(), _kAuto = GlobalKey(), _kSpeed = GlobalKey();
 
   /// التلاوة شغالة والتطبيق مفتوح بس: لو خرج من التطبيق أو قفل الشاشة بتقف مؤقتًا.
@@ -304,7 +416,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           TourStep(_kPage, tourText(context, 'reader.page'), padding: 0),
           TourStep(_kPlay, tourText(context, 'reader.play'), radius: 24),
           TourStep(_kAuto, tourText(context, 'reader.auto'), radius: 24),
-          TourStep(_kZoom, tourText(context, 'reader.zoom'), radius: 24),
+          TourStep(_kView, tourText(context, 'reader.view'), radius: 24),
           TourStep(_kMark, tourText(context, 'reader.mark')),
           TourStep(_kUndo, tourText(context, 'reader.undo')),
         ], delay: const Duration(milliseconds: 1200));
@@ -326,6 +438,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void dispose() {
     _audio.removeListener(_onAudio);
     _auto.removeListener(_onAudio);
+    _ticker.dispose();
     WidgetsBinding.instance.removeObserver(this);
     WakelockPlus.disable();
     // التلاوة بتقف لما يقفل شاشة القراءة.
@@ -407,6 +520,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// التحويل بين الصفحات والنص المتصل، من نفس الآية.
   Future<void> _setView(String view) async {
     if (view == _view) return;
+    // القراءة الصامتة شغالة: بتكمّل من نفس الآية في الشكل الجديد (عدد الكلمات بيختلف بينهم).
+    final autoFrom = _auto.active ? _auto.current : null;
+    if (autoFrom != null) _auto.stop();
     final pos = _pages ? _pagePosition() : _topAyah();
     if (pos != null) await Prefs.instance.setReadPosition(_posKey, pos.toString());
     await Prefs.instance.setReaderView(view);
@@ -419,6 +535,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _anchors.paragraphs.clear();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => old?.dispose());
+    if (autoFrom != null) {
+      Future.delayed(const Duration(milliseconds: 700), () {
+        if (mounted) _startAutoRead(from: autoFrom);
+      });
+    }
   }
 
   Future<void> _enlarge() async {
@@ -543,7 +664,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             page: first + i,
             qpc: _qpc,
             inRange: inRange,
-            highlight: _current,
+            highlight: _highlight,
             onUseHafs: _useHafs,
             onAyahTap: _ayahMenu,
           ),
@@ -669,23 +790,44 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             Text(r.groupName, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
           ],
         ),
-        actions: _pages
-            ? [
-                if (!_following) ...[
-                  IconButton(key: _kPlay, tooltip: t.listen, onPressed: _startRecitation, icon: const Icon(Icons.play_circle_outline)),
-                  IconButton(key: _kAuto, tooltip: t.autoRead, onPressed: _startAutoRead, icon: const Icon(Icons.visibility_outlined)),
-                ],
-                IconButton(key: _kZoom, tooltip: t.enlargeText, onPressed: _enlarge, icon: const Icon(Icons.zoom_in)),
-              ]
-            : [
-                if (!_following) ...[
-                  IconButton(tooltip: t.listen, onPressed: _startRecitation, icon: const Icon(Icons.play_circle_outline)),
-                  IconButton(tooltip: t.autoRead, onPressed: _startAutoRead, icon: const Icon(Icons.visibility_outlined)),
-                ],
-                IconButton(tooltip: t.mushafPagesView, onPressed: () => _setView('pages'), icon: const Icon(Icons.menu_book_outlined)),
-                IconButton(tooltip: t.textSize, onPressed: () => _changeFont(-2), icon: const Icon(Icons.text_decrease)),
-                IconButton(tooltip: t.textSize, onPressed: () => _changeFont(2), icon: const Icon(Icons.text_increase)),
-              ],
+        // زرار الكتاب دايمًا آخر واحد (أقصى الشمال)، فمكانه ثابت بين الصفحات والنص المتصل.
+        actions: [
+          if (!_following) ...[
+            IconButton(key: _kPlay, tooltip: t.listen, onPressed: _startRecitation, icon: const Icon(Icons.play_circle_outline)),
+            IconButton(key: _kAuto, tooltip: t.autoRead, onPressed: _startAutoRead, icon: const Icon(Icons.visibility_outlined)),
+          ],
+          if (!_pages) ...[
+            IconButton(tooltip: t.textSize, onPressed: () => _changeFont(-2), icon: const Icon(Icons.text_decrease)),
+            IconButton(tooltip: t.textSize, onPressed: () => _changeFont(2), icon: const Icon(Icons.text_increase)),
+          ],
+          IconButton(
+            key: _kView,
+            tooltip: _pages ? t.viewText : t.mushafPagesView,
+            onPressed: () => _setView(_pages ? 'text' : 'pages'),
+            icon: const Icon(Icons.menu_book_outlined),
+          ),
+        ],
+        // القراءة الصامتة شغالة: تنوّر آية، ولا كلمة، ولا من غير.
+        bottom: _auto.active
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(48),
+                child: Padding(
+                  key: _kMode,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: SegmentedButton<String>(
+                    showSelectedIcon: false,
+                    style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                    segments: [
+                      ButtonSegment(value: 'ayah', label: Text(t.autoModeAyah)),
+                      ButtonSegment(value: 'word', label: Text(t.autoModeWord)),
+                      ButtonSegment(value: 'none', label: Text(t.autoModeNone)),
+                    ],
+                    selected: {_auto.mode},
+                    onSelectionChanged: (v) => _auto.setMode(v.first),
+                  ),
+                ),
+              )
+            : null,
       ),
       body: FutureBuilder<(QuranData, MushafLayout?)>(
         key: ValueKey(_view),
@@ -704,6 +846,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               _saveTimer = Timer(const Duration(milliseconds: 800), _savePosition);
               return false;
             },
+            child: NotificationListener<UserScrollNotification>(
+            // لو حرّك الشاشة بإيده، الحركة التلقائية بتسيبه شوية.
+            onNotification: (n) {
+              if (n.direction != ScrollDirection.idle) _userScrolledAt = DateTime.now();
+              return false;
+            },
             child: CustomScrollView(
             key: _viewportKey,
             controller: _scroll,
@@ -719,7 +867,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 18),
-                  sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize, anchors: _anchors, onAyahTap: _ayahMenu, highlight: _current)),
+                  sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize, anchors: _anchors, onAyahTap: _ayahMenu, highlight: _highlight)),
                 ),
                 if (i == _read)
                   SliverToBoxAdapter(
@@ -742,6 +890,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               const SliverToBoxAdapter(child: SizedBox(height: 40)),
             ],
           ),
+            ),
           );
         },
       ),
@@ -853,8 +1002,8 @@ class _QuarterText extends StatelessWidget {
     this.highlight,
   });
 
-  /// الآية اللي بتتقري في التلاوة.
-  final (int, int)? highlight;
+  /// اللي بيتنوّر (آية أو كلمة) في التلاوة أو القراءة التلقائية.
+  final ReadHighlight? highlight;
 
   final void Function(int surah, int ayah) onAyahTap;
 
@@ -913,8 +1062,23 @@ class _QuarterText extends StatelessWidget {
       }
       starts.add(_AyahStart(_AyahPos(quarter, a.surah, a.number), length));
       final text = '${a.text} ';
-      final now = highlight == (a.surah, a.number);
-      spans.add(TextSpan(text: text, style: now ? quranStyle.copyWith(backgroundColor: AppColors.goldTint) : quranStyle));
+      final h = highlight;
+      final lit = quranStyle.copyWith(backgroundColor: AppColors.goldTint);
+      if (h == null || !h.isAyah(a.surah, a.number)) {
+        spans.add(TextSpan(text: text, style: quranStyle));
+      } else if (h.word == null) {
+        spans.add(TextSpan(text: text, style: lit));
+      } else {
+        // كلمة واحدة بس منوّرة.
+        final ws = ayahWordStarts(a.text);
+        final k = h.word!.clamp(0, ws.isEmpty ? 0 : ws.length - 1);
+        final from = ws.isEmpty ? 0 : ws[k];
+        var to = k + 1 < ws.length ? ws[k + 1] - 1 : a.text.length;
+        if (to < from) to = from;
+        spans.add(TextSpan(text: text.substring(0, from), style: quranStyle));
+        spans.add(TextSpan(text: text.substring(from, to), style: lit));
+        spans.add(TextSpan(text: text.substring(to), style: quranStyle));
+      }
       length += text.length;
       // مصحف المدينة: رقم الآية جوه النص بشكل المصحف المطبوع.
       if (!data.numbersInText) {

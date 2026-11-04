@@ -50,6 +50,7 @@ const guideIcons = <String, IconData>{
   'invite': Icons.person_add_alt_1_outlined,
   'more': Icons.more_horiz,
   'zoom': Icons.zoom_in,
+  'book': Icons.menu_book_outlined,
   'play': Icons.play_circle_outline,
   'download': Icons.download_for_offline_outlined,
   'undo': Icons.undo,
@@ -142,10 +143,10 @@ const guideAr = <GuideSection>[
   GuideSection(Icons.menu_book_outlined, 'القراية', [
     GBullets([
       '**شكل الصفحات:** نفس سطور وصفحات مصحف المدينة، واللي برا وردك بيظهر باهت.',
-      '**التكبير {i:zoom}:** أو بإصبعين، وبيحوّلك للنص المتصل. وتقدر ترجع للصفحات تاني.',
+      '**زرار الكتاب {i:book}:** فوق أقصى الشمال، بيبدّل بين الصفحات والنص المتصل. في النص المتصل تقدر تكبّر وتصغّر الخط، والتكبير بإصبعين على الصفحة بيحوّلك للنص المتصل.',
       '**التسجيل:** في آخر صفحة من كل ربع هتلاقي زرار "خلصت الربع".',
       '**مش هتعدّي الربع اللي بعده قبل ما تسجّل اللي قبله**، عشان تقدّمك يتحسب صح. اللي بعده بيظهر باهت لحد ما تسجّل.',
-      '**قراءة تلقائية {i:auto}:** من غير صوت: الآية بتتنوّر وتمشي لوحدها على قد طولها، والصفحة بتتقلب لوحدها. السرعة بـ − و+ تحت (من ×0.5 لـ ×4)، وبتقف في آخر الربع لحد ما تسجّله زي التلاوة. وتقدر تبدأ من أي آية: دوس عليها واختار "اقرأ تلقائي من هنا".',
+      '**قراءة تلقائية {i:auto}:** من غير صوت وبسرعة ثابتة. وهي شغالة اختار فوق: **آية** (الآية كلها بتتنوّر)، أو **كلمة** (كلمة كلمة)، أو **بدون** (من غير تنوير). في النص المتصل الشاشة بتطلع لفوق بنفس السرعة، وفي الصفحات الصفحة بتتقلب لوحدها. السرعة بـ − و+ تحت (من ×0.5 لـ ×4)، وبتقف في آخر الربع لحد ما تسجّله. وتقدر تبدأ من أي آية: دوس عليها واختار "اقرأ تلقائي من هنا".',
       '**تراجع {i:undo}:** بيلغي آخر ربع سجّلته.',
       'الشاشة مش بتقفل لوحدها وإنت بتقرا.',
     ]),
@@ -295,10 +296,10 @@ const guideEn = <GuideSection>[
   GuideSection(Icons.menu_book_outlined, 'Reading', [
     GBullets([
       '**Pages:** the same lines and pages as the Madinah Mushaf. Text outside your portion is dimmed.',
-      '**Zoom {i:zoom}:** or pinch, which switches to continuous text. You can switch back to pages any time.',
+      '**Book button {i:book}:** at the far left, switches between pages and continuous text. In continuous text you can make the font bigger or smaller, and pinching a page also switches to continuous text.',
       '**Recording:** on the last page of each quarter you will find a "Finished this quarter" button.',
       '**You cannot move past a quarter until you record it**, so your progress stays accurate. The next quarter stays dimmed until then.',
-      '**Auto-read {i:auto}:** silent reading — each ayah lights up and moves on by itself, timed to its length, and pages turn automatically. Adjust the speed with − and + (×0.5 to ×4). It pauses at the end of the quarter until you record it, like recitation. To start from any ayah, tap it and choose "Auto-read from here".',
+      '**Auto-read {i:auto}:** silent, at a steady pace. While it runs, choose at the top: **Ayah** (the whole ayah lights up), **Word** (word by word) or **None** (no highlight). In continuous text the screen scrolls up at the same pace; on pages, pages turn by themselves. Adjust the speed with − and + (×0.5 to ×4). It pauses at the end of the quarter until you record it. To start from any ayah, tap it and choose "Auto-read from here".',
       '**Undo {i:undo}:** removes the last quarter you recorded.',
       'The screen stays on while you read.',
     ]),

@@ -5,6 +5,7 @@ import '../../services/mushaf_fonts.dart';
 import '../../services/mushaf_layout.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
+import 'read_highlight.dart';
 
 /// صفحة من مصحف المدينة: نفس السطور ونفس الكلمات في كل سطر زي المطبوع.
 /// [qpc] = خط صفحات المجمع (مطابق للمطبوع)، وإلا خط حفص اللي جوه التطبيق.
@@ -23,7 +24,7 @@ class MushafPage extends StatelessWidget {
   });
 
   /// الآية اللي بتتقري في التلاوة (بتتلوّن).
-  final (int, int)? highlight;
+  final ReadHighlight? highlight;
 
   final MushafLayout layout;
   final QuranData quran;
@@ -105,7 +106,7 @@ class _FontLoaderState extends State<_FontLoader> {
 class _PageBody extends StatelessWidget {
   const _PageBody({required this.page, required this.qpc, required this.layout, required this.quran, this.inRange, this.onAyahTap, this.highlight});
 
-  final (int, int)? highlight;
+  final ReadHighlight? highlight;
 
   final void Function(int surah, int ayah)? onAyahTap;
 
@@ -117,11 +118,33 @@ class _PageBody extends StatelessWidget {
 
   static const _slots = 15;
 
+  /// الكلمة دي منوّرة؟ (الآية كلها، أو الكلمة رقم [index] منها).
+  bool _lit(MushafWord w, int? index) {
+    final h = highlight;
+    if (h == null || !h.isAyah(w.surah, w.ayah)) return false;
+    return h.word == null || h.word == index;
+  }
+
+  /// ترتيب كل كلمة جوه آيتها (للتنوير كلمة كلمة)، للآية المنوّرة بس.
+  Map<MushafWord, int> _wordIndex(List<MushafLine> lines) {
+    final h = highlight;
+    final out = Map<MushafWord, int>.identity();
+    if (h == null || h.word == null) return out;
+    var i = layout.wordsBefore(page, h.surah, h.ayah);
+    for (final l in lines) {
+      for (final w in l.words) {
+        if (h.isAyah(w.surah, w.ayah)) out[w] = i++;
+      }
+    }
+    return out;
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final ar = Localizations.localeOf(context).languageCode != 'en';
     final lines = layout.page(page);
+    final wordIndex = _wordIndex(lines);
     final (s0, a0) = layout.firstAyahOf(page);
     final juz = (quran.quarterOf(s0, a0) - 1) ~/ 8 + 1;
     final surahNames = layout
@@ -215,7 +238,7 @@ class _PageBody extends StatelessWidget {
                     softWrap: false,
                     textDirection: TextDirection.rtl,
                     style: (inRange == null || inRange!(w.surah, w.ayah) ? style : style.copyWith(color: dim)).copyWith(
-                      backgroundColor: highlight == (w.surah, w.ayah) ? AppColors.goldTint : null,
+                      backgroundColor: _lit(w, wordIndex[w]) ? AppColors.goldTint : null,
                     ),
                   ),
                 ),
