@@ -12,7 +12,7 @@ class AutoReader extends ChangeNotifier {
   static final AutoReader instance = AutoReader._();
 
   /// السرعات المتاحة. ×١ = [wordsPerMinute] كلمة في الدقيقة.
-  static const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+  static const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0];
   static const wordsPerMinute = 60.0;
 
   /// كل عنصر: (سورة، آية، عدد الكلمات).
@@ -49,7 +49,9 @@ class AutoReader extends ChangeNotifier {
 
   Duration _durationOf(int words) {
     final ms = words / (wordsPerMinute * speed) * 60000;
-    return Duration(milliseconds: ms.clamp(1500, 120000).round());
+    // أقل مدة للآية القصيرة: ثانية ونص عادي، وبتقل مع السرعات العالية.
+    final min = (1500 / speed).clamp(600, 1500);
+    return Duration(milliseconds: ms.clamp(min, 120000).round());
   }
 
   void play(List<(int, int, int)> ayahs) {
