@@ -45,6 +45,12 @@ jobs:
           fi
           exit $code
 
+      # كل بناء بيعمل شهادة تطوير جديدة، وأبل ليها حد أقصى: بنمسح شهادات "Created via API" قبل وبعد.
+      - name: Clean up CI development certificates
+        run: |
+          python3 -m venv "$RUNNER_TEMP/asc" && "$RUNNER_TEMP/asc/bin/pip" -q install 'pyjwt[crypto]'
+          "$RUNNER_TEMP/asc/bin/python" tools/asc_dev_certs.py
+
       - name: Archive
         run: |
           set -o pipefail
@@ -90,3 +96,9 @@ jobs:
             echo "::notice title=Uploaded::Build ${{ github.run_number }} uploaded to App Store Connect"
           fi
           exit $code
+
+      - name: Clean up CI development certificates (after)
+        if: always()
+        run: |
+          [ -x "$RUNNER_TEMP/asc/bin/python" ] || { python3 -m venv "$RUNNER_TEMP/asc" && "$RUNNER_TEMP/asc/bin/pip" -q install 'pyjwt[crypto]'; }
+          "$RUNNER_TEMP/asc/bin/python" tools/asc_dev_certs.py
