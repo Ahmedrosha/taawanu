@@ -68,6 +68,16 @@ service cloud.firestore {
         && (request.resource.data.get('notifSeenAt', null) == resource.data.get('notifSeenAt', null)
             || request.resource.data.notifSeenAt == request.time);
 
+      // آخر آية وقف عندها في كل ختمة: خاص بصاحبه بس.
+      match /readPositions/{id} {
+        allow read, delete: if isSelf(uid);
+        allow write: if isSelf(uid)
+          && request.resource.data.keys().hasOnly(['key', 'pos', 'at'])
+          && request.resource.data.key is string && request.resource.data.key.size() <= 160
+          && request.resource.data.pos is string && request.resource.data.pos.size() <= 40
+          && request.resource.data.at == request.time;
+      }
+
       // الجرس: صاحب الحساب يقرا إشعاراته بس، والسيرفر بس اللي بيكتبها.
       match /notifications/{id} {
         allow read: if isSelf(uid);

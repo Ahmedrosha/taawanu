@@ -107,7 +107,14 @@ class Prefs {
 
   String? readPosition(String key) => _p.getString('readPos:$key');
   Future<void> setReadPosition(String key, String v) => _p.setString('readPos:$key', v);
-  Future<void> clearReadPosition(String key) => _p.remove('readPos:$key');
+  Future<void> clearReadPosition(String key) async {
+    await _p.remove('readPos:$key');
+    await _p.remove('readPosAt:$key');
+  }
+
+  /// وقت آخر حفظ لمكان القراءة (عشان نقارنه باللي على السيرفر).
+  int? readPositionAt(String key) => _p.getInt('readPosAt:$key');
+  Future<void> setReadPositionAt(String key, int ms) => _p.setInt('readPosAt:$key', ms);
 
   // ---------- فلاتر وترتيب شاشة المجموعات ----------
 
