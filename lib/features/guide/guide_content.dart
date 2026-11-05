@@ -143,7 +143,7 @@ const guideAr = <GuideSection>[
   GuideSection(Icons.menu_book_outlined, 'القراية', [
     GBullets([
       '**شكل الصفحات:** نفس سطور وصفحات مصحف المدينة، واللي برا وردك بيظهر باهت.',
-      '**زرار الكتاب {i:book}:** فوق أقصى الشمال، بيبدّل بين الصفحات والنص المتصل. في النص المتصل تقدر تكبّر وتصغّر الخط، والتكبير بإصبعين على الصفحة بيحوّلك للنص المتصل.',
+      '**زرار الكتاب {i:book}:** فوق أقصى الشمال، بيبدّل بين الصفحات والنص المتصل. في النص المتصل تقدر تكبّر وتصغّر الخط وتغيّر نوعه من زرار الخط اللي جنبهم، والتكبير بإصبعين على الصفحة بيحوّلك للنص المتصل.',
       '**التسجيل:** في آخر صفحة من كل ربع هتلاقي زرار "خلصت الربع".',
       '**مش هتعدّي الربع اللي بعده قبل ما تسجّل اللي قبله**، عشان تقدّمك يتحسب صح. اللي بعده بيظهر باهت لحد ما تسجّل.',
       '**قراءة تلقائية {i:auto}:** من غير صوت وبسرعة ثابتة. وهي شغالة اختار فوق: **آية** (الآية كلها بتتنوّر)، أو **كلمة** (كلمة كلمة)، أو **بدون** (من غير تنوير). في النص المتصل الشاشة بتطلع لفوق بنفس السرعة، وفي الصفحات الصفحة بتتقلب لوحدها. السرعة بـ − و+ تحت (من ×0.5 لـ ×4)، وبتقف في آخر الربع لحد ما تسجّله. وتقدر تبدأ من أي آية: دوس عليها واختار "اقرأ تلقائي من هنا".',
@@ -200,7 +200,7 @@ const guideAr = <GuideSection>[
       '**الالتزام:** نسبة الدورات اللي خلصت فيها وردك في ميعاده.',
       '**الدورات المتتالية:** كام دورة ورا بعض خلصت فيها في الميعاد.',
       '**الأوسمة:** أول ختمة، ٤ دورات متتالية، ١٢ دورة متتالية، المبادر (أول واحد يخلص في الدورة)، المنقذ (خلص ورد حد تاني)، ختمة شخصية.',
-      '**إعدادات المصحف:** شكل القراية (صفحات أو نص)، وخط الصفحات، وحجم ونوع خط النص.',
+      '**إعدادات المصحف:** شكل القراية (صفحات أو نص)، وخط الصفحات، وحجم ونوع خط النص، ولون التظليل (ذهبي، أصفر، أخضر، أزرق، وردي).',
     ]),
   ]),
   GuideSection(Icons.help_outline, 'أسئلة شائعة', [
@@ -296,7 +296,7 @@ const guideEn = <GuideSection>[
   GuideSection(Icons.menu_book_outlined, 'Reading', [
     GBullets([
       '**Pages:** the same lines and pages as the Madinah Mushaf. Text outside your portion is dimmed.',
-      '**Book button {i:book}:** at the far left, switches between pages and continuous text. In continuous text you can make the font bigger or smaller, and pinching a page also switches to continuous text.',
+      '**Book button {i:book}:** at the far left, switches between pages and continuous text. In continuous text you can make the font bigger or smaller, or change it with the font button next to them, and pinching a page also switches to continuous text.',
       '**Recording:** on the last page of each quarter you will find a "Finished this quarter" button.',
       '**You cannot move past a quarter until you record it**, so your progress stays accurate. The next quarter stays dimmed until then.',
       '**Auto-read {i:auto}:** silent, at a steady pace. While it runs, choose at the top: **Ayah** (the whole ayah lights up), **Word** (word by word) or **None** (no highlight). In continuous text the screen scrolls up at the same pace; on pages, pages turn by themselves. Adjust the speed with − and + (×0.5 to ×4). It pauses at the end of the quarter until you record it. To start from any ayah, tap it and choose "Auto-read from here".',
@@ -353,7 +353,7 @@ const guideEn = <GuideSection>[
       '**Commitment:** the share of cycles where you finished your portion on time.',
       '**Cycles in a row:** how many consecutive cycles you finished on time.',
       '**Badges:** first khatma, 4 cycles in a row, 12 cycles in a row, Starter (first to finish in a cycle), Rescuer (finished someone else\'s portion), personal khatma.',
-      '**Mushaf settings:** reading style (pages or text), page font, and text size and font.',
+      '**Mushaf settings:** reading style (pages or text), page font, text size and font, and the highlight color (gold, yellow, green, blue, pink).',
     ]),
   ]),
   GuideSection(Icons.help_outline, 'FAQ', [
