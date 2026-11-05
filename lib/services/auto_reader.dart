@@ -61,6 +61,19 @@ class AutoReader extends ChangeNotifier {
   /// مدة الكلمة الواحدة بالسرعة الحالية.
   Duration get wordDuration => Duration(milliseconds: (60000 / (wordsPerMinute * speed)).round());
 
+  /// الآيات اللي بتتقري: (سورة، آية، عدد الكلمات).
+  List<(int, int, int)> get items => _items;
+
+  /// نفس الآيات بعدد كلمات تاني (لما يبدّل بين الصفحات والنص): بتكمّل من نفس المكان في الآية.
+  void remap(List<(int, int, int)> ayahs) {
+    if (!_active || ayahs.length != _items.length || ayahs.isEmpty) return;
+    final old = _items[_index].$3;
+    final now = ayahs[_index].$3;
+    _items = ayahs;
+    _word = old <= 1 ? 0 : ((_word / (old - 1)) * (now - 1)).round().clamp(0, now - 1);
+    notifyListeners();
+  }
+
   void play(List<(int, int, int)> ayahs) {
     if (ayahs.isEmpty) return;
     _items = ayahs;

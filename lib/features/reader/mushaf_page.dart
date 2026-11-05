@@ -6,6 +6,7 @@ import '../../services/mushaf_layout.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
 import 'read_highlight.dart';
+import '../../theme/highlight_colors.dart';
 
 /// صفحة من مصحف المدينة: نفس السطور ونفس الكلمات في كل سطر زي المطبوع.
 /// [qpc] = خط صفحات المجمع (مطابق للمطبوع)، وإلا خط حفص اللي جوه التطبيق.
@@ -238,7 +239,7 @@ class _PageBody extends StatelessWidget {
                     softWrap: false,
                     textDirection: TextDirection.rtl,
                     style: (inRange == null || inRange!(w.surah, w.ayah) ? style : style.copyWith(color: dim)).copyWith(
-                      backgroundColor: _lit(w, wordIndex[w]) ? AppColors.goldTint : null,
+                      backgroundColor: _lit(w, wordIndex[w]) ? readHighlightColor : null,
                     ),
                   ),
                 ),

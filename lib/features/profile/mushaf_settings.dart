@@ -6,6 +6,7 @@ import '../reader/mushaf_page.dart';
 import '../../services/prefs.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/highlight_colors.dart';
 import '../../widgets/quran_style.dart';
 import '../../widgets/ui.dart';
 
@@ -21,6 +22,15 @@ class MushafSettings extends StatefulWidget {
 class _MushafSettingsState extends State<MushafSettings> {
   late double _size = Prefs.instance.readerFontSize;
   late String _font = Prefs.instance.readerFont;
+  late String _highlight = Prefs.instance.highlightColor;
+
+  String _colorName(AppLocalizations t, String id) => switch (id) {
+        'yellow' => t.colorYellow,
+        'green' => t.colorGreen,
+        'blue' => t.colorBlue,
+        'pink' => t.colorPink,
+        _ => t.colorGold,
+      };
   late String _view = Prefs.instance.readerView;
   late String _style = Prefs.instance.pageStyle;
 
@@ -170,6 +180,51 @@ class _MushafSettingsState extends State<MushafSettings> {
               const SizedBox(height: 4),
               Text(_font == madinahFont ? t.quranTextSourceMadinah : t.quranTextSource, style: note),
             ],
+          ),
+          const SizedBox(height: 16),
+          // لون تظليل الآية أو الكلمة وقت التلاوة والقراءة الصامتة.
+          Text(t.highlightColor, style: const TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              for (final id in highlightPalette.keys)
+                Semantics(
+                  button: true,
+                  selected: _highlight == id,
+                  label: _colorName(t, id),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () {
+                      setState(() => _highlight = id);
+                      Prefs.instance.setHighlightColor(id);
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: highlightColorFor(id),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: _highlight == id ? AppColors.accent : AppColors.border, width: _highlight == id ? 3 : 1),
+                      ),
+                      child: _highlight == id ? Icon(Icons.check, size: 20, color: AppColors.text) : null,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // معاينة: كلمة منوّرة وسط الكلام.
+          Text.rich(
+            TextSpan(
+              style: quranTextStyle(_font, fontSize: 22, color: AppColors.text),
+              children: [
+                const TextSpan(text: 'ٱلۡحَمۡدُ لِلَّهِ '),
+                TextSpan(text: 'رَبِّ ٱلۡعَٰلَمِينَ', style: TextStyle(backgroundColor: highlightColorFor(_highlight))),
+              ],
+            ),
+            textDirection: TextDirection.rtl,
           ),
         ],
       ),

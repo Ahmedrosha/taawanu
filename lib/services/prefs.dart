@@ -157,6 +157,10 @@ class Prefs {
   Future<void> setReciterId(String v) => _p.setString('reciterId', v);
 
   /// تكرار كل آية في التلاوة: ١ أو ٣ أو ٥، و٠ = لحد ما يوقّف.
+  /// لون تظليل الآية/الكلمة في القراءة.
+  String get highlightColor => _p.getString('highlightColor') ?? 'gold';
+  Future<void> setHighlightColor(String v) => _p.setString('highlightColor', v);
+
   /// القراءة التلقائية بتنوّر إيه: ayah / word / none.
   String get autoReadMode => _p.getString('autoReadMode') ?? 'ayah';
   Future<void> setAutoReadMode(String v) => _p.setString('autoReadMode', v);

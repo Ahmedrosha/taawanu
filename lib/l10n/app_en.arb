@@ -886,5 +886,12 @@
   "autoReadWaiting": "Auto-read paused at the end of the quarter. Tap \"Finished this quarter\" to continue with the next one.",
   "autoModeAyah": "Ayah",
   "autoModeWord": "Word",
-  "autoModeNone": "None"
+  "autoModeNone": "None",
+  "highlightColor": "Highlight color",
+  "colorGold": "Gold",
+  "colorYellow": "Yellow",
+  "colorGreen": "Green",
+  "colorBlue": "Blue",
+  "colorPink": "Pink",
+  "chooseFont": "Font"
 }
