@@ -1,9 +1,11 @@
 // فحص سريع لمجموعة بالاسم: بيطبع معلومات عامة بس (من غير إيميلات أو أسامي أو IDs)
 // لأن سجلّات GitHub Actions في المستودع العام بيشوفها أي حد.
-const admin = require('firebase-admin');
+const { initializeApp } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
+const { getAuth } = require('firebase-admin/auth');
 
-admin.initializeApp({ projectId: 'taawanu-4ca70' });
-const db = admin.firestore();
+initializeApp({ projectId: 'taawanu-4ca70' });
+const db = getFirestore();
 const REVIEW = ['review@taawanu.app'];
 
 async function main() {
@@ -18,7 +20,7 @@ async function main() {
     let providers = [];
     if (adminUid) {
       try {
-        const u = await admin.auth().getUser(adminUid);
+        const u = await getAuth().getUser(adminUid);
         who = REVIEW.includes((u.email || '').toLowerCase()) ? 'the App Review account' : 'another user (not the review account)';
         providers = u.providerData.map((p) => p.providerId);
       } catch (e) {
