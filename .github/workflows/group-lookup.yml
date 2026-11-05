@@ -22,9 +22,9 @@ jobs:
         run: |
           echo "$SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
-      - run: npm ci --prefix functions --silent
+      - run: mkdir -p "$RUNNER_TEMP/lk" && cd "$RUNNER_TEMP/lk" && npm init -y >/dev/null && npm install --silent firebase-admin
       - name: Look up
         env:
-          NODE_PATH: functions/node_modules
+          NODE_PATH: ${{ runner.temp }}/lk/node_modules
           GROUP_NAME: ${{ inputs.name }}
         run: node tools/group_lookup.js "$GROUP_NAME"

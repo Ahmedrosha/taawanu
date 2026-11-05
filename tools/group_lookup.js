@@ -13,7 +13,7 @@ async function main() {
   for (const g of groups.docs) {
     const d = g.data();
     const members = await g.ref.collection('members').count().get();
-    const adminUid = d.adminUid || d.createdBy || d.ownerUid;
+    const adminUid = d.adminId;
     let who = 'unknown';
     let providers = [];
     if (adminUid) {
