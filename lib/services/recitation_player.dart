@@ -69,6 +69,16 @@ class RecitationPlayer extends ChangeNotifier {
   bool _waiting = false;
   bool get playing => _player.playing;
 
+  /// موضع الصوت في الآية الحالية، ومدتها (لو اتعرفت).
+  Duration get position => _player.position;
+  Duration? get duration => _player.duration;
+
+  /// بيقرا البسملة دلوقتي (قبل أول آية في السورة).
+  bool get onBasmala {
+    final i = _player.currentIndex;
+    return _active && i != null && i < _items.length && _items[i].$2 == 0;
+  }
+
   /// رقم العنصر الحالي في قايمة التشغيل (البسملة والتكرار عناصر لوحدها).
   int? get index => _active ? _player.currentIndex : null;
 

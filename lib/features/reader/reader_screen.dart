@@ -159,26 +159,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // الشاشة بتطلع لفوق بنعومة وبشكل مستمر: أول الآية عند "خط القراية" لما تبدأ،
   // وآخرها عنده لما تخلص، فالآية اللي بعدها بتبدأ في نفس المكان من غير نطّ.
 
-  /// آخر حالة اتعملها حركة: (الآية، رقمها في قايمة التشغيل، شغالة؟، المدة معروفة؟).
-  Object? _glideState;
 
   void _followText((int, int)? cur) {
+    // التلاوة والقراءة الصامتة: الصفحة بتطلع بنعومة من الـticker (مش آية آية).
     _syncTicker();
-    // القراءة الصامتة: الشاشة بتطلع بسرعة ثابتة (الـticker)، مش آية آية.
-    if (_auto.active) return;
-    final playing = _audio.playing;
-    final remaining = _audio.active ? _audio.remaining : null;
-    final state = (cur, _audio.active ? _audio.index : null, playing, remaining != null);
-    if (state == _glideState) return;
-    _glideState = state;
-    if (cur == null) return;
-    if (!playing || remaining == null) {
-      // وقف (أو المدة لسه مش معروفة): الحركة بتقف مكانها.
-      if (_scroll.hasClients && _scroll.position.isScrollingNotifier.value) _scroll.jumpTo(_scroll.offset);
-      return;
-    }
-    _glide(cur, remaining);
   }
+
 
   // ---------- القراءة الصامتة في النص المتصل: الشاشة بسرعة ثابتة ----------
   late final _ticker = createTicker(_onTick);
@@ -212,20 +198,30 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   /// بينزّل الكلمة اللي عليها الدور لمكان القراية بنعومة.
-  void _alignToLine() {
+  /// بيعيد المحاولة لحد ما النص يتبني والكلمة تبقى فعلًا في مكانها.
+  void _alignToLine([int attempt = 0]) {
+    if (!mounted || _pages || !_auto.active) return;
     final top = _viewTop;
     final focus = _wordY();
-    if (top == null || focus == null || !_scroll.hasClients) return;
+    if (top == null || focus == null || !_scroll.hasClients) {
+      if (attempt < 15) Future.delayed(const Duration(milliseconds: 150), () => _alignToLine(attempt + 1));
+      return;
+    }
     final pos = _scroll.position;
     final error = focus.$1 - (top + pos.viewportDimension * 0.3);
+    if (error.abs() < 12) return;
     _catchUpUntil = DateTime.now().add(const Duration(milliseconds: 450));
-    _scroll.animateTo((pos.pixels + error).clamp(0.0, pos.maxScrollExtent),
-        duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+    _scroll
+        .animateTo((pos.pixels + error).clamp(0.0, pos.maxScrollExtent),
+            duration: const Duration(milliseconds: 400), curve: Curves.easeInOut)
+        .then((_) {
+      if (attempt < 15) Future.delayed(const Duration(milliseconds: 100), () => _alignToLine(attempt + 1));
+    });
   }
 
   void _syncTicker() {
     _syncAutoPad();
-    final run = !_pages && _auto.active && _auto.playing;
+    final run = !_pages && ((_auto.active && _auto.playing) || (_audio.active && _audio.playing));
     if (run && !_ticker.isActive) {
       _lastTick = null;
       _ticker.start();
@@ -276,14 +272,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (now.difference(_userScrolledAt) < const Duration(milliseconds: 1500) || now.isBefore(_catchUpUntil)) return;
     final top = _viewTop;
     final pos = _scroll.position;
-    final focus = _wordY();
     if (top == null) return;
+    if (_audio.active) {
+      _followRecitation(dt, top, pos, now);
+      return;
+    }
+    final focus = _wordY();
     if (focus == null) {
       // الآية لسه مش متبنية: نروح لها.
       final cur = _auto.current, q = _textQuran;
       if (cur != null && q != null) {
         _catchUpUntil = now.add(const Duration(milliseconds: 600));
-        _jumpToAyah(_AyahPos(q.quarterOf(cur.$1, cur.$2).clamp(r.fromQuarter, r.toQuarter), cur.$1, cur.$2));
+        _jumpToAyah(_AyahPos(q.quarterOf(cur.$1, cur.$2).clamp(r.fromQuarter, r.toQuarter), cur.$1, cur.$2), line: 0.3);
       }
       return;
     }
@@ -291,7 +291,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final h = pos.viewportDimension;
     final line = top + h * 0.3;
     final error = y - line;
-    if (error.abs() > h * 0.45) {
+    // الكلمة بعيدة عن التلت اللي فوق (مثلًا مستخبية فوق في الأول): ننقلها له بنعومة.
+    if (error.abs() > h * 0.2) {
       // بعيد قوي عن مكان القراية: نرجع له بنعومة.
       _catchUpUntil = now.add(const Duration(milliseconds: 450));
       _scroll.animateTo((pos.pixels + error).clamp(0.0, pos.maxScrollExtent),
@@ -303,6 +304,41 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final factor = (1 + error / (h * 0.6)).clamp(0.85, 1.15);
     final next = (pos.pixels + wordsPerSec * pxPerWord * factor * dt).clamp(0.0, pos.maxScrollExtent);
     if (next != pos.pixels) _scroll.jumpTo(next);
+  }
+
+  /// التلاوة في النص المتصل: الصفحة بتطلع بنعومة كإن فيه كلمة مستخبية ماشية جوه الآية على قد صوتها،
+  /// والمكان ده بيفضل في التلت اللي فوق. الآية الطويلة (خط كبير) بتبدأ من أول كلمة وتطلع مع القارئ.
+  void _followRecitation(double dt, double top, ScrollPosition pos, DateTime now) {
+    final cur = _audio.current;
+    if (cur == null) return;
+    final span = _ayahSpan(cur);
+    final h = pos.viewportDimension;
+    final line = top + h * 0.3;
+    if (span == null) {
+      final q = _textQuran;
+      if (q != null) {
+        _catchUpUntil = now.add(const Duration(milliseconds: 600));
+        _jumpToAyah(_AyahPos(q.quarterOf(cur.$1, cur.$2).clamp(r.fromQuarter, r.toQuarter), cur.$1, cur.$2), line: 0.3);
+      }
+      return;
+    }
+    // نسبة اللي اتقرا من الآية من الصوت (البسملة = لسه في أولها).
+    final d = _audio.duration;
+    var frac = 0.0;
+    if (d != null && d.inMilliseconds > 0 && !_audio.onBasmala) {
+      frac = (_audio.position.inMilliseconds / d.inMilliseconds).clamp(0.0, 1.0);
+    }
+    final y = span.$1 + (span.$2 - span.$1) * frac;
+    final error = y - line;
+    if (error.abs() > h * 0.35) {
+      _catchUpUntil = now.add(const Duration(milliseconds: 450));
+      _scroll.animateTo((pos.pixels + error).clamp(0.0, pos.maxScrollExtent),
+          duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+      return;
+    }
+    // بنقرّب ناحية المكان بنعومة كل فريم (من غير قفزات).
+    final next = (pos.pixels + error * (dt * 4).clamp(0.0, 1.0)).clamp(0.0, pos.maxScrollExtent);
+    if ((next - pos.pixels).abs() > 0.1) _scroll.jumpTo(next);
   }
 
   /// أول الآية وآخرها على الشاشة (y)، لو الآية متبنية.
@@ -324,53 +360,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     return null;
   }
 
-  void _glide((int, int) cur, Duration remaining) {
-    final top = _viewTop;
-    if (top == null || !_scroll.hasClients) return;
-    final span = _ayahSpan(cur);
-    final q = _textQuran;
-    if (span == null) {
-      // الآية لسه مش متبنية (بعيدة): نروح لها الأول، والحركة تكمّل من الإشعار الجاي.
-      if (q != null) {
-        final (s, a) = cur;
-        _glideState = null;
-        _jumpToAyah(_AyahPos(q.quarterOf(s, a).clamp(r.fromQuarter, r.toQuarter), s, a));
-        Future.delayed(const Duration(milliseconds: 400), () {
-          if (mounted && !_pages) _followText(_current);
-        });
-      }
-      return;
-    }
-    final pos = _scroll.position;
-    final h = pos.viewportDimension;
-    final line = top + h * 0.3;
-    final bottom = top + h - 16;
-    // أول الآية في التلت اللي فوق.
-    final start = (pos.pixels + span.$1 - line).clamp(0.0, pos.maxScrollExtent);
-    final ms = remaining.inMilliseconds;
-    if (ms <= 0) return;
-    // الآية كلها تساع تحت الخط ده: الشاشة بتقف عليها لحد ما تخلص (من غير حركة).
-    if (span.$2 - span.$1 <= bottom - line) {
-      if ((pos.pixels - start).abs() > 1) {
-        _scroll.animateTo(start, duration: const Duration(milliseconds: 350), curve: Curves.easeOut);
-      }
-      return;
-    }
-    // الآية أطول من الشاشة (خط كبير): بنبدأ بأول كلمة في التلت اللي فوق، والشاشة بتمشي مع الكلام
-    // لحد ما آخر الآية يبان تحت، والتنوير بيفضل على الآية كلها.
-    final end = (pos.pixels + span.$2 - bottom).clamp(0.0, pos.maxScrollExtent);
-    if ((pos.pixels - start).abs() > 1) {
-      // بعيد عن مكان الآية (مثلًا اتحرك بالإيد): نرجع لها بنعومة، وبعدين نكمّل.
-      const back = 350;
-      _scroll.animateTo(start, duration: const Duration(milliseconds: back), curve: Curves.easeOut).then((_) {
-        if (!mounted || !_scroll.hasClients || _glideState == null) return;
-        final rest = ms - back;
-        if (rest > 0 && end > start) _scroll.animateTo(end, duration: Duration(milliseconds: rest), curve: Curves.linear);
-      });
-    } else if (end > start) {
-      _scroll.animateTo(end, duration: Duration(milliseconds: ms), curve: Curves.linear);
-    }
-  }
 
   /// الآية دي ظاهرة دلوقتي؟ (في صفحتها، أو جوه الشاشة في النص المتصل).
   bool _isOnScreen(int s, int a) {
@@ -433,6 +422,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _followed = null;
     if (_audio.active) await _audio.stop();
     _auto.play(ayahs);
+    if (!_pages) WidgetsBinding.instance.addPostFrameCallback((_) => _alignToLine());
     if (mounted) {
       Tour.schedule(context, 'autoread', () => [
             TourStep(_kMode, tourText(context, 'auto.mode')),
@@ -468,6 +458,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// التلاوة شغالة والتطبيق مفتوح بس: لو خرج من التطبيق أو قفل الشاشة بتقف مؤقتًا.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // التطبيق راح للخلفية أو اتقفل وهو في المصحف: نحفظ الآية دلوقتي.
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) _savePosition();
     if (state != AppLifecycleState.resumed && _audio.playing) _audio.pause();
     if (state != AppLifecycleState.resumed && _auto.playing) _auto.pause();
   }
@@ -510,10 +502,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     WidgetsBinding.instance.removeObserver(this);
     WakelockPlus.disable();
     // التلاوة بتقف لما يقفل شاشة القراءة.
-    if (_audio.active) _audio.stop();
-    if (_auto.active) _auto.stop();
+    // المكان بيتحفظ الأول (الآية المنوّرة)، وبعدين التلاوة تقف.
     _saveTimer?.cancel();
     _savePosition();
+    if (_audio.active) _audio.stop();
+    if (_auto.active) _auto.stop();
     _scroll.dispose();
     _pager?.dispose();
     super.dispose();
@@ -630,8 +623,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (!mounted) return;
     if (_auto.active) _auto.remap(_withWords([for (final (s, a, _) in _auto.items) (s, a)]));
     _followed = null;
-    _glideState = null;
     _onAudio();
+    if (!_pages && _auto.active) _alignToLine();
   }
 
   Future<void> _enlarge() async {
