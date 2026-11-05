@@ -92,7 +92,26 @@ class UserService {
     }
   }
 
+  /// بيسجّل الموبايل ده للحساب، وبيشيله من أي حساب تاني كان متسجّل عليه.
   Future<void> addFcmToken(String token) async {
+    if (_me == null) return;
+    try {
+      await FirebaseFunctions.instanceFor(region: 'me-central1').httpsCallable('claimFcmToken').call<Object?>({'token': token});
+      return;
+    } catch (_) {
+      // السيرفر مش متاح: نسجّله مباشرة زي الأول.
+    }
+    await _addFcmTokenDirect(token);
+  }
+
+  /// قبل تسجيل الخروج: الموبايل ده ميفضلش يستقبل إشعارات الحساب.
+  Future<void> removeFcmToken(String token) async {
+    final ref = _me;
+    if (ref == null) return;
+    await ref.update({'fcmTokens': FieldValue.arrayRemove([token])});
+  }
+
+  Future<void> _addFcmTokenDirect(String token) async {
     final ref = _me;
     if (ref == null) return;
     final snap = await ref.get();

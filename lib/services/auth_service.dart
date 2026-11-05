@@ -2,10 +2,13 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../firebase_options.dart';
+import 'push_service.dart';
+import 'user_service.dart';
 
 /// معرّف عميل الويب من google-services.json (client_type 3).
 /// أندرويد محتاجه عشان يطلب idToken يقدر Firebase يتحقق منه.
@@ -111,6 +114,15 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    // الموبايل ده ميفضلش يستقبل إشعارات الحساب بعد الخروج (وعنوانه بيتجدد للحساب الجاي).
+    PushService.instance.stop();
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) await UserService.instance.removeFcmToken(token);
+      await FirebaseMessaging.instance.deleteToken();
+    } catch (_) {
+      // من غير نت أو إشعارات مقفولة: السيرفر بيصلّحها لما الحساب الجاي يسجّل الموبايل.
+    }
     if (_googleReady) {
       await GoogleSignIn.instance.signOut();
     }

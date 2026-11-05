@@ -10,4 +10,4 @@ export {
   startKhatma, cycleTick, updateProgress, claimPortion, assignPortion, completePortion, recordProgress, updatePortionProgress,
 } from './cycles';
 export { guardNewUser } from './authGuard';
-export { updateName } from './profile';
+export { claimFcmToken, updateName } from './profile';
