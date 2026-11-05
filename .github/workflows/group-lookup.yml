@@ -1,0 +1,30 @@
+name: Group lookup
+
+# يدوي: معلومات عامة عن مجموعة بالاسم (مين عملها: حساب المراجعة ولا لأ، وإمتى). مفيش بيانات شخصية في السجل.
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: "اسم المجموعة"
+        required: true
+
+jobs:
+  lookup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Service account from secrets
+        env:
+          SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+      - run: npm ci --prefix functions --silent
+      - name: Look up
+        env:
+          NODE_PATH: functions/node_modules
+          GROUP_NAME: ${{ inputs.name }}
+        run: node tools/group_lookup.js "$GROUP_NAME"
