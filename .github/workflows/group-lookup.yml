@@ -7,6 +7,10 @@ on:
       name:
         description: "اسم المجموعة"
         required: true
+      fix_negative:
+        description: "صفّر عداد الأرباع لو نزل بالسالب في ختمة مكتملة"
+        type: boolean
+        default: false
 
 jobs:
   lookup:
@@ -27,4 +31,5 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/lk/node_modules
           GROUP_NAME: ${{ inputs.name }}
+          FIX_NEGATIVE: ${{ inputs.fix_negative }}
         run: node tools/group_lookup.js "$GROUP_NAME"

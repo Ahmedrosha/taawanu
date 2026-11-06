@@ -180,7 +180,24 @@ interface MovePlan {
   myRead: number;
   /** الخانة الجديدة فاضية بس واخدها متطوع (ورد إضافي). */
   volunteer: { uid: string; name: string; read: number; portionId: string } | null;
+  segPortions: { id: string; assignee: string | null; read: number; done: boolean }[];
   quarterCount: number;
+}
+
+/** أوراد الدورة اللي جوه جزء معيّن (خانة فاضية أو ورد عضو خرج)، من غير المقفولة. */
+async function segmentPortions(groupId: string, n: number, segment: number, wardQuarters: number) {
+  const from = segment * wardQuarters + 1;
+  const to = (segment + 1) * wardQuarters;
+  const snap = await groupRef(groupId).collection('portions')
+    .where('cycle', '==', n).where('origin', 'in', ['empty', 'left']).get();
+  return snap.docs
+    .filter((d) => d.get('status') !== 'closed' && (d.get('fromQuarter') as number) >= from && (d.get('fromQuarter') as number) <= to)
+    .map((d) => ({
+      id: d.id,
+      assignee: (d.get('assignee') as string | null | undefined) ?? null,
+      read: (d.get('quartersRead') as number | undefined) ?? 0,
+      done: d.get('status') === 'done',
+    }));
 }
 
 /** بنقرا الوضع الحالي: الجزء الجديد مع مين، وكل واحد قرا كام ربع. */
@@ -201,15 +218,14 @@ async function planMove(groupId: string, target: string, segment: number): Promi
     return a.exists && !a.get('closed') ? ((a.get('quartersRead') as number | undefined) ?? 0) : 0;
   };
   let volunteer: MovePlan['volunteer'] = null;
+  // كل الأوراد المفتوحة أو اللي اتقرت للجزء الجديد (خانة فاضية أو ورد عضو خرج). لازم تتصفّر قبل ما تتمسح.
+  let segPortions: MovePlan['segPortions'] = [];
   if (active && !otherDoc) {
-    const empty = await groupRef(groupId).collection('portions')
-      .where('cycle', '==', n).where('origin', '==', 'empty')
-      .where('fromQuarter', '==', segment * g.wardQuarters + 1).limit(1).get();
-    const p = empty.docs[0];
-    const assignee = p?.get('assignee') as string | null | undefined;
-    if (p && assignee) {
-      const v = members.docs.find((d) => d.id === assignee);
-      volunteer = { uid: assignee, name: (v?.get('name') as string | undefined) ?? '', read: (p.get('quartersRead') as number | undefined) ?? 0, portionId: p.id };
+    segPortions = await segmentPortions(groupId, n, segment, g.wardQuarters);
+    const p = segPortions.find((x) => x.assignee);
+    if (p) {
+      const v = members.docs.find((d) => d.id === p.assignee);
+      volunteer = { uid: p.assignee!, name: (v?.get('name') as string | undefined) ?? '', read: p.read, portionId: p.id };
     }
   }
   return {
@@ -219,6 +235,7 @@ async function planMove(groupId: string, target: string, segment: number): Promi
     other: otherDoc ? { uid: otherDoc.id, name: otherDoc.get('name') as string, read: await readOf(otherDoc.id) } : null,
     myRead: await readOf(target),
     volunteer,
+    segPortions,
     quarterCount: g.wardQuarters,
   };
 }
@@ -271,7 +288,10 @@ export const moveMember = onCall(async (request) => {
     const actor = { uid, manager: true };
     if (plan.myRead > 0) await applyAssignmentProgress(groupId, target, 0, actor);
     if (plan.other && plan.other.read > 0) await applyAssignmentProgress(groupId, plan.other.uid, 0, actor);
-    if (plan.volunteer && plan.volunteer.read > 0) await applyPortionProgress(groupId, plan.volunteer.portionId, 0, actor);
+    // أي ورد للجزء الجديد كان اتقرا (حتى لو الأدمن سجّله من غير حد) بيتصفّر، عشان عدّاد الختمة ميتنقصش مرتين.
+    for (const p of plan.segPortions) {
+      if (p.read > 0 || p.done) await applyPortionProgress(groupId, p.id, 0, actor);
+    }
   }
 
   const gRef = groupRef(groupId);
@@ -295,10 +315,8 @@ export const moveMember = onCall(async (request) => {
     const cRef = cycleRef(groupId, n);
     const myARef = assignmentRef(groupId, n, target);
     const otherARef = plan.other ? assignmentRef(groupId, n, plan.other.uid) : null;
-    const emptyQuery = gRef.collection('portions')
-      .where('cycle', '==', n).where('origin', '==', 'empty')
-      .where('fromQuarter', '==', segment * g.wardQuarters + 1).limit(1);
-    const [cSnap, myASnap, emptySnap] = await Promise.all([tx.get(cRef), tx.get(myARef), tx.get(emptyQuery)]);
+    const segQuery = gRef.collection('portions').where('cycle', '==', n).where('origin', 'in', ['empty', 'left']);
+    const [cSnap, myASnap, segSnap] = await Promise.all([tx.get(cRef), tx.get(myARef), tx.get(segQuery)]);
     const range = (seg: number) => ({ fromQuarter: seg * g.wardQuarters + 1, toQuarter: (seg + 1) * g.wardQuarters });
     const fresh = (seg: number) => ({
       ...range(seg), segment: seg, quarterCount: g.wardQuarters, quartersRead: 0, status: 'pending', closed: false,
@@ -322,8 +340,20 @@ export const moveMember = onCall(async (request) => {
 
     tx.set(myARef, fresh(segment));
     setSeg(segment, target);
-    const emptyDoc = emptySnap.docs[0];
-    if (emptyDoc) tx.delete(emptyDoc.ref);
+    // الجزء الجديد كله بقى مع العضو: الأوراد اللي كانت عليه بتتمسح. ورد العضو اللي خرج كان باقي الجزء بس،
+    // واللي العضو ده قراه قبل ما يخرج كان اتشال من العدّاد، فبيرجع لأن العضو الجديد هيقرا الجزء كله.
+    const segFrom = segment * g.wardQuarters + 1;
+    const segTo = (segment + 1) * g.wardQuarters;
+    let giveBack = 0;
+    for (const d of plan.other ? [] : segSnap.docs) {
+      const from = d.get('fromQuarter') as number;
+      if (d.get('status') === 'closed' || from < segFrom || from > segTo) continue;
+      if (d.get('status') === 'done') {
+        throw new HttpsError('aborted', 'Changed meanwhile, try again.');
+      }
+      giveBack += from - segFrom;
+      tx.delete(d.ref);
+    }
     if (plan.other && otherARef) {
       tx.set(otherARef, fresh(oldSeg));
       setSeg(oldSeg, plan.other.uid);
@@ -335,7 +365,7 @@ export const moveMember = onCall(async (request) => {
         createdAt: FieldValue.serverTimestamp(),
       });
     }
-    tx.update(cRef, { segments: segs });
+    tx.update(cRef, { segments: segs, ...(giveBack > 0 ? { remainingQuarters: FieldValue.increment(giveBack) } : {}) });
   });
 
   // إشعار للي ورده اتغير (غير اللي عمل التغيير).

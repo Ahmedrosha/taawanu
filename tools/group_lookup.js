@@ -35,6 +35,10 @@ async function main() {
       const ps = await g.ref.collection('portions').where('cycle', '==', Number(c.id)).get();
       const by = {};
       ps.docs.forEach((x) => { const k = `${x.get('status')}/${x.get('origin')}`; by[k] = (by[k] || 0) + 1; });
+      if (process.env.FIX_NEGATIVE === 'true' && cd.khatmaComplete && cd.remainingQuarters < 0) {
+        await c.ref.update({ remainingQuarters: 0 });
+        console.log(`::notice title=Cycle ${c.id}::remainingQuarters was ${cd.remainingQuarters}, set to 0`);
+      }
       console.log(`::notice title=Cycle ${c.id}::khatmaComplete=${!!cd.khatmaComplete}; remainingQuarters=${cd.remainingQuarters}; portions=${JSON.stringify(by)}`);
     }
   }
