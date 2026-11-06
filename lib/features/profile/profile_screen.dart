@@ -151,7 +151,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   leading: Icon(Icons.menu_book_outlined, color: AppColors.accent),
                   title: Text(t.guideTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
                   subtitle: Text(t.guideSubtitle),
-                  trailing: const Icon(Icons.chevron_left),
+                  trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/guide'),
                 ),
               ),

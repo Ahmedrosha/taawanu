@@ -492,7 +492,6 @@ class _KhatmaMapState extends State<_KhatmaMap> {
 
   Widget _header(BuildContext context, Cycle? c) {
     final t = AppLocalizations.of(context);
-    final rtl = Directionality.of(context).name == 'rtl';
     final locale = Localizations.localeOf(context).toLanguageTag();
     final isCurrent = _n == _current;
     String? sub;
@@ -505,7 +504,7 @@ class _KhatmaMapState extends State<_KhatmaMap> {
         IconButton(
           tooltip: t.olderCycle,
           onPressed: _n > 1 ? () => _go(_n - 1) : null,
-          icon: Icon(rtl ? Icons.chevron_right : Icons.chevron_left),
+          icon: const Icon(Icons.chevron_left),
         ),
         Expanded(
           child: Column(
@@ -522,7 +521,7 @@ class _KhatmaMapState extends State<_KhatmaMap> {
         IconButton(
           tooltip: t.newerCycle,
           onPressed: isCurrent ? null : () => _go(_n + 1),
-          icon: Icon(rtl ? Icons.chevron_left : Icons.chevron_right),
+          icon: const Icon(Icons.chevron_right),
         ),
       ],
     );
@@ -885,7 +884,8 @@ class _PortionTile extends StatelessWidget {
                   ),
                 ),
                 if (p.isOpen)
-                  TextButton(
+                  FilledButton(
+                    style: FilledButton.styleFrom(minimumSize: const Size(0, 40), padding: const EdgeInsets.symmetric(horizontal: 16)),
                     onPressed: () => runAction(context, () => svc.claimPortion(group.id, p.id)),
                     child: Text(t.take),
                   )
@@ -945,7 +945,7 @@ class _PortionTile extends StatelessWidget {
   }
 }
 
-/// الأوراد الإضافية مترتبة: وردي أنا الأول، وبعدين الدورة الحالية، واللي من دورات فاتت في سطر واحد بيفتح صفحتها.
+/// الأوراد الإضافية في مجموعات: أورادي، المتاحة، اللي حد شغال فيها، واللي خلصت ومن دورات فاتت في سطور بتفتح صفحتها.
 class _ExtraPortions extends StatelessWidget {
   const _ExtraPortions({super.key, required this.group, required this.portions, required this.members, required this.me});
 
@@ -958,31 +958,93 @@ class _ExtraPortions extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final uid = GroupsService.instance.uid;
-    final mine = portions.where((p) => p.assignee == uid).toList();
-    final rest = portions.where((p) => p.assignee != uid);
-    final current = rest.where((p) => p.isDone || p.cycle >= group.currentCycle).toList();
-    final past = rest.where((p) => !p.isDone && p.cycle < group.currentCycle).toList();
+    final cur = group.currentCycle;
+    final mine = portions.where((p) => !p.isDone && p.assignee == uid).toList();
+    final open = portions.where((p) => !p.isDone && p.assignee != uid && p.cycle >= cur && p.isOpen).toList();
+    final busy = portions.where((p) => !p.isDone && p.assignee != uid && p.cycle >= cur && !p.isOpen).toList();
+    final past = portions.where((p) => !p.isDone && p.assignee != uid && p.cycle < cur).length;
+    final done = portions.where((p) => p.isDone).length;
+
+    Widget section(String title, List<Portion> list) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 12),
+            Text(title, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
+            const SizedBox(height: 8),
+            for (final p in list) _PortionTile(group: group, p: p, members: members, me: me),
+          ],
+        );
+
+    Widget row(IconData icon, Color color, String title, Widget Function() page) => Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: AppCard(
+            padding: EdgeInsets.zero,
+            child: ListTile(
+              leading: Icon(icon, color: color),
+              title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page())),
+            ),
+          ),
+        );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionTitle(t.extraPortions),
         const SizedBox(height: 4),
         Text(t.extraPortionsBody, style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
-        const SizedBox(height: 10),
-        for (final p in [...mine, ...current]) _PortionTile(group: group, p: p, members: members, me: me),
-        if (past.isNotEmpty)
-          AppCard(
-            padding: EdgeInsets.zero,
-            child: ListTile(
-              leading: Icon(Icons.history, color: AppColors.statusLate),
-              title: Text(t.pastLeftovers(past.length), style: const TextStyle(fontWeight: FontWeight.w700)),
-              trailing: const Icon(Icons.chevron_left),
-              onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-                builder: (_) => _PastPortionsScreen(group: group, members: members, me: me),
-              )),
-            ),
-          ),
+        if (mine.isNotEmpty) section(t.myExtraPortions, mine),
+        if (open.isNotEmpty) section(t.availablePortions, open),
+        if (busy.isNotEmpty) section(t.inProgressPortions, busy),
+        const SizedBox(height: 4),
+        if (done > 0)
+          row(Icons.check_circle_outline, AppColors.statusDone, t.donePortionsN(done),
+              () => _DonePortionsScreen(group: group, members: members, me: me)),
+        if (past > 0)
+          row(Icons.history, AppColors.statusLate, t.pastLeftovers(past),
+              () => _PastPortionsScreen(group: group, members: members, me: me)),
       ],
+    );
+  }
+}
+
+/// الأوراد الإضافية اللي خلصت في الدورة الحالية.
+class _DonePortionsScreen extends StatefulWidget {
+  const _DonePortionsScreen({required this.group, required this.members, required this.me});
+
+  final Group group;
+  final List<Member> members;
+  final Member? me;
+
+  @override
+  State<_DonePortionsScreen> createState() => _DonePortionsScreenState();
+}
+
+class _DonePortionsScreenState extends State<_DonePortionsScreen> {
+  late final Stream<List<Portion>> _portions = GroupsService.instance.donePortions(widget.group.id, widget.group.currentCycle);
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(title: Text(t.donePortionsTitle)),
+      body: StreamBuilder<List<Portion>>(
+        stream: _portions,
+        builder: (context, snap) {
+          final list = [...?snap.data]..sort((a, b) {
+              final c = a.cycle.compareTo(b.cycle);
+              return c != 0 ? c : a.fromQuarter.compareTo(b.fromQuarter);
+            });
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            children: [
+              if (!snap.hasData) const Center(child: CircularProgressIndicator()),
+              for (final p in list) _PortionTile(group: widget.group, p: p, members: widget.members, me: widget.me),
+            ],
+          );
+        },
+      ),
     );
   }
 }

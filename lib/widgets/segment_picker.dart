@@ -309,7 +309,7 @@ class SegmentChoiceTile extends StatelessWidget {
         onTap: onTap,
         leading: Icon(Icons.menu_book_outlined, color: AppColors.accent),
         title: Text(label, style: TextStyle(fontWeight: FontWeight.w700, color: empty ? AppColors.accent : null)),
-        trailing: onTap == null ? null : Icon(empty ? Icons.chevron_left : Icons.edit_outlined, size: 20),
+        trailing: onTap == null ? null : Icon(empty ? Icons.chevron_right : Icons.edit_outlined, size: 20),
       ),
     );
   }
