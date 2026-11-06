@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -468,7 +470,6 @@ class _KhatmaMap extends StatefulWidget {
 class _KhatmaMapState extends State<_KhatmaMap> {
   /// الدورة المعروضة (null = الحالية).
   int? _shown;
-  final _past = <int, Stream<Cycle?>>{};
 
   Group get group => widget.group;
   int get _current => widget.cycle.number;
@@ -477,20 +478,52 @@ class _KhatmaMapState extends State<_KhatmaMap> {
   /// الأدمن والمساعد: الضغط على ورد عضو بيفتح تسجيل ورده (في الدورة الحالية بس).
   bool get _canRecord => (widget.me?.isManager ?? false) && _n == _current;
 
-  void _go(int n) => setState(() => _shown = n >= _current ? null : n);
+  /// الدورات اللي فاتت: بتتحفظ أول ما تتحمل وبتفضل متحدثة، عشان القلب بينها يبقى فوري.
+  final _cache = <int, Cycle>{};
+  final _subs = <int, StreamSubscription<Cycle?>>{};
+
+  /// آخر خريطة اتعرضت: بتفضل باهتة مكانها لحد ما الدورة الجديدة توصل.
+  Cycle? _lastShown;
+
+  void _ensure(int n) {
+    if (n < 1 || n >= _current || _subs.containsKey(n)) return;
+    _subs[n] = GroupsService.instance.cycle(group.id, n).listen((c) {
+      if (c != null && mounted) setState(() => _cache[n] = c);
+    }, onError: (_) {});
+  }
+
+  void _go(int n) {
+    setState(() => _shown = n >= _current ? null : n);
+    _ensure(n);
+    _ensure(n - 1);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _ensure(_current - 1);
+  }
+
+  @override
+  void dispose() {
+    for (final s in _subs.values) {
+      s.cancel();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (_n == _current) return _card(context, widget.cycle);
-    return StreamBuilder<Cycle?>(
-      stream: _past.putIfAbsent(_n, () => GroupsService.instance.cycle(group.id, _n)),
-      builder: (context, snap) => snap.data == null
-          ? AppCard(child: Column(children: [_header(context, null), const Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator())]))
-          : _card(context, snap.data!),
-    );
+    final c = _n == _current ? widget.cycle : _cache[_n];
+    if (c != null) {
+      _lastShown = c;
+      return _card(context, c);
+    }
+    final last = _lastShown ?? widget.cycle;
+    return _card(context, last, loading: true);
   }
 
-  Widget _header(BuildContext context, Cycle? c) {
+  Widget _header(BuildContext context, Cycle? c, {bool loading = false}) {
     final t = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toLanguageTag();
     final isCurrent = _n == _current;
@@ -515,6 +548,11 @@ class _KhatmaMapState extends State<_KhatmaMap> {
                 style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
               ),
               if (sub != null) Text(sub, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+              if (loading)
+                const Padding(
+                  padding: EdgeInsets.only(top: 4),
+                  child: SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
             ],
           ),
         ),
@@ -537,7 +575,7 @@ class _KhatmaMapState extends State<_KhatmaMap> {
   String _shownStatus(Segment s, bool warn) =>
       warn && s.uid != null && (s.status == 'pending' || s.status == 'in_progress') ? 'late' : s.status;
 
-  Widget _card(BuildContext context, Cycle c) {
+  Widget _card(BuildContext context, Cycle c, {bool loading = false}) {
     final t = AppLocalizations.of(context);
     final names = {
       for (final e in group.formerNames.entries) e.key: t.formerName(e.value),
@@ -551,7 +589,15 @@ class _KhatmaMapState extends State<_KhatmaMap> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _header(context, c),
+          _header(context, loading ? null : c, loading: loading),
+          AnimatedOpacity(
+            opacity: loading ? 0.4 : 1,
+            duration: const Duration(milliseconds: 150),
+            child: IgnorePointer(
+              ignoring: loading,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
           const SizedBox(height: 4),
           Align(
             alignment: AlignmentDirectional.centerEnd,
@@ -582,6 +628,10 @@ class _KhatmaMapState extends State<_KhatmaMap> {
                   ],
                 ),
             ],
+          ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
