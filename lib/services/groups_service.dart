@@ -175,6 +175,10 @@ class GroupsService {
   Future<void> setRole(String groupId, String memberUid, String role) =>
       _call('setRole', {'groupId': groupId, 'uid': memberUid, 'role': role});
 
+  /// الأدمن أو المساعد بيكتب اسم لعضو في المجموعة دي.
+  Future<void> setMemberName(String groupId, String memberUid, String name) =>
+      _call('setMemberName', {'groupId': groupId, 'uid': memberUid, 'name': name});
+
   /// الأدمن أو المساعد بيسجّل ورد عضو (من غير نقاط).
   Future<void> recordProgress(String groupId, String memberUid, int quartersRead) =>
       _call('recordProgress', {'groupId': groupId, 'uid': memberUid, 'quartersRead': quartersRead});

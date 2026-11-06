@@ -8,6 +8,7 @@ import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_colors.dart';
 import '../../services/prefs.dart';
+import '../../widgets/name_dialog.dart';
 import '../../widgets/tour.dart';
 import '../../widgets/tour_texts.dart';
 import '../../widgets/ui.dart';
@@ -38,28 +39,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _editName(BuildContext context, String current) async {
     final t = AppLocalizations.of(context);
-    final controller = TextEditingController(text: current);
-    final value = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(t.editName),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: 60,
-          textCapitalization: TextCapitalization.words,
-          decoration: InputDecoration(hintText: t.yourNameHint),
-          onSubmitted: (v) => Navigator.pop(context, v),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(t.cancel)),
-          TextButton(onPressed: () => Navigator.pop(context, controller.text), child: Text(t.save)),
-        ],
-      ),
-    );
-    controller.dispose();
-    final name = value?.trim().replaceAll(RegExp(r'\s+'), ' ') ?? '';
-    if (name.isEmpty || name == current || !context.mounted) return;
+    final name = await showNameDialog(context, title: t.editName, current: current);
+    if (name == null || !context.mounted) return;
     await runAction(context, () => UserService.instance.updateName(name), success: t.nameUpdated);
   }
 

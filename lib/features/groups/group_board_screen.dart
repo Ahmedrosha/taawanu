@@ -11,6 +11,7 @@ import '../../services/prefs.dart';
 import '../../services/groups_service.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/name_dialog.dart';
 import '../../widgets/segment_picker.dart';
 import 'assign_portions_screen.dart';
 import 'record_progress_sheet.dart';
@@ -1308,8 +1309,11 @@ class _MembersList extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               leading: Avatar(name: members[i].name, photoUrl: members[i].photoUrl),
               title: Text(
-                members[i].uid == me?.uid ? '${members[i].name} ${t.you}' : members[i].name,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                [
+                  if (members[i].hasNoName) t.noName else members[i].name,
+                  if (members[i].uid == me?.uid) t.you,
+                ].join(' '),
+                style: TextStyle(fontWeight: FontWeight.w600, color: members[i].hasNoName ? AppColors.textMuted : null),
               ),
               subtitle: Text(
                 [
@@ -1354,7 +1358,9 @@ class _MembersList extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(title: Text(target.name, style: const TextStyle(fontWeight: FontWeight.w700))),
+            ListTile(title: Text(target.hasNoName ? t.noName : target.name, style: const TextStyle(fontWeight: FontWeight.w700))),
+            if (canManage)
+              ListTile(leading: const Icon(Icons.badge_outlined), title: Text(t.editMemberName), onTap: () => Navigator.pop(context, 'rename')),
             if ((me?.isManager ?? false) && target.uid != me?.uid)
               ListTile(leading: const Icon(Icons.mail_outline), title: Text(t.sendMessage), onTap: () => Navigator.pop(context, 'message')),
             if (group.isActive && (me?.isManager ?? false))
@@ -1388,6 +1394,16 @@ class _MembersList extends StatelessWidget {
         await showRecordProgress(context, group: group, memberUid: target.uid, memberName: target.name);
       case 'move':
         await _move(context, target);
+      case 'rename':
+        final name = await showNameDialog(
+          context,
+          title: t.editMemberName,
+          current: target.hasNoName ? '' : target.name,
+          hint: t.memberNameHint,
+        );
+        if (name != null && context.mounted) {
+          await runAction(context, () => svc.setMemberName(group.id, target.uid, name), success: t.nameUpdated);
+        }
       case 'assistant':
       case 'member':
         await runAction(context, () => svc.setRole(group.id, target.uid, action));

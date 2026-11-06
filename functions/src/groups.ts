@@ -10,7 +10,7 @@ import {
 import { applyAssignmentProgress, applyPortionProgress, releaseMemberWork, rescheduleCurrentCycle } from './cycles';
 import { notifyUsers } from './notify';
 import { rangeLabel, segmentFor, segmentRange, slotForSegment } from './rotation';
-import { CYCLE_UNITS, LATE_POLICIES, parseNewGroup, parseSegment, ValidationError } from './validation';
+import { cleanDisplayName, CYCLE_UNITS, LATE_POLICIES, parseNewGroup, parseSegment, ValidationError } from './validation';
 
 /** حد أقصى لعدد المجموعات اللي المستخدم الواحد يقدر يعملها، ضد الإساءة. */
 const MAX_GROUPS_CREATED_PER_USER = 20;
@@ -177,6 +177,26 @@ export const setRole = onCall(async (request) => {
   batch.set(userGroupIndexRef(target, groupId), { role }, { merge: true });
   await batch.commit();
   return { ok: true };
+});
+
+/**
+ * الأدمن أو المساعد بيكتب اسم لعضو (مثلًا عضو مالوش اسم). الاسم بيتغير في المجموعة دي بس،
+ * ولو العضو كتب اسمه بنفسه بعد كده، اسمه هو اللي بيظهر. المساعد بيعدّل أسماء الأعضاء العاديين بس.
+ */
+export const setMemberName = onCall(async (request) => {
+  const uid = requireUid(request);
+  const groupId = requireString(request.data?.groupId, 'groupId');
+  const target = requireString(request.data?.uid, 'uid');
+  const name = cleanDisplayName(request.data?.name);
+  if (!name) throw new HttpsError('invalid-argument', 'Name must be 1 to 60 characters.');
+  const me = await requireManager(groupId, uid);
+  const them = await requireMember(groupId, target);
+  if (target !== uid && them.role === 'admin') throw new HttpsError('permission-denied', 'Cannot rename the admin.');
+  if (me.role !== 'admin' && target !== uid && them.role !== 'member') {
+    throw new HttpsError('permission-denied', 'Assistants can rename members only.');
+  }
+  await memberRef(groupId, target).update({ name });
+  return { name };
 });
 
 interface MovePlan {
