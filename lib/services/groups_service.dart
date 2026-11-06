@@ -228,6 +228,18 @@ class GroupsService {
     return (data['points'] as num?)?.toInt() ?? 0;
   }
 
+  /// رسالة جوه المجموعة: [to] = uid أو قايمة uids، أو 'late' لتذكير المتأخرين. بيرجع عدد اللي وصلهم.
+  Future<int> sendMessage(String groupId, Object to, String text) async {
+    final data = await _call('sendGroupMessage', {'groupId': groupId, 'to': to, 'text': text});
+    return (data['sent'] as num?)?.toInt() ?? 0;
+  }
+
+  /// قفل الأوراد اللي لسه متقرتش من دورة فاتت.
+  Future<int> closeCyclePortions(String groupId, int cycle) async {
+    final data = await _call('closeCyclePortions', {'groupId': groupId, 'cycle': cycle});
+    return (data['closed'] as num?)?.toInt() ?? 0;
+  }
+
   Future<void> claimPortion(String groupId, String portionId) =>
       _call('claimPortion', {'groupId': groupId, 'portionId': portionId});
 

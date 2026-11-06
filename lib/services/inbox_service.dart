@@ -14,7 +14,12 @@ class InboxItem {
     required this.groupId,
     required this.type,
     required this.createdAt,
+    this.fromUid,
+    this.fromName,
   });
+
+  /// الرسائل: مين بعتها (عشان الرد).
+  final String? fromUid, fromName;
 
   final String id;
   final String titleAr, bodyAr, titleEn, bodyEn;
@@ -38,6 +43,8 @@ class InboxItem {
       groupId: d['groupId'] as String?,
       type: d['type'] as String?,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
+      fromUid: d['fromUid'] as String?,
+      fromName: d['fromName'] as String?,
     );
   }
 }

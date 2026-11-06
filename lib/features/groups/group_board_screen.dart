@@ -11,6 +11,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/segment_picker.dart';
 import 'assign_portions_screen.dart';
 import 'record_progress_sheet.dart';
+import 'group_messages.dart';
 import '../../widgets/tour.dart';
 import '../../widgets/tour_texts.dart';
 import '../../widgets/ui.dart';
@@ -265,21 +266,31 @@ class _ActiveCycle extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            if (cycle != null) KeyedSubtree(key: tourKeys.map, child: _KhatmaMap(group: group, cycle: cycle, members: members, me: me)),
             StreamBuilder<List<Portion>>(
               stream: portionsStream,
-              builder: (context, pSnap) => _DonePortions(
-                // المفتاح بالدورة: لما الدورة تتغير، الاشتراك يتجدد.
-                key: ValueKey(group.currentCycle),
-                group: group,
-                builder: (done) {
-                  final portions = [...?pSnap.data, ...done]..sort((a, b) => a.fromQuarter.compareTo(b.fromQuarter));
-                  if (portions.isEmpty) return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 20),
-                    child: _ExtraPortions(key: tourKeys.extra, group: group, portions: portions, members: members, me: me),
-                  );
-                },
+              builder: (context, pSnap) => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (cycle != null)
+                    KeyedSubtree(
+                      key: tourKeys.map,
+                      child: _KhatmaMap(group: group, cycle: cycle, members: members, me: me, portions: pSnap.data ?? const []),
+                    ),
+                  if (cycle != null) _MessageButtons(group: group, cycle: cycle, members: members, me: me),
+                  _DonePortions(
+                    // المفتاح بالدورة: لما الدورة تتغير، الاشتراك يتجدد.
+                    key: ValueKey(group.currentCycle),
+                    group: group,
+                    builder: (done) {
+                      final portions = [...?pSnap.data, ...done]..sort((a, b) => a.fromQuarter.compareTo(b.fromQuarter));
+                      if (portions.isEmpty) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 20),
+                        child: _ExtraPortions(key: tourKeys.extra, group: group, portions: portions, members: members, me: me),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           ],
@@ -394,7 +405,7 @@ class ReadRequest {
 }
 
 Color segmentColor(String status) => switch (status) {
-      'done' => AppColors.statusDone,
+      'done' || 'late_done' => AppColors.statusDone,
       'in_progress' => AppColors.statusInProgress,
       'late' => AppColors.statusLate,
       'open' => Colors.transparent,
@@ -412,7 +423,12 @@ Widget segmentSwatch(String status, {double? width, double height = 10, double r
     decoration: BoxDecoration(
       color: partial ? AppColors.statusPending : segmentColor(status),
       borderRadius: BorderRadius.circular(radius),
-      border: open ? Border.all(color: AppColors.mutedLine, width: 1) : null,
+      // "متاح" فاضي بإطار، و"اتأخر واتكمّل" أخضر بإطار أحمر.
+      border: open
+          ? Border.all(color: AppColors.mutedLine, width: 1)
+          : status == 'late_done'
+              ? Border.all(color: AppColors.statusLate, width: 1.5)
+              : null,
     ),
     child: partial
         ? FractionallySizedBox(
@@ -431,56 +447,130 @@ Color segmentTextColor(String status) => switch (status) {
       _ => AppColors.textMuted,
     };
 
-class _KhatmaMap extends StatelessWidget {
-  const _KhatmaMap({required this.group, required this.cycle, required this.members, required this.me});
+/// خريطة الختمة: الدورة الحالية، وبالأسهم الدورات اللي فاتت (المتأخر فيها أحمر).
+class _KhatmaMap extends StatefulWidget {
+  const _KhatmaMap({required this.group, required this.cycle, required this.members, required this.me, required this.portions});
 
   final Group group;
+
+  /// الدورة الحالية.
   final Cycle cycle;
   final List<Member> members;
   final Member? me;
 
-  /// الأدمن والمساعد: الضغط على ورد عضو بيفتح تسجيل ورده.
-  bool get _canRecord => me?.isManager ?? false;
+  /// الأوراد الإضافية المفتوحة (عشان "خده" من خريطة دورة فاتت).
+  final List<Portion> portions;
 
-  void _record(BuildContext context, Segment s, Map<String, String> names) => showRecordProgress(
-        context,
-        group: group,
-        memberUid: s.uid!,
-        memberName: names[s.uid] ?? '—',
-        segmentFromQuarter: s.seg * group.wardQuarters + 1,
-      );
+  @override
+  State<_KhatmaMap> createState() => _KhatmaMapState();
+}
 
-  bool _recordable(Segment s) => _canRecord && s.uid != null && s.status != 'late';
+class _KhatmaMapState extends State<_KhatmaMap> {
+  /// الدورة المعروضة (null = الحالية).
+  int? _shown;
+  final _past = <int, Stream<Cycle?>>{};
+
+  Group get group => widget.group;
+  int get _current => widget.cycle.number;
+  int get _n => _shown ?? _current;
+
+  /// الأدمن والمساعد: الضغط على ورد عضو بيفتح تسجيل ورده (في الدورة الحالية بس).
+  bool get _canRecord => (widget.me?.isManager ?? false) && _n == _current;
+
+  void _go(int n) => setState(() => _shown = n >= _current ? null : n);
 
   @override
   Widget build(BuildContext context) {
+    if (_n == _current) return _card(context, widget.cycle);
+    return StreamBuilder<Cycle?>(
+      stream: _past.putIfAbsent(_n, () => GroupsService.instance.cycle(group.id, _n)),
+      builder: (context, snap) => snap.data == null
+          ? AppCard(child: Column(children: [_header(context, null), const Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator())]))
+          : _card(context, snap.data!),
+    );
+  }
+
+  Widget _header(BuildContext context, Cycle? c) {
     final t = AppLocalizations.of(context);
-    final names = {for (final m in members) m.uid: m.name};
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final isCurrent = _n == _current;
+    String? sub;
+    if (!isCurrent && c?.startedAt != null && c?.endsAt != null) {
+      final f = DateFormat.MMMd(locale);
+      sub = t.cycleRange(f.format(c!.startedAt!), f.format(c.endsAt!));
+    }
+    return Row(
+      children: [
+        IconButton(
+          tooltip: t.olderCycle,
+          onPressed: _n > 1 ? () => _go(_n - 1) : null,
+          icon: Icon(rtl ? Icons.chevron_right : Icons.chevron_left),
+        ),
+        Expanded(
+          child: Column(
+            children: [
+              Text(
+                isCurrent ? '${t.mapCycleTitle(_n)} ${t.currentCycleTag}' : t.mapCycleTitle(_n),
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+              ),
+              if (sub != null) Text(sub, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+            ],
+          ),
+        ),
+        IconButton(
+          tooltip: t.newerCycle,
+          onPressed: isCurrent ? null : () => _go(_n + 1),
+          icon: Icon(rtl ? Icons.chevron_left : Icons.chevron_right),
+        ),
+      ],
+    );
+  }
+
+  /// فاضل أقل من ربع الدورة الحالية: اللي لسه مخلصش بيتلوّن أحمر.
+  bool _warn(Cycle c) {
+    if (_n != _current || c.startedAt == null || c.endsAt == null) return false;
+    final total = c.endsAt!.difference(c.startedAt!);
+    return DateTime.now().isAfter(c.endsAt!.subtract(total ~/ 4));
+  }
+
+  String _shownStatus(Segment s, bool warn) =>
+      warn && s.uid != null && (s.status == 'pending' || s.status == 'in_progress') ? 'late' : s.status;
+
+  Widget _card(BuildContext context, Cycle c) {
+    final t = AppLocalizations.of(context);
+    final names = {for (final m in widget.members) m.uid: m.name};
     // نسبة الانتهاء: الأرباع اللي خلصت من الـ٢٤٠.
-    final done = (240 - cycle.remainingQuarters).clamp(0, 240);
+    final done = (240 - c.remainingQuarters).clamp(0, 240);
     final percent = (done * 100 / 240).round();
+    final warn = _warn(c);
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(child: Text(t.khatmaMap, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15))),
-              Text(t.khatmaPercent(percent), style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.statusDone)),
-            ],
+          _header(context, c),
+          const SizedBox(height: 4),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: Text(t.khatmaPercent(percent), style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.statusDone)),
           ),
           const SizedBox(height: 6),
           ProgressLine(value: done / 240),
           const SizedBox(height: 6),
           Text(t.tapJuzHint, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
           const SizedBox(height: 12),
-          _juzGrid(context, t, names),
+          _juzGrid(context, t, names, c, warn),
+          if (warn) ...[
+            const SizedBox(height: 8),
+            Text(t.lateWarningNote, style: TextStyle(fontSize: 12, color: AppColors.statusLate)),
+          ],
           const SizedBox(height: 12),
           Wrap(
             spacing: 12,
             runSpacing: 6,
             children: [
-              for (final st in ['done', 'in_progress', 'pending', 'late', 'open'])
+              for (final st in ['done', 'in_progress', 'pending', 'late', 'late_done', 'open'])
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -513,8 +603,8 @@ class _KhatmaMap extends StatelessWidget {
 
   /// ٣٠ مربع (جزء لكل مربع)، وتحت رقمه أوراده بألوانها.
   /// لو الورد أكبر من جزء: خط على جنب الجزء اللي بيبدأ منه ورد جديد، وعلامة في الشريط مكان البداية.
-  Widget _juzGrid(BuildContext context, AppLocalizations t, Map<String, String> names) {
-    final bySeg = {for (final s in cycle.segments) s.seg: s};
+  Widget _juzGrid(BuildContext context, AppLocalizations t, Map<String, String> names, Cycle c, bool warn) {
+    final bySeg = {for (final s in c.segments) s.seg: s};
     final big = group.wardQuarters > 8;
     return GridView.count(
       crossAxisCount: 6,
@@ -533,7 +623,7 @@ class _KhatmaMap extends StatelessWidget {
             for (var k = 0; k < parts.length; k++) {
               final (seg, len, starts) = parts[k];
               final s = bySeg[seg];
-              final st = s?.status ?? 'open';
+              final st = s == null ? 'open' : _shownStatus(s, warn);
               // الجزء ده من الورد: الأرباع اللي اتقرت منه (الورد بيتقري بالترتيب).
               final offset = q - seg * group.wardQuarters;
               q += len;
@@ -556,7 +646,7 @@ class _KhatmaMap extends StatelessWidget {
               ),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
-                onTap: () => _juzSheet(context, juz, bySeg, names),
+                onTap: () => _juzSheet(context, juz, bySeg, names, warn),
                 child: Stack(
                   children: [
                     if (startsWard)
@@ -580,9 +670,21 @@ class _KhatmaMap extends StatelessWidget {
     );
   }
 
-  /// أوراد الجزء: مين معاه كل ورد وحالته. الأدمن يدوس على ورد يسجّله.
-  Future<void> _juzSheet(BuildContext context, int juz, Map<int, Segment> bySeg, Map<String, String> names) async {
+  /// الورد الإضافي اللي اتعمل من باقي ورد متأخر في الدورة دي (لو لسه موجود).
+  Portion? _leftoverOf(Segment s) {
+    final w = group.wardQuarters;
+    final from = s.seg * w + 1, to = (s.seg + 1) * w;
+    for (final p in widget.portions) {
+      if (p.cycle == _n && p.fromQuarter >= from && p.fromQuarter <= to) return p;
+    }
+    return null;
+  }
+
+  /// أوراد الجزء: مين معاه كل ورد وحالته. الأدمن يدوس على ورد يسجّله. في الدورات اللي فاتت:
+  /// الورد المتأخر بيبيّن راح فين، ولو محدش خده فيه "خده".
+  Future<void> _juzSheet(BuildContext context, int juz, Map<int, Segment> bySeg, Map<String, String> names, bool warn) async {
     final t = AppLocalizations.of(context);
+    final svc = GroupsService.instance;
     final picked = await showModalBottomSheet<Segment>(
       context: context,
       showDragHandle: true,
@@ -593,21 +695,42 @@ class _KhatmaMap extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(t.juzLabel(juz + 1), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              child: Text(
+                _n == _current ? t.juzLabel(juz + 1) : '${t.juzLabel(juz + 1)} · ${t.cycleN(_n)}',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
             ),
             for (final (seg, _, _) in _partsOf(juz))
               if (bySeg[seg] case final s?)
-                ListTile(
-                  leading: segmentSwatch(s.status, width: 14, height: 14, radius: 4,
-                      fill: s.read == null ? 1 : s.read! / group.wardQuarters),
-                  title: Text(segmentLabel(t, s.seg, group.wardQuarters), style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text([
-                    if (s.uid != null) names[s.uid] ?? '—',
-                    segmentStatusLabel(t, s.status),
-                  ].join(' · ')),
-                  trailing: _recordable(s) ? const Icon(Icons.edit_note) : null,
-                  onTap: _recordable(s) ? () => Navigator.pop(context, s) : null,
-                ),
+                Builder(builder: (context) {
+                  final st = _shownStatus(s, warn);
+                  final left = s.status == 'late' && _n != _current ? _leftoverOf(s) : null;
+                  final recordable = _canRecord && s.uid != null && s.status != 'late';
+                  return ListTile(
+                    leading: segmentSwatch(st, width: 14, height: 14, radius: 4,
+                        fill: s.read == null ? 1 : s.read! / group.wardQuarters),
+                    title: Text(segmentLabel(t, s.seg, group.wardQuarters), style: const TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text([
+                      if (s.uid != null) names[s.uid] ?? t.formerMember,
+                      segmentStatusLabel(t, st),
+                      if (s.read != null && s.status == 'late') t.quartersProgress(s.read!, group.wardQuarters),
+                      if (left != null && left.assignee != null) t.assignedTo(names[left.assignee] ?? t.formerMember),
+                      if (left != null && left.assignee == null) t.noneTookIt,
+                    ].join(' · ')),
+                    trailing: left != null && left.isOpen
+                        ? TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              runAction(context, () => svc.claimPortion(group.id, left.id));
+                            },
+                            child: Text(t.takeThis),
+                          )
+                        : recordable
+                            ? const Icon(Icons.edit_note)
+                            : null,
+                    onTap: recordable ? () => Navigator.pop(context, s) : null,
+                  );
+                }),
             if (_canRecord)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
@@ -617,7 +740,60 @@ class _KhatmaMap extends StatelessWidget {
         ),
       ),
     );
-    if (picked != null && context.mounted) _record(context, picked, names);
+    if (picked != null && context.mounted) {
+      await showRecordProgress(
+        context,
+        group: group,
+        memberUid: picked.uid!,
+        memberName: names[picked.uid] ?? '—',
+        segmentFromQuarter: picked.seg * group.wardQuarters + 1,
+      );
+    }
+  }
+}
+
+/// تحت الخريطة: تذكير المتأخرين (للإدارة) وراسل الإدارة (لأي عضو).
+class _MessageButtons extends StatelessWidget {
+  const _MessageButtons({required this.group, required this.cycle, required this.members, required this.me});
+
+  final Group group;
+  final Cycle cycle;
+  final List<Member> members;
+  final Member? me;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final manager = me?.isManager ?? false;
+    final lateCount = cycle.segments
+        .where((s) => s.uid != null && s.uid != me?.uid && s.status != 'done' && s.status != 'late' && s.status != 'late_done')
+        .map((s) => s.uid)
+        .toSet()
+        .length;
+    final otherManagers = members.any((m) => m.isManager && m.uid != me?.uid);
+    if (!manager && !otherManagers) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (manager && !cycle.khatmaComplete)
+            FilledButton.tonalIcon(
+              onPressed: lateCount == 0 ? null : () => showLateReminder(context, group: group, lateCount: lateCount, endsAt: cycle.endsAt),
+              icon: const Icon(Icons.notifications_active_outlined),
+              label: Text('${t.remindLate} ($lateCount)'),
+            ),
+          if (otherManagers) ...[
+            if (manager) const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () => showContactManagers(context, group: group, members: members, myUid: me?.uid),
+              icon: const Icon(Icons.mail_outline),
+              label: Text(t.contactManagers),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 
@@ -625,6 +801,7 @@ String segmentStatusLabel(AppLocalizations t, String status) => switch (status) 
       'done' => t.statusDone,
       'in_progress' => t.statusInProgress,
       'late' => t.statusLate,
+      'late_done' => t.statusLateDone,
       'open' => t.statusOpen,
       _ => t.statusPending,
     };
@@ -650,11 +827,12 @@ class _DonePortionsState extends State<_DonePortions> {
       );
 }
 
-class _ExtraPortions extends StatelessWidget {
-  const _ExtraPortions({super.key, required this.group, required this.portions, required this.members, required this.me});
+/// كارت ورد إضافي (في اللوحة وفي صفحة الدورات اللي فاتت).
+class _PortionTile extends StatelessWidget {
+  const _PortionTile({required this.group, required this.p, required this.members, required this.me});
 
   final Group group;
-  final List<Portion> portions;
+  final Portion p;
   final List<Member> members;
   final Member? me;
 
@@ -663,82 +841,72 @@ class _ExtraPortions extends StatelessWidget {
     final t = AppLocalizations.of(context);
     final svc = GroupsService.instance;
     final names = {for (final m in members) m.uid: m.name};
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SectionTitle(t.extraPortions),
-        const SizedBox(height: 4),
-        Text(t.extraPortionsBody, style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
-        const SizedBox(height: 10),
-        for (final p in portions)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                // الورد اللي خلص: أخضر فاتح.
-                color: p.isDone ? AppColors.doneTint : AppColors.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: p.isDone ? AppColors.doneBorder : AppColors.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          // الورد اللي خلص: أخضر فاتح.
+          color: p.isDone ? AppColors.doneTint : AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: p.isDone ? AppColors.doneBorder : AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                if (p.isDone) ...[
+                  Icon(Icons.check_circle, color: AppColors.statusDone, size: 22),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (p.isDone) ...[
-                        Icon(Icons.check_circle, color: AppColors.statusDone, size: 22),
-                        const SizedBox(width: 8),
-                      ],
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(rangeLabel(t, p.fromQuarter, p.toQuarter), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                            const SizedBox(height: 2),
-                            Text(
-                              [
-                                t.cycleN(p.cycle),
-                                if (p.isDone) t.portionDone else if (p.isOpen) t.statusOpen,
-                                if (p.assignee != null) t.assignedTo(names[p.assignee] ?? '—'),
-                                if (p.recordedBy != null) t.recordedByAdminNote,
-                              ].join(' · '),
-                              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
-                            ),
-                          ],
-                        ),
+                      Text(rangeLabel(t, p.fromQuarter, p.toQuarter), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                      const SizedBox(height: 2),
+                      Text(
+                        [
+                          t.cycleN(p.cycle),
+                          if (p.isDone) t.portionDone else if (p.isOpen) t.statusOpen,
+                          if (p.assignee != null) t.assignedTo(names[p.assignee] ?? '—'),
+                          if (p.recordedBy != null) t.recordedByAdminNote,
+                        ].join(' · '),
+                        style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                       ),
-                      if (p.isOpen)
-                        TextButton(
-                          onPressed: () => runAction(context, () => svc.claimPortion(group.id, p.id)),
-                          child: Text(t.take),
-                        )
-                      else if (p.assignee == svc.uid)
-                        FilledButton.tonal(
-                          // الثيم بيخلي الزرار بعرض الشاشة، وهنا جوه صف فلازم عرض محدود.
-                          style: FilledButton.styleFrom(minimumSize: const Size(0, 40), padding: const EdgeInsets.symmetric(horizontal: 16)),
-                          onPressed: () => context.push('/read', extra: ReadRequest.portion(group: group, portion: p)),
-                          child: Text(p.isDone ? t.open : (p.quartersRead > 0 ? t.continueReading : t.readNow)),
-                        ),
-                      if (me?.isManager ?? false)
-                        IconButton(
-                          tooltip: t.assignToMember,
-                          icon: const Icon(Icons.more_vert),
-                          onPressed: () => _manage(context, p, names),
-                        ),
                     ],
                   ),
-                  if (!p.isDone && p.quartersRead > 0) ...[
-                    const SizedBox(height: 10),
-                    ProgressLine(value: p.progress),
-                    const SizedBox(height: 4),
-                    Text(t.quartersProgress(p.quartersRead, p.quarterCount), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                  ],
-                ],
-              ),
+                ),
+                if (p.isOpen)
+                  TextButton(
+                    onPressed: () => runAction(context, () => svc.claimPortion(group.id, p.id)),
+                    child: Text(t.take),
+                  )
+                else if (p.assignee == svc.uid)
+                  FilledButton.tonal(
+                    // الثيم بيخلي الزرار بعرض الشاشة، وهنا جوه صف فلازم عرض محدود.
+                    style: FilledButton.styleFrom(minimumSize: const Size(0, 40), padding: const EdgeInsets.symmetric(horizontal: 16)),
+                    onPressed: () => context.push('/read', extra: ReadRequest.portion(group: group, portion: p)),
+                    child: Text(p.isDone ? t.open : (p.quartersRead > 0 ? t.continueReading : t.readNow)),
+                  ),
+                if (me?.isManager ?? false)
+                  IconButton(
+                    tooltip: t.assignToMember,
+                    icon: const Icon(Icons.more_vert),
+                    onPressed: () => _manage(context, p, names),
+                  ),
+              ],
             ),
-          ),
-      ],
+            if (!p.isDone && p.quartersRead > 0) ...[
+              const SizedBox(height: 10),
+              ProgressLine(value: p.progress),
+              const SizedBox(height: 4),
+              Text(t.quartersProgress(p.quartersRead, p.quarterCount), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -768,6 +936,115 @@ class _ExtraPortions extends StatelessWidget {
       return;
     }
     await runAction(context, () => GroupsService.instance.assignPortion(group.id, p.id, choice.isEmpty ? null : choice));
+  }
+}
+
+/// الأوراد الإضافية مترتبة: وردي أنا الأول، وبعدين الدورة الحالية، واللي من دورات فاتت في سطر واحد بيفتح صفحتها.
+class _ExtraPortions extends StatelessWidget {
+  const _ExtraPortions({super.key, required this.group, required this.portions, required this.members, required this.me});
+
+  final Group group;
+  final List<Portion> portions;
+  final List<Member> members;
+  final Member? me;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final uid = GroupsService.instance.uid;
+    final mine = portions.where((p) => p.assignee == uid).toList();
+    final rest = portions.where((p) => p.assignee != uid);
+    final current = rest.where((p) => p.isDone || p.cycle >= group.currentCycle).toList();
+    final past = rest.where((p) => !p.isDone && p.cycle < group.currentCycle).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionTitle(t.extraPortions),
+        const SizedBox(height: 4),
+        Text(t.extraPortionsBody, style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
+        const SizedBox(height: 10),
+        for (final p in [...mine, ...current]) _PortionTile(group: group, p: p, members: members, me: me),
+        if (past.isNotEmpty)
+          AppCard(
+            padding: EdgeInsets.zero,
+            child: ListTile(
+              leading: Icon(Icons.history, color: AppColors.statusLate),
+              title: Text(t.pastLeftovers(past.length), style: const TextStyle(fontWeight: FontWeight.w700)),
+              trailing: const Icon(Icons.chevron_left),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => _PastPortionsScreen(group: group, members: members, me: me),
+              )),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// أوراد متأخرة من دورات خلصت، مقسومة بالدورة. الإدارة تقدر تقفل أوراد دورة.
+class _PastPortionsScreen extends StatefulWidget {
+  const _PastPortionsScreen({required this.group, required this.members, required this.me});
+
+  final Group group;
+  final List<Member> members;
+  final Member? me;
+
+  @override
+  State<_PastPortionsScreen> createState() => _PastPortionsScreenState();
+}
+
+class _PastPortionsScreenState extends State<_PastPortionsScreen> {
+  late final Stream<List<Portion>> _portions = GroupsService.instance.activePortions(widget.group.id);
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final g = widget.group;
+    return Scaffold(
+      appBar: AppBar(title: Text(t.pastLeftoversTitle)),
+      body: StreamBuilder<List<Portion>>(
+        stream: _portions,
+        builder: (context, snap) {
+          final uid = GroupsService.instance.uid;
+          final past = (snap.data ?? const <Portion>[]).where((p) => p.cycle < g.currentCycle && p.assignee != uid).toList();
+          final byCycle = <int, List<Portion>>{};
+          for (final p in past) {
+            byCycle.putIfAbsent(p.cycle, () => []).add(p);
+          }
+          final cycles = byCycle.keys.toList()..sort();
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            children: [
+              Text(t.pastLeftoversBody, style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
+              const SizedBox(height: 12),
+              if (!snap.hasData) const Center(child: CircularProgressIndicator()),
+              for (final c in cycles) ...[
+                Row(
+                  children: [
+                    Expanded(child: SectionTitle(t.cyclePortionsHeader(c, byCycle[c]!.length))),
+                    if (widget.me?.isManager ?? false)
+                      TextButton.icon(
+                        onPressed: () async {
+                          if (await confirmDialog(context, title: t.closeCycleLeftovers, body: t.closeCycleConfirm(c), destructive: true) &&
+                              context.mounted) {
+                            await runAction(context, () => GroupsService.instance.closeCyclePortions(g.id, c));
+                          }
+                        },
+                        icon: const Icon(Icons.block, size: 18),
+                        label: Text(t.closeCycleLeftovers),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                for (final p in byCycle[c]!..sort((a, b) => a.fromQuarter.compareTo(b.fromQuarter)))
+                  _PortionTile(group: g, p: p, members: widget.members, me: widget.me),
+                const SizedBox(height: 8),
+              ],
+            ],
+          );
+        },
+      ),
+    );
   }
 }
 
@@ -838,6 +1115,8 @@ class _MembersList extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(title: Text(target.name, style: const TextStyle(fontWeight: FontWeight.w700))),
+            if ((me?.isManager ?? false) && target.uid != me?.uid)
+              ListTile(leading: const Icon(Icons.mail_outline), title: Text(t.sendMessage), onTap: () => Navigator.pop(context, 'message')),
             if (group.isActive && (me?.isManager ?? false))
               ListTile(leading: const Icon(Icons.edit_note), title: Text(t.recordProgress), onTap: () => Navigator.pop(context, 'record')),
             ListTile(
@@ -863,6 +1142,8 @@ class _MembersList extends StatelessWidget {
     );
     if (action == null || !context.mounted) return;
     switch (action) {
+      case 'message':
+        await showComposeMessage(context, groupId: group.id, to: target.uid, title: t.messageTo(target.name));
       case 'record':
         await showRecordProgress(context, group: group, memberUid: target.uid, memberName: target.name);
       case 'move':

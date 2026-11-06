@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../l10n/gen/app_localizations.dart';
 import '../../services/inbox_service.dart';
+import '../groups/group_messages.dart';
 import '../../theme/app_colors.dart';
 
 /// "من ساعتين" وهكذا.
@@ -136,7 +137,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                   subtitle: Padding(
                     padding: const EdgeInsets.only(top: 2),
-                    child: Text(n.body(lang), style: TextStyle(color: AppColors.text, height: 1.4)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(n.body(lang), style: TextStyle(color: AppColors.text, height: 1.4)),
+                        // رسالة من حد: زرار رد لنفس الشخص.
+                        if (n.fromUid != null && n.groupId != null)
+                          Align(
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: TextButton.icon(
+                              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                              onPressed: () => showComposeMessage(
+                                context,
+                                groupId: n.groupId!,
+                                to: n.fromUid!,
+                                title: t.replyTo(n.fromName ?? ''),
+                              ),
+                              icon: const Icon(Icons.reply, size: 18),
+                              label: Text(t.reply),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                   onTap: n.groupId == null ? null : () => context.push('/group/${n.groupId}'),
                 ),
@@ -157,6 +179,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         'portion' => Icons.add_task,
         'moved' => Icons.swap_horiz,
         'recorded' => Icons.edit_note,
+        'message' => Icons.mail_outline,
         _ => Icons.notifications,
       };
 }
