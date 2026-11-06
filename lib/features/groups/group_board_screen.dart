@@ -492,7 +492,7 @@ class _KhatmaMapState extends State<_KhatmaMap> {
 
   Widget _header(BuildContext context, Cycle? c) {
     final t = AppLocalizations.of(context);
-    final rtl = Directionality.of(context) == TextDirection.rtl;
+    final rtl = Directionality.of(context).name == 'rtl';
     final locale = Localizations.localeOf(context).toLanguageTag();
     final isCurrent = _n == _current;
     String? sub;
