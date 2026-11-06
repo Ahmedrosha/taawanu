@@ -47,7 +47,8 @@ export interface MemberDoc {
 export interface Segment {
   seg: number;
   uid: string | null;
-  status: 'pending' | 'in_progress' | 'done' | 'late' | 'open';
+  /** late_done: اتأخر في دورته واتكمّل بعدين من الأوراد الإضافية. */
+  status: 'pending' | 'in_progress' | 'done' | 'late' | 'late_done' | 'open';
   /** الأرباع اللي اتقرت (بتتحدّث مع كل تسجيل؛ الخريطة بتستخدمها مع in_progress بس). */
   read?: number;
 }

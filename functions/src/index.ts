@@ -8,6 +8,8 @@ export {
 } from './invites';
 export {
   startKhatma, cycleTick, updateProgress, claimPortion, assignPortion, completePortion, recordProgress, updatePortionProgress,
+  closeCyclePortions,
 } from './cycles';
 export { guardNewUser } from './authGuard';
 export { claimFcmToken, updateName } from './profile';
+export { sendGroupMessage } from './messages';

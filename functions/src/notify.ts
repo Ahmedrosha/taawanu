@@ -26,6 +26,8 @@ async function saveToInbox(uids: string[], text: (uid: string) => LocalizedText,
         en: t.en,
         groupId: data.groupId ?? null,
         type: data.type ?? null,
+        // الرسائل: مين بعتها، عشان الرد.
+        ...(data.fromUid ? { fromUid: data.fromUid, fromName: data.fromName ?? null } : {}),
         createdAt: FieldValue.serverTimestamp(),
         expireAt,
       });

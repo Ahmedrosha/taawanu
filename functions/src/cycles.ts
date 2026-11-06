@@ -23,7 +23,7 @@ interface PortionDoc extends QuarterRange {
   cycle: number;
   quarterCount: number;
   assignee: string | null;
-  status: 'open' | 'assigned' | 'done';
+  status: 'open' | 'assigned' | 'done' | 'closed';
   origin: PortionOrigin;
   originalUid?: string;
 }
@@ -471,6 +471,7 @@ export async function applyPortionProgress(groupId: string, portionId: string, q
     const cRef = cycleRef(groupId, p.cycle);
     const c = (await tx.get(cRef)).data() as CycleDoc | undefined;
     const setSegment = await segmentUpdater(tx, groupId, p);
+    const setLate = await lateSegmentUpdater(tx, groupId, portionId, p);
     if (wasDone && c?.khatmaComplete) throw new HttpsError('failed-precondition', 'Khatma already complete.');
     const byManager = actor.manager && !isAssignee;
     const ownCarry = p.origin === 'carry' && p.originalUid === p.assignee;
@@ -483,6 +484,7 @@ export async function applyPortionProgress(groupId: string, portionId: string, q
         recordedBy: byManager ? actor.uid : null, pointsAwarded: points, doneCycle: g.currentCycle,
       });
       setSegment({ status: 'done', read: q, ...(p.assignee ? { uid: p.assignee } : {}) });
+      setLate(true);
       tx.update(cRef, { remainingQuarters: FieldValue.increment(-count) });
       if (selfDone) return { kind: 'doneSelf', cycle: p.cycle, assignee: p.assignee!, points, rescue: !ownCarry, quarters: count };
       return { kind: 'doneByManager', cycle: p.cycle, assignee: p.assignee };
@@ -493,6 +495,7 @@ export async function applyPortionProgress(groupId: string, portionId: string, q
       ...(wasDone ? { completedAt: null, pointsAwarded: 0, doneCycle: null } : {}),
     });
     setSegment({ status: q > 0 ? 'in_progress' : p.assignee ? 'pending' : 'open', read: q });
+    if (wasDone) setLate(false);
     if (wasDone) tx.update(cRef, { remainingQuarters: FieldValue.increment(count) });
     if (!wasDone) return { kind: 'partial' };
     const selfCounted = !p.recordedBy && p.assignee !== null;
@@ -560,6 +563,26 @@ export const updatePortionProgress = onCall(async (request) => {
  * الخانة الفاضية (empty) أو اللي صاحبها خرج (left) لون خانتها على الخريطة بيتبع الورد الإضافي.
  * بنقرا قبل أي كتابة في الـtransaction، وبنرجّع دالة تكتب التحديث.
  */
+/**
+ * ورد متأخر (من دورة فاتت) اتكمّل من الأوراد الإضافية: جزء صاحبه في خريطة الدورة دي بيبقى
+ * "اتأخر واتكمّل" لما كل الحتت اللي اتقسم لها تخلص، ويرجع "متأخر" لو حد رجّع التسجيل.
+ * كل القراية هنا قبل أي كتابة (شرط المعاملة).
+ */
+async function lateSegmentUpdater(tx: Transaction, groupId: string, portionId: string, p: PortionDoc) {
+  const lateOrigins = ['carry', 'distribute', 'volunteer', 'ask'];
+  if (!lateOrigins.includes(p.origin) || !p.originalUid) return (_done: boolean) => {};
+  const a = (await tx.get(assignmentRef(groupId, p.cycle, p.originalUid))).data() as AssignmentDoc | undefined;
+  const cRef = cycleRef(groupId, p.cycle);
+  const c = (await tx.get(cRef)).data() as CycleDoc | undefined;
+  if (!a || !c) return (_done: boolean) => {};
+  const siblings = await tx.get(portionsCol(groupId).where('cycle', '==', p.cycle).where('originalUid', '==', p.originalUid));
+  const othersDone = siblings.docs.every((d) => d.id === portionId || (d.data() as PortionDoc).status === 'done');
+  return (done: boolean) => {
+    const status = done && othersDone ? 'late_done' : 'late';
+    tx.update(cRef, { segments: c.segments.map((s) => (s.seg === a.segment ? { ...s, status } : s)) });
+  };
+}
+
 async function segmentUpdater(tx: Transaction, groupId: string, p: PortionDoc) {
   if (p.origin !== 'empty' && p.origin !== 'left') return () => {};
   const g = groupData(await tx.get(groupRef(groupId)));
@@ -727,3 +750,27 @@ export async function releaseMemberWork(groupId: string, uid: string): Promise<v
   mine.forEach((d) => writer.update(d.ref, { assignee: null, status: 'open' }));
   await writer.close();
 }
+
+/** الأدمن أو المساعد بيقفل الأوراد اللي لسه متقرتش من دورة فاتت (بتختفي من الأوراد الإضافية،
+ * وتفضل حمرا في خريطة الدورة دي). مفيش نقاط بتتخصم من حد. */
+export const closeCyclePortions = onCall(async (request) => {
+  const uid = requireUid(request);
+  const groupId = requireString(request.data?.groupId, 'groupId');
+  const cycle = Number(request.data?.cycle);
+  if (!Number.isInteger(cycle) || cycle < 1) throw new HttpsError('invalid-argument', 'Bad cycle.');
+  await requireManager(groupId, uid);
+  const g = groupData(await groupRef(groupId).get());
+  if (cycle >= g.currentCycle) throw new HttpsError('failed-precondition', 'Only past cycles.');
+  const snap = await portionsCol(groupId).where('cycle', '==', cycle).get();
+  const writer = db.bulkWriter();
+  let closed = 0;
+  for (const d of snap.docs) {
+    const st = (d.data() as PortionDoc).status;
+    if (st === 'open' || st === 'assigned') {
+      writer.update(d.ref, { status: 'closed', closedBy: uid, closedAt: FieldValue.serverTimestamp() });
+      closed++;
+    }
+  }
+  await writer.close();
+  return { closed };
+});
