@@ -153,5 +153,6 @@ html[lang="en"] .guide .g-en { display: block; }
 html[dir="ltr"] .sw.in_progress { background: linear-gradient(to right, #FBBF24 50%, #CBD5E1 50%); }
 .sw.pending { background: #CBD5E1; }
 .sw.late { background: #B91C1C; }
+.sw.late_done { background: #15803D; border: 1.5px solid #B91C1C; }
 .sw.open { border: 1.5px solid #94A3B8; }
 .home .guide-cta { text-align: center; margin-top: 20px; }
