@@ -16,6 +16,7 @@ class Group {
     required this.cycleStartHour,
     required this.cycleStartDayOfMonth,
     required this.lateDefault,
+    this.formerNames = const {},
     required this.adminId,
     required this.memberCount,
     required this.status,
@@ -36,6 +37,9 @@ class Group {
   final int cycleStartHour;
   final int cycleStartDayOfMonth;
   final String lateDefault;
+
+  /// أسامي الأعضاء اللي خرجوا (للخرايط القديمة).
+  final Map<String, String> formerNames;
   final String adminId;
   final int memberCount;
   final String status;
@@ -62,6 +66,10 @@ class Group {
       cycleStartHour: _int(d['cycleStartHour'], 6),
       cycleStartDayOfMonth: _int(d['cycleStartDayOfMonth'], 1),
       lateDefault: (d['lateDefault'] as String?) ?? 'ask',
+      formerNames: {
+        for (final e in ((d['formerNames'] as Map?) ?? const {}).entries)
+          if (e.key is String && e.value is String) e.key as String: e.value as String,
+      },
       adminId: (d['adminId'] as String?) ?? '',
       memberCount: _int(d['memberCount'], 1),
       status: (d['status'] as String?) ?? 'forming',

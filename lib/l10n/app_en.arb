@@ -936,5 +936,7 @@
   "@cyclePortionsHeader": {"placeholders": {"n": {"type": "int"}, "count": {"type": "int"}}},
   "@closeCycleConfirm": {"placeholders": {"n": {"type": "int"}}},
   "@cycleRange": {"placeholders": {"from": {"type": "String"}, "to": {"type": "String"}}},
-  "@mapCycleTitle": {"placeholders": {"n": {"type": "int"}}}
+  "@mapCycleTitle": {"placeholders": {"n": {"type": "int"}}},
+  "formerName": "{name} (left)",
+  "@formerName": {"placeholders": {"name": {"type": "String"}}}
 }

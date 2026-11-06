@@ -540,7 +540,10 @@ class _KhatmaMapState extends State<_KhatmaMap> {
 
   Widget _card(BuildContext context, Cycle c) {
     final t = AppLocalizations.of(context);
-    final names = {for (final m in widget.members) m.uid: m.name};
+    final names = {
+      for (final e in group.formerNames.entries) e.key: t.formerName(e.value),
+      for (final m in widget.members) m.uid: m.name,
+    };
     // نسبة الانتهاء: الأرباع اللي خلصت من الـ٢٤٠.
     final done = (240 - c.remainingQuarters).clamp(0, 240);
     final percent = (done * 100 / 240).round();
@@ -840,7 +843,10 @@ class _PortionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final svc = GroupsService.instance;
-    final names = {for (final m in members) m.uid: m.name};
+    final names = {
+      for (final e in group.formerNames.entries) e.key: t.formerName(e.value),
+      for (final m in members) m.uid: m.name,
+    };
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Container(

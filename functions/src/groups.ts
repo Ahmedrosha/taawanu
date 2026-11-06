@@ -4,7 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 
 import {
-  assignmentRef, cycleRef, db, groupData, groupRef, memberRef, requireManager, requireMember,
+  assignmentRef, cycleRef, db, groupData, groupRef, MemberDoc, memberRef, requireManager, requireMember,
   requireString, requireUid, Role, userDisplay, userGroupIndexRef,
 } from './common';
 import { applyAssignmentProgress, applyPortionProgress, releaseMemberWork } from './cycles';
@@ -117,9 +117,15 @@ export async function removeFromGroup(groupId: string, uid: string): Promise<voi
   await db.runTransaction(async (tx) => {
     const gSnap = await tx.get(groupRef(groupId));
     const g = groupData(gSnap);
+    const m = (await tx.get(memberRef(groupId, uid))).data() as MemberDoc | undefined;
     tx.delete(memberRef(groupId, uid));
     tx.delete(userGroupIndexRef(uid, groupId));
-    tx.update(groupRef(groupId), { memberCount: Math.max(0, g.memberCount - 1), hasFreeSlots: true });
+    tx.update(groupRef(groupId), {
+      memberCount: Math.max(0, g.memberCount - 1),
+      hasFreeSlots: true,
+      // الخرايط القديمة تفضل تعرض اسمه الحقيقي (مع "خرج").
+      ...(m?.name ? { [`formerNames.${uid}`]: m.name } : {}),
+    });
   });
 }
 

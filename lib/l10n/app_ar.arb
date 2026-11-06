@@ -450,5 +450,6 @@
   "mapCycleTitle": "خريطة الختمة · الدورة {n}",
   "lateWarningNote": "فاضل أقل من ربع الدورة: الأوراد اللي لسه مخلصتش بقت حمرا",
   "takeThis": "خده",
-  "noneTookIt": "لسه محدش خده"
+  "noneTookIt": "لسه محدش خده",
+  "formerName": "{name} (خرج)"
 }
