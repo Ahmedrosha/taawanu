@@ -30,6 +30,14 @@ async function main() {
     const created = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toISOString() : 'n/a';
     console.log(`::notice title=Group lookup::created ${created} by ${who} (sign-in: ${providers.join(', ') || 'n/a'}); type=${d.type || d.visibility || 'n/a'}; members=${members.data().count}; status=${d.status || 'n/a'}; cycle=${d.currentCycle ?? 'n/a'}`);
   }
+    const cycles = await g.ref.collection('cycles').get();
+    for (const c of cycles.docs) {
+      const cd = c.data();
+      const ps = await g.ref.collection('portions').where('cycle', '==', Number(c.id)).get();
+      const by = {};
+      ps.docs.forEach((x) => { const k = `${x.get('status')}/${x.get('origin')}`; by[k] = (by[k] || 0) + 1; });
+      console.log(`::notice title=Cycle ${c.id}::khatmaComplete=${!!cd.khatmaComplete}; remainingQuarters=${cd.remainingQuarters}; portions=${JSON.stringify(by)}`);
+    }
   if (groups.empty) console.log('::notice title=Group lookup::No group with that name now (it may have been deleted).');
 
   // الجروب ممكن يكون اتمسح: بندوّر في الإشعارات المحفوظة (الجرس) مين استلم إشعارات منه.
