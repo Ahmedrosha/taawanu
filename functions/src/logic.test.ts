@@ -3,7 +3,7 @@ import { describe, test } from 'node:test';
 
 import { regularPoints } from './points';
 import { pickCycle, rangeLabel, segmentFor, segmentRange, slotForSegment, splitRange, takenSegments } from './rotation';
-import { CycleSettings, firstCycleEnd, nextBoundary, nextCycleEnd } from './schedule';
+import { CycleSettings, firstCycleEnd, nextBoundary, nextCycleEnd, rescheduledEnd } from './schedule';
 
 describe('التدوير', () => {
   test('الدورة ١: الخانة ٠ تقرا الجزء ١، والدورة ٢ تقرا الجزء ٢', () => {
@@ -108,5 +108,18 @@ describe('اختيار الجزء', () => {
   test('الأجزاء المحجوزة محسوبة على الدورة', () => {
     assert.deepEqual(takenSegments([0, 5], 1, 30), [0, 5]);
     assert.deepEqual(takenSegments([0, 29], 2, 30), [0, 1]);
+  });
+});
+
+describe('تغيير المواعيد والدورة شغالة', () => {
+  const sunday: CycleSettings = { ...weekly, cycleStartDay: 0, cycleStartHour: 4, utcOffsetMinutes: 120 };
+  test('دورة بدأت الجمعة ٦ وغيّرنا للأحد: تخلص الأحد ١٥ مش ٨', () => {
+    const end = rescheduledEnd(new Date('2026-11-06T02:00:00Z'), new Date('2026-11-06T20:20:00Z'), sunday);
+    assert.equal(end.toISOString(), '2026-11-15T02:00:00.000Z');
+  });
+  test('لو النهاية الجديدة قريبة أوي من دلوقتي بتتمد وحدة', () => {
+    // بدأت الأحد ٨، ودلوقتي السبت ١٤ بالليل، والنهاية المحسوبة الأحد ١٥ الساعة ٤ (أقل من يوم)
+    const end = rescheduledEnd(new Date('2026-11-08T02:00:00Z'), new Date('2026-11-14T20:00:00Z'), sunday);
+    assert.equal(end.toISOString(), '2026-11-22T02:00:00.000Z');
   });
 });

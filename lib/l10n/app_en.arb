@@ -108,7 +108,7 @@
   "copied": "Copied",
   "copyLink": "Copy message",
   "createLink": "Create link",
-  "cycleChangeNote": "Changes to the cycle apply from the next cycle.",
+  "cycleChangeNote": "Schedule changes also move the end of the current cycle, and later cycles follow.",
   "cycleEnded": "Closing",
   "cycleN": "Cycle {n}",
   "@cycleN": {

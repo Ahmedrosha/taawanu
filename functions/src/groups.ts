@@ -7,7 +7,7 @@ import {
   assignmentRef, cycleRef, db, groupData, groupRef, MemberDoc, memberRef, requireManager, requireMember,
   requireString, requireUid, Role, userDisplay, userGroupIndexRef,
 } from './common';
-import { applyAssignmentProgress, applyPortionProgress, releaseMemberWork } from './cycles';
+import { applyAssignmentProgress, applyPortionProgress, releaseMemberWork, rescheduleCurrentCycle } from './cycles';
 import { notifyUsers } from './notify';
 import { rangeLabel, segmentFor, segmentRange, slotForSegment } from './rotation';
 import { CYCLE_UNITS, LATE_POLICIES, parseNewGroup, parseSegment, ValidationError } from './validation';
@@ -102,14 +102,22 @@ export const updateGroupSettings = onCall(async (request) => {
   }
   if (Object.keys(update).length === 0) return { ok: true };
 
+  const before = (await groupRef(groupId).get()).data() ?? {};
   await groupRef(groupId).update(update);
+  // تغيير المواعيد بيعدّل نهاية الدورة الحالية (مش بس اللي بعدها).
+  const scheduleFields = ['cycleCount', 'cycleUnit', 'cycleStartDay', 'cycleStartHour', 'cycleStartDayOfMonth', 'utcOffsetMinutes'];
+  let cycleEndsAt: string | null = null;
+  if (scheduleFields.some((f) => update[f] !== undefined && update[f] !== before[f])) {
+    const end = await rescheduleCurrentCycle(groupId);
+    cycleEndsAt = end ? end.toISOString() : null;
+  }
   if (update.name) {
     const members = await groupRef(groupId).collection('members').get();
     const writer = db.bulkWriter();
     members.forEach((m) => writer.set(userGroupIndexRef(m.id, groupId), { name: update.name }, { merge: true }));
     await writer.close();
   }
-  return { ok: true };
+  return { ok: true, cycleEndsAt };
 });
 
 export async function removeFromGroup(groupId: string, uid: string): Promise<void> {

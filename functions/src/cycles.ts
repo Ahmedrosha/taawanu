@@ -15,7 +15,7 @@ import {
 import {
   QuarterRange, quarterCount, rangeLabel, segmentFor, segmentRange, slotForSegment, splitRange, TOTAL_QUARTERS,
 } from './rotation';
-import { CycleSettings, firstCycleEnd, lastCallTime, midpoint, nextCycleEnd } from './schedule';
+import { CycleSettings, firstCycleEnd, lastCallTime, midpoint, nextCycleEnd, rescheduledEnd } from './schedule';
 
 type PortionOrigin = 'empty' | 'carry' | 'distribute' | 'volunteer' | 'ask' | 'left';
 
@@ -132,6 +132,41 @@ export const startKhatma = onCall(async (request) => {
   await openCycle(groupId, g, 1, now, firstCycleEnd(now, settingsOf(g)));
   return { ok: true };
 });
+
+// ---------------------------------------------------------------------------
+// تغيير المواعيد والختمة شغالة
+
+/**
+ * الأدمن غيّر يوم البداية أو الساعة أو المدة: نهاية الدورة الحالية بتتحسب من جديد على الإعدادات الجديدة،
+ * والدورات اللي بعدها بتمشي عليها. لو الدورة خلاص خلصت (مستنية القفل) مفيش تغيير.
+ */
+export async function rescheduleCurrentCycle(groupId: string): Promise<Date | null> {
+  return db.runTransaction(async (tx) => {
+    const gSnap = await tx.get(groupRef(groupId));
+    const g = groupData(gSnap) as GroupDoc & { reminderStage?: string };
+    if (g.status !== 'active' || !g.currentCycle) return null;
+    const cRef = cycleRef(groupId, g.currentCycle);
+    const cSnap = await tx.get(cRef);
+    if (!cSnap.exists) return null;
+    const c = cSnap.data() as CycleDoc;
+    const now = new Date();
+    const oldEnd = c.endsAt.toDate();
+    if (oldEnd <= now) return null;
+    const start = c.startedAt.toDate();
+    const end = rescheduledEnd(start, now, settingsOf(g));
+    if (end.getTime() === oldEnd.getTime()) return null;
+    const mid = midpoint(start, end);
+    tx.update(cRef, { endsAt: Timestamp.fromDate(end), midAt: Timestamp.fromDate(mid) });
+    const stage = g.reminderStage ?? 'mid';
+    const reminder = stage === 'mid'
+      ? { nextReminderAt: Timestamp.fromDate(mid) }
+      : stage === 'last'
+        ? { nextReminderAt: Timestamp.fromDate(lastCallTime(start, end)) }
+        : {};
+    tx.update(groupRef(groupId), { nextCycleAt: Timestamp.fromDate(end), ...reminder });
+    return end;
+  });
+}
 
 // ---------------------------------------------------------------------------
 // إغلاق الدورة والانتقال للي بعدها (بالجدولة)

@@ -62,6 +62,17 @@ export function firstCycleEnd(now: Date, s: CycleSettings): Date {
   return end;
 }
 
+/**
+ * نهاية الدورة الحالية بعد ما الأدمن يغيّر المواعيد: بنفس قاعدة أول دورة محسوبة من بدايتها،
+ * ولو طلعت قريبة أوي من دلوقتي (أقل من يوم، أو نص وحدة للدورات اليومية) بنزود وحدة عشان الدورة متقفلش فجأة.
+ */
+export function rescheduledEnd(start: Date, now: Date, s: CycleSettings): Date {
+  let end = firstCycleEnd(start, s);
+  const minAhead = Math.min(DAY_MS, approxUnitMs(s.cycleUnit) / 2);
+  while (end.getTime() - now.getTime() < minAhead) end = addUnits(end, s, 1);
+  return end;
+}
+
 /** نهاية الدورة اللي بعدها. */
 export function nextCycleEnd(previousEnd: Date, s: CycleSettings): Date {
   return addUnits(previousEnd, s, s.cycleCount);
