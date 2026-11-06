@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../l10n/gen/app_localizations.dart';
 import '../../models/group_models.dart';
 import '../../models/group_options.dart';
+import '../../services/prefs.dart';
 import '../../services/groups_service.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
@@ -108,14 +109,7 @@ class _GroupBoardScreenState extends State<GroupBoardScreen> {
                   const SizedBox(height: 20),
                   KeyedSubtree(
                     key: _kMembers,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SectionTitle(t.members),
-                        const SizedBox(height: 8),
-                        _MembersList(group: g, members: members, me: me),
-                      ],
-                    ),
+                    child: _MembersSection(group: g, members: members, me: me),
                   ),
                 ],
                 ),
@@ -1181,6 +1175,116 @@ class _PastPortionsScreenState extends State<_PastPortionsScreen> {
         },
       ),
     );
+  }
+}
+
+/// عنوان الأعضاء وزرار الترتيب والقايمة.
+class _MembersSection extends StatefulWidget {
+  const _MembersSection({required this.group, required this.members, required this.me});
+
+  final Group group;
+  final List<Member> members;
+  final Member? me;
+
+  @override
+  State<_MembersSection> createState() => _MembersSectionState();
+}
+
+class _MembersSectionState extends State<_MembersSection> {
+  static const _sorts = ['points', 'name', 'oldest', 'newest', 'ward', 'status'];
+  late String _sort = _sorts.contains(Prefs.instance.memberSort) ? Prefs.instance.memberSort : 'points';
+  Stream<Cycle?>? _cycleStream;
+  int? _cycleNo;
+
+  String _label(AppLocalizations t, String s) => switch (s) {
+        'name' => t.sortName,
+        'oldest' => t.sortOldest,
+        'newest' => t.sortNewest,
+        'ward' => t.sortWard,
+        'status' => t.sortStatus,
+        _ => t.sortPoints,
+      };
+
+  /// ترتيب حالة القراءة: المتأخر، اللي لسه مبدأش، الجاري، اللي خلص.
+  static int _statusRank(String? st) => switch (st) {
+        'late' => 0,
+        'pending' => 1,
+        'in_progress' => 2,
+        'done' || 'late_done' => 3,
+        _ => 4,
+      };
+
+  List<Member> _sorted(Cycle? cycle) {
+    final g = widget.group;
+    final list = [...widget.members];
+    final far = DateTime(9999);
+    int byPoints(Member a, Member b) => b.points.compareTo(a.points);
+    int byName(Member a, Member b) {
+      if (a.hasNoName != b.hasNoName) return a.hasNoName ? 1 : -1;
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    }
+    final status = {for (final sg in cycle?.segments ?? const <Segment>[]) if (sg.uid != null) sg.uid!: sg.status};
+    list.sort((a, b) {
+      final r = switch (_sort) {
+        'name' => byName(a, b),
+        'oldest' => (a.joinedAt ?? far).compareTo(b.joinedAt ?? far),
+        'newest' => (b.joinedAt ?? DateTime(0)).compareTo(a.joinedAt ?? DateTime(0)),
+        'ward' => currentSegment(g, a).compareTo(currentSegment(g, b)),
+        'status' => _statusRank(status[a.uid]).compareTo(_statusRank(status[b.uid])),
+        _ => byPoints(a, b),
+      };
+      return r != 0 ? r : byName(a, b);
+    });
+    return list;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final g = widget.group;
+    final needCycle = _sort == 'status' && g.isActive;
+    if (needCycle && (_cycleStream == null || _cycleNo != g.currentCycle)) {
+      _cycleNo = g.currentCycle;
+      _cycleStream = GroupsService.instance.cycle(g.id, g.currentCycle);
+    }
+    final header = Row(
+      children: [
+        Expanded(child: SectionTitle(t.members)),
+        PopupMenuButton<String>(
+          tooltip: t.sortBy,
+          initialValue: _sort,
+          onSelected: (v) {
+            setState(() => _sort = v);
+            Prefs.instance.setMemberSort(v);
+          },
+          itemBuilder: (_) => [
+            for (final s in _sorts)
+              if (s != 'status' || g.isActive) PopupMenuItem(value: s, child: Text(_label(t, s))),
+          ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(_label(t, _sort), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                const SizedBox(width: 4),
+                Icon(Icons.swap_vert, size: 20, color: AppColors.textMuted),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+    Widget body(Cycle? c) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            header,
+            const SizedBox(height: 8),
+            _MembersList(group: g, members: _sorted(c), me: widget.me),
+          ],
+        );
+    if (!needCycle) return body(null);
+    return StreamBuilder<Cycle?>(stream: _cycleStream, builder: (context, snap) => body(snap.data));
   }
 }
 

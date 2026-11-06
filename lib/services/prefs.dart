@@ -169,6 +169,10 @@ class Prefs {
   Future<void> setHighlightColor(String v) => _p.setString('highlightColor', v);
 
   /// القراءة التلقائية بتنوّر إيه: ayah / word / none.
+  /// ترتيب قايمة الأعضاء: points / name / oldest / newest / ward / status.
+  String get memberSort => _p.getString('memberSort') ?? 'points';
+  Future<void> setMemberSort(String v) => _p.setString('memberSort', v);
+
   String get autoReadMode => _p.getString('autoReadMode') ?? 'ayah';
   Future<void> setAutoReadMode(String v) => _p.setString('autoReadMode', v);
 

@@ -89,6 +89,7 @@ class Member {
     required this.name,
     this.photoUrl,
     required this.points,
+    this.joinedAt,
     this.nowSegCycle,
     this.nowSeg,
   });
@@ -103,6 +104,12 @@ class Member {
   final String? photoUrl;
   final int points;
 
+  /// تاريخ الانضمام للمجموعة.
+  final DateTime? joinedAt;
+
+  /// العضو مالوش اسم (دخل بحساب مخفي الاسم).
+  bool get hasNoName => name.trim().isEmpty || name.trim() == '—';
+
   bool get isAdmin => role == 'admin';
   bool get isManager => role == 'admin' || role == 'assistant';
 
@@ -115,6 +122,7 @@ class Member {
       name: (d['name'] as String?) ?? '—',
       photoUrl: d['photoUrl'] as String?,
       points: _int(d['points']),
+      joinedAt: (d['joinedAt'] as Timestamp?)?.toDate(),
       nowSegCycle: ((d['nowSegment'] as Map?)?['cycle'] as num?)?.toInt(),
       nowSeg: ((d['nowSegment'] as Map?)?['seg'] as num?)?.toInt(),
     );
