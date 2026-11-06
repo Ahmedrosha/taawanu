@@ -831,12 +831,15 @@ class _DonePortionsState extends State<_DonePortions> {
 
 /// كارت ورد إضافي (في اللوحة وفي صفحة الدورات اللي فاتت).
 class _PortionTile extends StatelessWidget {
-  const _PortionTile({required this.group, required this.p, required this.members, required this.me});
+  const _PortionTile({required this.group, required this.p, required this.members, required this.me, this.locked = false});
 
   final Group group;
   final Portion p;
   final List<Member> members;
   final Member? me;
+
+  /// ورد خلص في ختمة اكتملت: مفيش رجوع فيه.
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -896,7 +899,7 @@ class _PortionTile extends StatelessWidget {
                     onPressed: () => context.push('/read', extra: ReadRequest.portion(group: group, portion: p)),
                     child: Text(p.isDone ? t.open : (p.quartersRead > 0 ? t.continueReading : t.readNow)),
                   ),
-                if (me?.isManager ?? false)
+                if ((me?.isManager ?? false) && !(p.isDone && locked))
                   IconButton(
                     tooltip: t.assignToMember,
                     icon: const Icon(Icons.more_vert),
@@ -1024,6 +1027,19 @@ class _DonePortionsScreen extends StatefulWidget {
 class _DonePortionsScreenState extends State<_DonePortionsScreen> {
   late final Stream<List<Portion>> _portions = GroupsService.instance.donePortions(widget.group.id, widget.group.currentCycle);
 
+  /// الدورات اللي ختمتها اكتملت (أوراد الختمة دي مفيهاش رجوع).
+  final Map<int, bool> _complete = {};
+
+  void _checkCycles(Iterable<int> cycles) {
+    for (final c in cycles) {
+      if (_complete.containsKey(c)) continue;
+      _complete[c] = false;
+      GroupsService.instance.cycle(widget.group.id, c).first.then((cy) {
+        if (mounted && (cy?.khatmaComplete ?? false)) setState(() => _complete[c] = true);
+      }).catchError((_) {});
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
@@ -1036,11 +1052,13 @@ class _DonePortionsScreenState extends State<_DonePortionsScreen> {
               final c = a.cycle.compareTo(b.cycle);
               return c != 0 ? c : a.fromQuarter.compareTo(b.fromQuarter);
             });
+          _checkCycles(list.map((p) => p.cycle).toSet());
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             children: [
               if (!snap.hasData) const Center(child: CircularProgressIndicator()),
-              for (final p in list) _PortionTile(group: widget.group, p: p, members: widget.members, me: widget.me),
+              for (final p in list)
+                _PortionTile(group: widget.group, p: p, members: widget.members, me: widget.me, locked: _complete[p.cycle] ?? true),
             ],
           );
         },

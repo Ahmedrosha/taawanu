@@ -443,6 +443,7 @@
   "inProgressPortions": "حد شغال فيها",
   "donePortionsN": "خلصت ({n})",
   "donePortionsTitle": "خلصت في الدورة دي",
+  "khatmaClosedNoUndo": "الختمة دي اكتملت، مينفعش ترجع في أورادها.",
   "pastLeftoversTitle": "أوراد من دورات فاتت",
   "pastLeftoversBody": "أوراد متأخرة لسه متقرتش من دورات خلصت. خد منها عشان ختمتها تكمل.",
   "cyclePortionsHeader": "الدورة {n} · {count} ورد",

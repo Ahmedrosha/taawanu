@@ -920,6 +920,7 @@
   "donePortionsN": "Completed ({n})",
   "donePortionsTitle": "Completed this cycle",
   "@donePortionsN": {"placeholders": {"n": {"type": "int"}}},
+  "khatmaClosedNoUndo": "This cycle’s khatma is complete, so its portions can’t be undone.",
   "pastLeftoversTitle": "Portions from past cycles",
   "pastLeftoversBody": "Late portions from finished cycles that are still unread. Take one to complete that khatma.",
   "cyclePortionsHeader": "Cycle {n} · {count} portions",

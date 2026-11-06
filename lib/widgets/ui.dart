@@ -227,7 +227,7 @@ Future<bool> runAction(BuildContext context, Future<void> Function() action, {St
     return true;
   } on FirebaseFunctionsException catch (e) {
     debugPrint('Action failed: ${e.code} ${e.message}');
-    messenger.showSnackBar(SnackBar(content: Text(_friendly(t, e.code))));
+    messenger.showSnackBar(SnackBar(content: Text(_friendly(t, e.code, e.message))));
   } catch (e) {
     debugPrint('Action failed: $e');
     messenger.showSnackBar(SnackBar(content: Text(t.actionFailed)));
@@ -235,7 +235,8 @@ Future<bool> runAction(BuildContext context, Future<void> Function() action, {St
   return false;
 }
 
-String _friendly(AppLocalizations t, String code) => switch (code) {
+String _friendly(AppLocalizations t, String code, [String? message]) => switch (code) {
+      'failed-precondition' when (message ?? '').contains('Khatma already complete') => t.khatmaClosedNoUndo,
       'not-found' || 'deadline-exceeded' => t.inviteInvalid,
       'resource-exhausted' => t.groupFull,
       _ => t.actionFailed,
