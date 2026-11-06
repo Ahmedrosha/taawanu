@@ -10,6 +10,7 @@ import '../../services/prefs.dart';
 import '../../services/quran_repository.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/name_dialog.dart';
 import '../../widgets/ui.dart';
 import '../groups/group_board_screen.dart' show ReadRequest, TimeLeftChip;
 import '../prayer/next_prayer_tile.dart';
@@ -88,6 +89,18 @@ class _HomeScreenState extends State<HomeScreen> {
             const NextPrayerTile(),
             // الخانة دي بتفضل موجودة حتى بعد ما الكارت يتقفل، عشان اللي تحتها ميتحركش ويتبني من الأول
             // (بيانات "وردك الحالي" اشتراك بيتعمل مرة واحدة، ولو اتبنى من جديد كان بيفضل يحمّل).
+            // اللي مالوش اسم: كارت يكتب منه اسمه، وبيختفي أول ما يكتبه.
+            KeyedSubtree(
+              key: const ValueKey('nameCard'),
+              child: StreamBuilder<UserStats>(
+                stream: _stats,
+                builder: (context, snap) {
+                  final name = snap.data?.name.trim();
+                  if (name == null || (name.isNotEmpty && name != '—')) return const SizedBox.shrink();
+                  return const Padding(padding: EdgeInsets.only(top: 12), child: _NameCard());
+                },
+              ),
+            ),
             KeyedSubtree(
               key: const ValueKey('guideCard'),
               child: Prefs.instance.guideCardDone
@@ -250,6 +263,55 @@ class _HomeGroupCardState extends State<_HomeGroupCard> {
 }
 
 /// كارت للمستخدم الجديد: بيفتح دليل الاستخدام، وبيختفي بعد ما يتفتح أو يتقفل.
+/// كارت للي مالوش اسم: أعضاء مجموعته مش هيعرفوه غير لما يكتب اسمه.
+class _NameCard extends StatelessWidget {
+  const _NameCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    Future<void> edit() async {
+      final name = await showNameDialog(context, title: t.editName);
+      if (name == null || !context.mounted) return;
+      await runAction(context, () => UserService.instance.updateName(name), success: t.nameUpdated);
+    }
+
+    return Material(
+      color: AppColors.goldTint,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: edit,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            children: [
+              Icon(Icons.badge_outlined, color: AppColors.accent),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(t.nameCardTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(t.nameCardBody, style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 40), padding: const EdgeInsets.symmetric(horizontal: 16)),
+                onPressed: edit,
+                child: Text(t.nameCardButton),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _GuideCard extends StatelessWidget {
   const _GuideCard({required this.onDone});
 
