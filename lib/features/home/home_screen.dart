@@ -11,6 +11,7 @@ import '../../services/quran_repository.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/name_dialog.dart';
+import '../update/update_widgets.dart';
 import '../../widgets/ui.dart';
 import '../groups/group_board_screen.dart' show ReadRequest, TimeLeftChip;
 import '../prayer/next_prayer_tile.dart';
@@ -89,6 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const NextPrayerTile(),
             // الخانة دي بتفضل موجودة حتى بعد ما الكارت يتقفل، عشان اللي تحتها ميتحركش ويتبني من الأول
             // (بيانات "وردك الحالي" اشتراك بيتعمل مرة واحدة، ولو اتبنى من جديد كان بيفضل يحمّل).
+            const KeyedSubtree(key: ValueKey('updateCard'), child: UpdateBanner()),
             // اللي مالوش اسم: كارت يكتب منه اسمه، وبيختفي أول ما يكتبه.
             KeyedSubtree(
               key: const ValueKey('nameCard'),

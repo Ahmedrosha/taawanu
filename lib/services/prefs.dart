@@ -169,6 +169,22 @@ class Prefs {
   Future<void> setHighlightColor(String v) => _p.setString('highlightColor', v);
 
   /// القراءة التلقائية بتنوّر إيه: ayah / word / none.
+  /// شريط "فيه تحديث" اتقفل لأنهي نسخة وإمتى.
+  String? get updateDismissedFor => _p.getString('updateDismissedFor');
+  DateTime? get updateDismissedAt {
+    final v = _p.getInt('updateDismissedAt');
+    return v == null ? null : DateTime.fromMillisecondsSinceEpoch(v);
+  }
+
+  Future<void> setUpdateDismissed(String version) async {
+    await _p.setString('updateDismissedFor', version);
+    await _p.setInt('updateDismissedAt', DateTime.now().millisecondsSinceEpoch);
+  }
+
+  /// آخر نسخة اتسجلت في حساب المستخدم (uid|version).
+  String? get recordedVersion => _p.getString('recordedVersion');
+  Future<void> setRecordedVersion(String v) => _p.setString('recordedVersion', v);
+
   /// ترتيب قايمة الأعضاء: points / name / oldest / newest / ward / status.
   String get memberSort => _p.getString('memberSort') ?? 'points';
   Future<void> setMemberSort(String v) => _p.setString('memberSort', v);

@@ -50,6 +50,12 @@ service cloud.firestore {
     // الاسم والصورة والإعدادات يعدلهم صاحبهم.
     // النقاط والسلسلة والإحصائيات يكتبها السيرفر بس.
 
+    // إعدادات التطبيق العامة (آخر نسخة وأقل نسخة مسموحة): الكل يقراها، ومحدش يكتبها من التطبيق.
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /users/{uid} {
       // كل واحد يقرا ملفه بس. أسماء وصور الأعضاء موجودة في أعضاء كل مجموعة.
       allow read: if isSelf(uid);
@@ -60,13 +66,17 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time;
 
       allow update: if isSelf(uid)
-        && changedOnly(['name', 'photoUrl', 'locale', 'settings', 'fcmTokens', 'notifSeenAt'])
+        && changedOnly(['name', 'photoUrl', 'locale', 'settings', 'fcmTokens', 'notifSeenAt', 'appVersion', 'appPlatform', 'appVersionAt'])
         && (!('name' in request.resource.data) || isShortText(request.resource.data.name, 60))
         && (!('fcmTokens' in request.resource.data)
             || (request.resource.data.fcmTokens is list && request.resource.data.fcmTokens.size() <= 10))
         && (!('locale' in request.resource.data) || request.resource.data.locale in ['ar', 'en'])
         && (request.resource.data.get('notifSeenAt', null) == resource.data.get('notifSeenAt', null)
-            || request.resource.data.notifSeenAt == request.time);
+            || request.resource.data.notifSeenAt == request.time)
+        && (!('appVersion' in request.resource.data) || isShortText(request.resource.data.appVersion, 20))
+        && (!('appPlatform' in request.resource.data) || request.resource.data.appPlatform in ['android', 'ios'])
+        && (request.resource.data.get('appVersionAt', null) == resource.data.get('appVersionAt', null)
+            || request.resource.data.appVersionAt == request.time);
 
       // آخر آية وقف عندها في كل ختمة: خاص بصاحبه بس.
       match /readPositions/{id} {

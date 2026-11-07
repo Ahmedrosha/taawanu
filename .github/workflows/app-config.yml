@@ -1,0 +1,43 @@
+name: App versions
+
+# يدوي: يحدد آخر نسخة وأقل نسخة مسموحة لكل منصة، ويطلع عدد المستخدمين على كل نسخة (من غير بيانات شخصية).
+# سيب الخانة فاضية عشان متتغيرش، أو اكتب none عشان تتشال.
+on:
+  workflow_dispatch:
+    inputs:
+      latest_android:
+        description: "آخر نسخة أندرويد (مثلًا 1.0.18)"
+        required: false
+      latest_ios:
+        description: "آخر نسخة أيفون"
+        required: false
+      min_android:
+        description: "أقل نسخة أندرويد مسموحة (إجباري)"
+        required: false
+      min_ios:
+        description: "أقل نسخة أيفون مسموحة (إجباري)"
+        required: false
+
+jobs:
+  config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Service account from secrets
+        env:
+          SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+      - run: mkdir -p "$RUNNER_TEMP/ac" && cd "$RUNNER_TEMP/ac" && npm init -y >/dev/null && npm install --silent firebase-admin
+      - name: Update and report
+        env:
+          NODE_PATH: ${{ runner.temp }}/ac/node_modules
+          LATEST_ANDROID: ${{ inputs.latest_android }}
+          LATEST_IOS: ${{ inputs.latest_ios }}
+          MIN_ANDROID: ${{ inputs.min_android }}
+          MIN_IOS: ${{ inputs.min_ios }}
+        run: node tools/app_config.js

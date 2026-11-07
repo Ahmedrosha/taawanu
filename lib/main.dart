@@ -8,6 +8,7 @@ import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'services/prefs.dart';
 import 'services/push_service.dart';
+import 'services/update_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,5 +30,7 @@ Future<void> main() async {
   // تنبيهات الصلاة: بتتجدد مع كل فتح للتطبيق، ولما المكان أو الإعدادات تتغير.
   PrayerController.instance.addListener(PrayerAlerts.instance.reschedule);
   PrayerAlerts.instance.reschedule();
+  // مقارنة النسخة بآخر نسخة، وتسجيلها في حساب المستخدم.
+  UpdateService.instance.start();
   runApp(const TaawanuApp());
 }

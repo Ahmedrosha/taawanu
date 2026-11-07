@@ -1,3 +1,5 @@
+import 'features/update/update_widgets.dart';
+import 'services/update_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -57,6 +59,12 @@ class TaawanuApp extends StatelessWidget {
                 child: SafeArea(top: false, left: false, right: false, child: app),
               );
             }
+            // نسخة أقدم من أقل نسخة مسموحة: شاشة "لازم تحدّث" مكان التطبيق.
+            final inner = app;
+            app = ValueListenableBuilder<UpdateNeed>(
+              valueListenable: UpdateService.instance.need,
+              builder: (context, need, _) => need == UpdateNeed.required ? const UpdateRequiredScreen() : inner,
+            );
             return KeyedSubtree(key: ValueKey(b), child: app);
           },
           locale: locale,
