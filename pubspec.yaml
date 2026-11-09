@@ -44,6 +44,7 @@ flutter:
   assets:
     - assets/quran/quran.json
     - assets/quran/madinah.json
+    - assets/quran/tajweed.json
     - assets/mushaf/pages.json
     - assets/tafsir/muyassar.json
     - assets/adhkar/daily.json

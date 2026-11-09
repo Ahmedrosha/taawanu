@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../theme/app_colors.dart';
 import 'prefs.dart';
 
 /// خطوط صفحات مجمع الملك فهد (QPC V2، أو V4 الملونة بالتجويد): خط لكل صفحة من الـ٦٠٤.
@@ -27,7 +28,9 @@ class MushafFonts extends ChangeNotifier {
   /// رمز البسملة في خط البسملة بتاع المجمع.
   static const basmalaGlyphs = 'ﭑﭒﭓ';
 
-  static String familyFor(int page) => '${tajweed ? 'QPC4' : 'QPC2'}_p${page.toString().padLeft(3, '0')}';
+  /// في الوضع الليلي خطوط التجويد بتستخدم ألوانها الفاتحة (لوحة الألوان التانية في الخط).
+  static String familyFor(int page) =>
+      '${tajweed ? (AppColors.isDark ? 'QPC4D' : 'QPC4') : 'QPC2'}_p${page.toString().padLeft(3, '0')}';
   static String _fileFor(int page) => 'p${page.toString().padLeft(3, '0')}.ttf';
 
   final _loaded = <String>{};
@@ -65,7 +68,8 @@ class MushafFonts extends ChangeNotifier {
     if (_loaded.contains(family)) return Future.value(true);
     return _pending.putIfAbsent(family, () async {
       try {
-        final bytes = await _bytes(file);
+        var bytes = await _bytes(file);
+        if (family.startsWith('QPC4D')) bytes = darkPalette(bytes);
         final loader = FontLoader(family)..addFont(Future.value(ByteData.sublistView(bytes)));
         await loader.load();
         _loaded.add(family);
@@ -78,6 +82,29 @@ class MushafFonts extends ChangeNotifier {
         _pending.remove(family);
       }
     });
+  }
+
+  /// نسخة من الخط بتستخدم لوحة الألوان التانية (المعمولة للخلفية الغامقة) كأنها الأساسية:
+  /// في جدول CPAL، أول لوحة بتشاور على نفس ألوان التانية. لو مفيش لوحة تانية الخط بيفضل زي ما هو.
+  static Uint8List darkPalette(Uint8List src) {
+    final b = Uint8List.fromList(src);
+    final d = ByteData.sublistView(b);
+    if (b.length < 12) return src;
+    final numTables = d.getUint16(4);
+    for (var i = 0; i < numTables; i++) {
+      final rec = 12 + i * 16;
+      if (rec + 16 > b.length) break;
+      final tag = String.fromCharCodes(b.sublist(rec, rec + 4));
+      if (tag != 'CPAL') continue;
+      final off = d.getUint32(rec + 8);
+      if (off + 14 > b.length) return src;
+      final numPalettes = d.getUint16(off + 4);
+      if (numPalettes < 2) return src;
+      // colorRecordIndices بتبدأ بعد الهيدر (١٢ بايت).
+      d.setUint16(off + 12, d.getUint16(off + 14));
+      return b;
+    }
+    return src;
   }
 
   /// من الموبايل لو موجود، وإلا من النت (وبيتحفظ).

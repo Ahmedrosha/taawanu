@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n/gen/app_localizations.dart';
+import 'prefs.dart';
 
 class Ayah {
   const Ayah({required this.surah, required this.number, required this.text});
@@ -15,7 +16,13 @@ class Ayah {
 
 /// نص المصحف وحدود الأرباع (من ملف assets/quran/quran.json).
 class QuranData {
-  QuranData._(this.basmala, this.surahNamesAr, this.surahNamesEn, this._quarters, this._surahs, {this.numbersInText = false});
+  QuranData._(this.basmala, this.surahNamesAr, this.surahNamesEn, this._quarters, this._surahs,
+      {this.numbersInText = false, List<List<List<int>>>? tajweed}) : _tajweed = tajweed;
+
+  /// أحكام التجويد لكل آية: [نوع، بداية، نهاية، ...] على نص التنزيل (لما التجويد الملون مختار).
+  final List<List<List<int>>>? _tajweed;
+
+  List<int>? tajweedOf(int surah, int ayah) => _tajweed?[surah - 1][ayah - 1];
 
   /// نص مصحف المدينة فيه علامة رقم الآية جوه النص نفسه.
   final bool numbersInText;
@@ -29,6 +36,20 @@ class QuranData {
   /// نفس البيانات بنص مصحف المدينة (مجمع الملك فهد). رقم الآية جزء من النص.
   QuranData _withText(String basmala, List<List<String>> surahs) =>
       QuranData._(basmala, surahNamesAr, surahNamesEn, _quarters, surahs, numbersInText: true);
+
+  /// نفس البيانات بنص التنزيل وأحكام التجويد عليه.
+  QuranData _withTajweed(String basmala, List<List<String>> surahs, List<List<List<int>>> tajweed) =>
+      QuranData._(basmala, surahNamesAr, surahNamesEn, _quarters, surahs, tajweed: tajweed);
+
+  static (String, List<List<String>>, List<List<List<int>>>) _parseTajweed(String raw) {
+    final d = jsonDecode(raw) as Map<String, dynamic>;
+    final surahs = d['surahs'] as List;
+    return (
+      d['basmala'] as String,
+      [for (final s in surahs) [for (final a in s as List) (a as List)[0] as String]],
+      [for (final s in surahs) [for (final a in s as List) List<int>.from((a as List)[1] as List)]],
+    );
+  }
 
   static (String, List<List<String>>) _parseMadinah(String raw) {
     final d = jsonDecode(raw) as Map<String, dynamic>;
@@ -120,8 +141,21 @@ class QuranRepository {
         return base._withText(basmala, surahs);
       }();
 
-  /// حسب الخط المختار.
-  Future<QuranData> loadFor(String font) => font == madinahFont ? loadMadinah() : load();
+  Future<QuranData>? _loadingTajweed;
+
+  /// نص التنزيل بأحكام التجويد (للنص المتصل الملون).
+  Future<QuranData> loadTajweed() => _loadingTajweed ??= () async {
+        final base = await load();
+        final raw = await rootBundle.loadString('assets/quran/tajweed.json');
+        final (basmala, surahs, tj) = await compute(QuranData._parseTajweed, raw);
+        return base._withTajweed(basmala, surahs, tj);
+      }();
+
+  /// حسب الخط المختار (والتجويد الملون في النص المتصل).
+  Future<QuranData> loadFor(String font, {bool? tajweed}) {
+    if (tajweed ?? Prefs.instance.textTajweed) return loadTajweed();
+    return font == madinahFont ? loadMadinah() : load();
+  }
 }
 
 /// اسم خط مصحف المدينة في الإعدادات وفي pubspec.

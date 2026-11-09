@@ -22,6 +22,7 @@ class MushafSettings extends StatefulWidget {
 class _MushafSettingsState extends State<MushafSettings> {
   late double _size = Prefs.instance.readerFontSize;
   late String _font = Prefs.instance.readerFont;
+  late bool _textTajweed = Prefs.instance.textTajweed;
   late String _highlight = Prefs.instance.highlightColor;
 
   String _colorName(AppLocalizations t, String id) => switch (id) {
@@ -151,13 +152,13 @@ class _MushafSettingsState extends State<MushafSettings> {
                 decoration: BoxDecoration(color: AppColors.paper, borderRadius: BorderRadius.circular(12)),
                 child: FutureBuilder<QuranData>(
                   // المفتاح بالخط: لما الخط يتغير، النص يتحمّل من جديد (مصحف المدينة نصه مختلف).
-                  key: ValueKey(_font),
-                  future: QuranRepository.instance.loadFor(_font),
+                  key: ValueKey('$_font|$_textTajweed'),
+                  future: QuranRepository.instance.loadFor(_font, tajweed: _textTajweed),
                   builder: (context, snap) => Text(
                     snap.data?.ayahText(1, 2) ?? '',
                     textAlign: TextAlign.center,
                     textDirection: TextDirection.rtl,
-                    style: quranTextStyle(_font, fontSize: _size, color: AppColors.text),
+                    style: quranTextStyle(_textTajweed && _font == madinahFont ? 'Amiri Quran' : _font, fontSize: _size, color: AppColors.text),
                   ),
                 ),
               ),
@@ -185,6 +186,17 @@ class _MushafSettingsState extends State<MushafSettings> {
                     }),
                 ],
               ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(t.textTajweed),
+                subtitle: Text(t.textTajweedNote, style: note),
+                value: _textTajweed,
+                onChanged: (v) {
+                  setState(() => _textTajweed = v);
+                  Prefs.instance.setTextTajweed(v);
+                },
+              ),
+              if (_textTajweed) ...[const TajweedLegend(text: true), const SizedBox(height: 4), Text(t.textTajweedCredit, style: note)],
               const SizedBox(height: 10),
               Text(t.textViewOnlyNote, style: note),
               const SizedBox(height: 4),
@@ -326,7 +338,10 @@ class _QpcDownloadsState extends State<_QpcDownloads> {
 
 /// ألوان التجويد في مصحف المجمع الملون.
 class TajweedLegend extends StatelessWidget {
-  const TajweedLegend({super.key});
+  const TajweedLegend({super.key, this.text = false});
+
+  /// النص المتصل: مفيهوش لون التفخيم.
+  final bool text;
 
   @override
   Widget build(BuildContext context) {
@@ -338,7 +353,7 @@ class TajweedLegend extends StatelessWidget {
       (const Color(0xFFC9A227), t.tjMaddTabii),
       (const Color(0xFF169C3B), t.tjGhunnah),
       (const Color(0xFF2E9BD6), t.tjQalqalah),
-      (const Color(0xFF1F3F9E), t.tjTafkhim),
+      if (!text) (const Color(0xFF1F3F9E), t.tjTafkhim),
       (const Color(0xFF9AA0A6), t.tjSilent),
     ];
     return Column(

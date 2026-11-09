@@ -14,6 +14,8 @@ import '../../services/prefs.dart';
 import '../../services/recitation_player.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/tajweed_colors.dart';
+import '../profile/mushaf_settings.dart';
 import '../../widgets/quran_style.dart';
 import '../../widgets/ui.dart';
 import '../groups/group_board_screen.dart' show ReadRequest;
@@ -1018,6 +1020,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             children: [
               Text(t.chooseFont, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
               const SizedBox(height: 4),
+              // التجويد الملون في النص المتصل.
+              SwitchListTile(
+                secondary: Icon(Icons.palette_outlined, color: AppColors.accent),
+                title: Text(t.textTajweed),
+                subtitle: Text(t.textTajweedNote, style: const TextStyle(fontSize: 12)),
+                value: Prefs.instance.textTajweed,
+                onChanged: (v) => Navigator.pop(context, v ? '#tajweed-on' : '#tajweed-off'),
+              ),
+              if (Prefs.instance.textTajweed)
+                const Padding(padding: EdgeInsets.fromLTRB(16, 0, 16, 8), child: TajweedLegend(text: true)),
               for (final f in Prefs.readerFonts)
                 ListTile(
                   selected: f == current,
@@ -1036,7 +1048,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // نفس الآية تفضل قدامك، والقراءة الصامتة/التلاوة بتكمّل.
     final pos = _readingPosition();
     if (pos != null) _storePosition(pos);
-    await Prefs.instance.setReaderFont(picked);
+    if (picked.startsWith('#tajweed')) {
+      await Prefs.instance.setTextTajweed(picked == '#tajweed-on');
+    } else {
+      await Prefs.instance.setReaderFont(picked);
+    }
     if (!mounted) return;
     setState(() {
       _textData = null;
@@ -1124,7 +1140,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             : null,
       ),
       body: FutureBuilder<(QuranData, MushafLayout?)>(
-        key: ValueKey('$_view|${Prefs.instance.readerFont}'),
+        key: ValueKey('$_view|${Prefs.instance.readerFont}|${Prefs.instance.textTajweed}'),
         future: _data,
         builder: (context, snap) {
           final data = snap.data;
@@ -1317,7 +1333,7 @@ class _QuarterText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ayahs = data.ayahsOfQuarter(quarter);
-    final quranStyle = quranTextStyle(Prefs.instance.readerFont, fontSize: fontSize, color: AppColors.text);
+    final quranStyle = quranTextStyle(Prefs.instance.textFont, fontSize: fontSize, color: AppColors.text);
     final markStyle = quranStyle.copyWith(fontSize: fontSize * 0.8, color: AppColors.goldInk);
 
     // نقسم الآيات لمجموعات حسب السورة، عشان نحط عنوان السورة قبل أول آية فيها.
@@ -1362,10 +1378,31 @@ class _QuarterText extends StatelessWidget {
       final text = '${a.text} ';
       final h = highlight;
       final lit = quranStyle.copyWith(backgroundColor: readHighlightColor);
+      final tj = data.tajweedOf(a.surah, a.number);
+      // جزء من الآية بستايل معيّن، ولو التجويد شغال بيتقسم بألوان الأحكام.
+      void add(int from, int to, TextStyle st) {
+        if (to <= from) return;
+        if (tj == null || tj.isEmpty) {
+          spans.add(TextSpan(text: text.substring(from, to), style: st));
+          return;
+        }
+        var i = from;
+        for (var r = 0; r + 2 < tj.length; r += 3) {
+          final s0 = tj[r + 1].clamp(from, to), e0 = tj[r + 2].clamp(from, to);
+          if (e0 <= i) continue;
+          if (s0 >= to) break;
+          if (s0 > i) spans.add(TextSpan(text: text.substring(i, s0), style: st));
+          final st0 = s0 > i ? s0 : i;
+          spans.add(TextSpan(text: text.substring(st0, e0), style: st.copyWith(color: tajweedColor(tj[r]))));
+          i = e0;
+        }
+        if (i < to) spans.add(TextSpan(text: text.substring(i, to), style: st));
+      }
+
       if (h == null || !h.isAyah(a.surah, a.number)) {
-        spans.add(TextSpan(text: text, style: quranStyle));
+        add(0, text.length, quranStyle);
       } else if (h.word == null) {
-        spans.add(TextSpan(text: text, style: lit));
+        add(0, text.length, lit);
       } else {
         // كلمة واحدة بس منوّرة.
         final ws = ayahWordStarts(a.text);
@@ -1373,9 +1410,9 @@ class _QuarterText extends StatelessWidget {
         final from = ws.isEmpty ? 0 : ws[k];
         var to = k + 1 < ws.length ? ws[k + 1] - 1 : a.text.length;
         if (to < from) to = from;
-        spans.add(TextSpan(text: text.substring(0, from), style: quranStyle));
-        spans.add(TextSpan(text: text.substring(from, to), style: lit));
-        spans.add(TextSpan(text: text.substring(to), style: quranStyle));
+        add(0, from, quranStyle);
+        add(from, to, lit);
+        add(to, text.length, quranStyle);
       }
       length += text.length;
       // مصحف المدينة: رقم الآية جوه النص بشكل المصحف المطبوع.

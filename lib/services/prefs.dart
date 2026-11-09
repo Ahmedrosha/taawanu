@@ -33,6 +33,13 @@ class Prefs {
 
   Future<void> setReaderFont(String v) => _p.setString('readerFont', v);
 
+  /// التجويد الملون في النص المتصل (بنص التنزيل).
+  bool get textTajweed => _p.getBool('textTajweed') ?? false;
+  Future<void> setTextTajweed(bool v) => _p.setBool('textTajweed', v);
+
+  /// خط النص المتصل الفعلي: التجويد بنص التنزيل، فخط حفص بتاع المجمع بيتبدل بأميري قرآن.
+  String get textFont => textTajweed && readerFont == 'KFGQPC Hafs' ? 'Amiri Quran' : readerFont;
+
   /// شكل القراءة: 'pages' = صفحات المصحف (الافتراضي)، 'text' = نص متصل بالحجم اللي يختاره.
   String get readerView => _p.getString('readerView') == 'text' ? 'text' : 'pages';
   Future<void> setReaderView(String v) => _p.setString('readerView', v);
