@@ -1,0 +1,19 @@
+name: Tajweed check (temp)
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  c:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: |
+          curl -fsSL -o p50.ttf "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/ttf/p50.ttf"
+          python3 tools/tj_check.py
+          npm init -y >/dev/null && npm i playwright@1.47.2 >/dev/null && npx playwright install --with-deps chromium >/dev/null
+          node -e "const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:1700,height:900},deviceScaleFactor:2});await p.goto('file://'+process.cwd()+'/index.html');await p.waitForTimeout(3000);await p.screenshot({path:'s.png',fullPage:true});await b.close()})()"
+          mkdir o && cp s.png o/ && cd o && git init -q && git checkout -q -b tmp-sample && git add . && git -c user.name=ci -c user.email=ci@local commit -qm s
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" tmp-sample
