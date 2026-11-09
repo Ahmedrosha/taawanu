@@ -110,7 +110,7 @@ class _MushafSettingsState extends State<MushafSettings> {
             isDefault: true,
             children: [
               // عينة من شكل الصفحة بالخط المختار.
-              MushafSample(qpc: _style == 'qpc', key: ValueKey(_style)),
+              MushafSample(qpc: _style != 'hafs', key: ValueKey(_style)),
               const SizedBox(height: 10),
               Text(t.pageStyle, style: label),
               const SizedBox(height: 8),
@@ -123,10 +123,20 @@ class _MushafSettingsState extends State<MushafSettings> {
                   setState(() => _style = 'qpc');
                   Prefs.instance.setPageStyle('qpc');
                 }),
+                _chip(t.pageStyleTajweed, _style == 'tajweed', () {
+                  setState(() => _style = 'tajweed');
+                  Prefs.instance.setPageStyle('tajweed');
+                }),
               ]),
               const SizedBox(height: 8),
-              Text(_style == 'qpc' ? t.qpcNote : t.pagesNote, style: note),
-              if (_style == 'qpc') const _QpcDownloads(),
+              Text(_style == 'hafs' ? t.pagesNote : t.qpcNote, style: note),
+              if (_style == 'tajweed') ...[
+                const SizedBox(height: 10),
+                const TajweedLegend(),
+                const SizedBox(height: 6),
+                Text(t.tajweedCredit, style: note),
+              ],
+              if (_style != 'hafs') _QpcDownloads(key: ValueKey(_style)),
             ],
           ),
           const SizedBox(height: 8),
@@ -234,7 +244,7 @@ class _MushafSettingsState extends State<MushafSettings> {
 
 /// تحميل كل صفحات خطوط المجمع مرة واحدة، أو مسحها.
 class _QpcDownloads extends StatefulWidget {
-  const _QpcDownloads();
+  const _QpcDownloads({super.key});
 
   @override
   State<_QpcDownloads> createState() => _QpcDownloadsState();
@@ -310,6 +320,45 @@ class _QpcDownloadsState extends State<_QpcDownloads> {
           ),
         );
       },
+    );
+  }
+}
+
+/// ألوان التجويد في مصحف المجمع الملون.
+class TajweedLegend extends StatelessWidget {
+  const TajweedLegend({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final items = [
+      (const Color(0xFF9B1B1B), t.tjMaddLazim),
+      (const Color(0xFFE0262B), t.tjMaddWajib),
+      (const Color(0xFFF08A24), t.tjMaddJaiz),
+      (const Color(0xFFC9A227), t.tjMaddTabii),
+      (const Color(0xFF169C3B), t.tjGhunnah),
+      (const Color(0xFF2E9BD6), t.tjQalqalah),
+      (const Color(0xFF1F3F9E), t.tjTafkhim),
+      (const Color(0xFF9AA0A6), t.tjSilent),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(t.tajweedColors, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 12,
+          runSpacing: 6,
+          children: [
+            for (final (c, label) in items)
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                Container(width: 12, height: 12, decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(3))),
+                const SizedBox(width: 6),
+                Text(label, style: const TextStyle(fontSize: 12)),
+              ]),
+          ],
+        ),
+      ],
     );
   }
 }

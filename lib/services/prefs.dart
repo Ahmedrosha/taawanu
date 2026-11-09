@@ -38,7 +38,11 @@ class Prefs {
   Future<void> setReaderView(String v) => _p.setString('readerView', v);
 
   /// خط الصفحات: 'hafs' = خط حفص (جوه التطبيق)، 'qpc' = خطوط صفحات المجمع (بتتحمّل).
-  String get pageStyle => _p.getString('pageStyle') == 'qpc' ? 'qpc' : 'hafs';
+  /// شكل الصفحات: hafs (خط حفص) / qpc (خطوط المجمع) / tajweed (خطوط المجمع الملونة بالتجويد).
+  String get pageStyle {
+    final v = _p.getString('pageStyle');
+    return v == 'qpc' || v == 'tajweed' ? v! : 'hafs';
+  }
   Future<void> setPageStyle(String v) => _p.setString('pageStyle', v);
 
   /// عدادات الأذكار بتتصفر كل يوم.

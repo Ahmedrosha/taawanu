@@ -54,7 +54,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   /// 'pages' = صفحات المصحف، 'text' = نص متصل.
   late String _view = Prefs.instance.readerView;
-  late bool _qpc = Prefs.instance.pageStyle == 'qpc';
+  late bool _qpc = Prefs.instance.pageStyle != 'hafs';
   PageController? _pager;
   int _page = 1;
 

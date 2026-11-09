@@ -6,7 +6,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
-/// خطوط صفحات مجمع الملك فهد (QPC V2): خط لكل صفحة من الـ٦٠٤.
+import 'prefs.dart';
+
+/// خطوط صفحات مجمع الملك فهد (QPC V2، أو V4 الملونة بالتجويد): خط لكل صفحة من الـ٦٠٤.
+/// الاتنين بنفس الأكواد، فالفرق بس في ملف الخط. خطوط التجويد من Quran Foundation.
 /// كل خط بيتنزل أول مرة الصفحة تتفتح (حوالي ٢٠٠–٣٠٠ كيلو) ويتحفظ على الموبايل،
 /// أو المستخدم ينزّلهم كلهم مرة واحدة من الإعدادات.
 class MushafFonts extends ChangeNotifier {
@@ -15,24 +18,31 @@ class MushafFonts extends ChangeNotifier {
   static final MushafFonts instance = MushafFonts._();
 
   static const _baseUrl = 'https://taawanu.app/mushaf/qpc2';
+  static const _tajweedUrl = 'https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/ttf';
   static const basmalaFamily = 'QPC2_BSML';
+
+  /// التجويد الملون مختار من الإعدادات.
+  static bool get tajweed => Prefs.instance.pageStyle == 'tajweed';
 
   /// رمز البسملة في خط البسملة بتاع المجمع.
   static const basmalaGlyphs = 'ﭑﭒﭓ';
 
-  static String familyFor(int page) => 'QPC2_p${page.toString().padLeft(3, '0')}';
+  static String familyFor(int page) => '${tajweed ? 'QPC4' : 'QPC2'}_p${page.toString().padLeft(3, '0')}';
   static String _fileFor(int page) => 'p${page.toString().padLeft(3, '0')}.ttf';
 
   final _loaded = <String>{};
   final _pending = <String, Future<bool>>{};
-  Directory? _dir;
+  final _dirs = <bool, Directory>{};
 
   bool isReady(int page) => _loaded.contains(familyFor(page)) && _loaded.contains(basmalaFamily);
 
-  Future<Directory> _folder() async {
-    if (_dir != null) return _dir!;
+  /// فولدر خطوط الصفحات (كل نوع في فولدر). خط البسملة دايمًا في فولدر V2.
+  Future<Directory> _folder([bool? tj]) async {
+    final t = tj ?? tajweed;
+    final d = _dirs[t];
+    if (d != null) return d;
     final base = await getApplicationSupportDirectory();
-    return _dir = await Directory('${base.path}/mushaf_qpc2').create(recursive: true);
+    return _dirs[t] = await Directory('${base.path}/${t ? 'mushaf_qpc4' : 'mushaf_qpc2'}').create(recursive: true);
   }
 
   /// بيجهّز خط الصفحة (ومعاه خط البسملة). بيرجع false لو مفيش نت والخط مش متحمّل قبل كده.
@@ -72,19 +82,22 @@ class MushafFonts extends ChangeNotifier {
 
   /// من الموبايل لو موجود، وإلا من النت (وبيتحفظ).
   Future<Uint8List> _bytes(String file) async {
-    final f = File('${(await _folder()).path}/$file');
+    final tj = tajweed && file != 'bsml.ttf';
+    final f = File('${(await _folder(tj)).path}/$file');
     if (await f.exists() && await f.length() > 1000) return f.readAsBytes();
-    final bytes = await _download(file);
+    final bytes = await _download(file, tj);
     final tmp = File('${f.path}.part');
     await tmp.writeAsBytes(bytes, flush: true);
     await tmp.rename(f.path);
     return bytes;
   }
 
-  Future<Uint8List> _download(String file) async {
+  Future<Uint8List> _download(String file, bool tj) async {
     final client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
+    // خطوط التجويد على Quran Foundation باسم من غير أصفار (p1.ttf).
+    final url = tj ? '$_tajweedUrl/p${int.parse(file.substring(1, file.length - 4))}.ttf' : '$_baseUrl/$file';
     try {
-      final req = await client.getUrl(Uri.parse('$_baseUrl/$file'));
+      final req = await client.getUrl(Uri.parse(url));
       final res = await req.close().timeout(const Duration(seconds: 60));
       if (res.statusCode != 200) throw HttpException('HTTP ${res.statusCode}');
       final b = BytesBuilder(copy: false);
@@ -154,9 +167,10 @@ class MushafFonts extends ChangeNotifier {
 
   /// بيمسح الخطوط المتحمّلة (الصفحات المفتوحة دلوقتي بتفضل شغالة لحد ما التطبيق يتقفل).
   Future<void> deleteAll() async {
-    final dir = await _folder();
+    final tj = tajweed;
+    final dir = await _folder(tj);
     if (await dir.exists()) await dir.delete(recursive: true);
-    _dir = null;
+    _dirs.remove(tj);
     notifyListeners();
   }
 }
