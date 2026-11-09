@@ -273,10 +273,19 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     return null;
   }
 
+  int _pointers = 0;
+
+  void _pointerUp() {
+    if (_pointers > 0) _pointers--;
+    _userScrolledAt = DateTime.now();
+  }
+
   void _onTick(Duration elapsed) {
     final last = _lastTick;
     _lastTick = elapsed;
     if (last == null || !mounted || _pages || !_scroll.hasClients) return;
+    // صباعه على الشاشة، أو الشاشة لسه بتتزحلق من سحبته: منلمسش التمرير.
+    if (_pointers > 0 || _scroll.position.isScrollingNotifier.value) return;
     final dt = (elapsed - last).inMicroseconds / 1e6;
     final now = DateTime.now();
     if (!_audio.active && _auto.mode == 'manual') {
@@ -1088,8 +1097,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     return Listener(
-      // أي لمس للشاشة = لسه بيقرا.
-      onPointerDown: (_) => ReadingTime.instance.activity(),
+      // أي لمس للشاشة = لسه بيقرا. وطول ما صباعه على الشاشة الحركة التلقائية بتسيبه
+      // (من غيرها كانت بتلغي السحب أول ما يبدأ، فمكانش بيعرف يحرّك غير لما يوقف).
+      onPointerDown: (_) {
+        ReadingTime.instance.activity();
+        _pointers++;
+      },
+      onPointerUp: (_) => _pointerUp(),
+      onPointerCancel: (_) => _pointerUp(),
       child: _scaffold(context),
     );
   }
