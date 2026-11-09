@@ -410,6 +410,7 @@
   "autoReadWaiting": "القراءة وقفت عند آخر الربع. دوس \"خلصت الربع ده\" وهتكمّل في الربع اللي بعده.",
   "autoModeAyah": "آية",
   "autoModeWord": "كلمة",
+  "autoModeManual": "يدوي",
   "autoModeNone": "بدون",
   "highlightColor": "لون التظليل",
   "colorGold": "ذهبي",

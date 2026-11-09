@@ -117,7 +117,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       return f == null ? null : ReadHighlight(f.$1, f.$2);
     }
     return switch (_auto.mode) {
-      'none' => null,
+      'none' || 'manual' => null,
       'word' => ReadHighlight(c.$1, c.$2, _auto.word),
       _ => ReadHighlight(c.$1, c.$2),
     };
@@ -225,7 +225,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   void _syncTicker() {
     _syncAutoPad();
-    final run = !_pages && ((_auto.active && _auto.playing) || (_audio.active && _audio.playing));
+    // اليدوي: الشاشة بتكمّل لحد آخر النص حتى لو العدّاد وصل آخر الربع قبلها.
+    final manualRun = _auto.active && _auto.mode == 'manual' && _auto.waiting;
+    final run = !_pages && ((_auto.active && (_auto.playing || manualRun)) || (_audio.active && _audio.playing));
     if (run && !_ticker.isActive) {
       _lastTick = null;
       _ticker.start();
@@ -273,6 +275,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (last == null || !mounted || _pages || !_scroll.hasClients) return;
     final dt = (elapsed - last).inMicroseconds / 1e6;
     final now = DateTime.now();
+    if (!_audio.active && _auto.mode == 'manual') {
+      _manualTick(dt, now);
+      return;
+    }
     if (now.difference(_userScrolledAt) < const Duration(milliseconds: 1500) || now.isBefore(_catchUpUntil)) return;
     final top = _viewTop;
     final pos = _scroll.position;
@@ -308,6 +314,55 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final factor = (1 + error / (h * 0.6)).clamp(0.85, 1.15);
     final next = (pos.pixels + wordsPerSec * pxPerWord * factor * dt).clamp(0.0, pos.maxScrollExtent);
     if (next != pos.pixels) _scroll.jumpTo(next);
+  }
+
+  // ---------- الوضع اليدوي ----------
+  bool _userScrolling = false;
+  double _manualRate = 0;
+  DateTime _manualSyncAt = DateTime(2000);
+
+  /// الوضع اليدوي: الشاشة بتطلع بسرعة القراءة من غير تنوير. لو حرّكها بإيده بتقف وهو ماسكها،
+  /// وبعدها بتكمّل من المكان الجديد (مش بترجع للي كانت فيه). مكان القراءة بيمشي ورا الشاشة.
+  void _manualTick(double dt, DateTime now) {
+    if (_userScrolling || now.difference(_userScrolledAt) < const Duration(milliseconds: 300)) return;
+    final top = _viewTop;
+    if (top == null) return;
+    final pos = _scroll.position;
+    final rate = _rateAt(top + pos.viewportDimension * 0.3) ?? _manualRate;
+    if (rate <= 0) return;
+    _manualRate = rate;
+    final wordsPerSec = AutoReader.wordsPerMinute * _auto.speed / 60;
+    final next = (pos.pixels + wordsPerSec * rate * dt).clamp(0.0, pos.maxScrollExtent);
+    if (next != pos.pixels) _scroll.jumpTo(next);
+    if (now.difference(_manualSyncAt) > const Duration(milliseconds: 400)) {
+      _manualSyncAt = now;
+      final a = _lineAyah();
+      if (a != null) _auto.seek(a.surah, a.ayah);
+    }
+  }
+
+  /// بكسل لكل كلمة في الفقرة اللي عند الخط ده.
+  double? _rateAt(double y) {
+    final q = _textQuran;
+    if (q == null) return null;
+    for (final e in _anchors.paragraphs.entries) {
+      final rp = e.value.key.currentContext?.findRenderObject();
+      if (rp is! RenderParagraph || !rp.attached) continue;
+      final t0 = rp.localToGlobal(Offset.zero).dy;
+      final h = rp.size.height;
+      if (y < t0 || y > t0 + h) continue;
+      var rate = _paraRate[e.key];
+      if (rate == null || rate.$1 != h) {
+        var words = 0;
+        for (final x in e.value.starts) {
+          words += ayahWordStarts(q.ayahText(x.pos.surah, x.pos.ayah)).length;
+        }
+        rate = (h, words == 0 ? 0 : h / words);
+        _paraRate[e.key] = rate;
+      }
+      return rate.$2;
+    }
+    return null;
   }
 
   /// التلاوة في النص المتصل: الصفحة بتطلع بنعومة كإن فيه كلمة مستخبية ماشية جوه الآية على قد صوتها،
@@ -1041,8 +1096,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                       ButtonSegment(value: 'ayah', label: Text(t.autoModeAyah)),
                       ButtonSegment(value: 'word', label: Text(t.autoModeWord)),
                       ButtonSegment(value: 'none', label: Text(t.autoModeNone)),
+                      if (!_pages) ButtonSegment(value: 'manual', label: Text(t.autoModeManual)),
                     ],
-                    selected: {_auto.mode},
+                    // اليدوي للنص المتصل بس: في الصفحات بيبقى زي "بدون".
+                    selected: {_pages && _auto.mode == 'manual' ? 'none' : _auto.mode},
                     onSelectionChanged: (v) => _auto.setMode(v.first),
                   ),
                 ),
@@ -1069,7 +1126,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             child: NotificationListener<UserScrollNotification>(
             // لو حرّك الشاشة بإيده، الحركة التلقائية بتسيبه شوية.
             onNotification: (n) {
-              if (n.direction != ScrollDirection.idle) _userScrolledAt = DateTime.now();
+              _userScrolling = n.direction != ScrollDirection.idle;
+              _userScrolledAt = DateTime.now();
               return false;
             },
             child: CustomScrollView(

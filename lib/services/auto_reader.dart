@@ -35,10 +35,10 @@ class AutoReader extends ChangeNotifier {
     return speeds.contains(s) ? s : 1.0;
   }
 
-  /// آية / كلمة / بدون تنوير.
+  /// آية / كلمة / بدون تنوير / يدوي (النص بس: الشاشة بتمشي بالسرعة، وبتكمّل من المكان اللي حرّكته له بإيدك).
   String get mode {
     final m = Prefs.instance.autoReadMode;
-    return const ['ayah', 'word', 'none'].contains(m) ? m : 'ayah';
+    return const ['ayah', 'word', 'none', 'manual'].contains(m) ? m : 'ayah';
   }
 
   Future<void> setMode(String m) async {
@@ -148,6 +148,24 @@ class AutoReader extends ChangeNotifier {
     _word = 0;
     _waiting = false;
     if (_playing) {
+      _start(wordDuration);
+    } else {
+      _left = wordDuration;
+    }
+    notifyListeners();
+  }
+
+  /// الوضع اليدوي: مكان القراءة بيمشي ورا الشاشة (مش العكس). لو رجع لورا بعد ما وقف آخر الربع بيكمّل.
+  void seek(int surah, int ayah) {
+    if (!_active) return;
+    final i = _items.indexWhere((x) => x.$1 == surah && x.$2 == ayah);
+    if (i < 0 || i == _index) return;
+    _index = i;
+    _word = 0;
+    if (_playing) {
+      _start(wordDuration);
+    } else if (_waiting) {
+      _waiting = false;
       _start(wordDuration);
     } else {
       _left = wordDuration;
