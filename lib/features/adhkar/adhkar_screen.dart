@@ -11,6 +11,7 @@ import '../../widgets/tour_texts.dart';
 import '../../widgets/ui.dart';
 import 'adhkar_data.dart';
 import 'hisn_screen.dart';
+import 'tasbeeh_screen.dart';
 
 class AdhkarScreen extends StatefulWidget {
   const AdhkarScreen({super.key});
@@ -106,6 +107,14 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                                 onSelected: (_) => setState(() => _cat = c.id),
                               ),
                             ),
+                          Padding(
+                            padding: const EdgeInsetsDirectional.only(end: 8),
+                            child: ActionChip(
+                              avatar: Icon(Icons.radio_button_checked, size: 18, color: AppColors.accent),
+                              label: Text(t.tasbeeh),
+                              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TasbeehScreen())),
+                            ),
+                          ),
                           ActionChip(
                             key: _kHisn,
                             avatar: Icon(Icons.menu_book_outlined, size: 18, color: AppColors.accent),

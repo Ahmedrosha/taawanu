@@ -56,6 +56,33 @@ class Prefs {
     await _p.setStringList('adhkarCounts', [for (final e in counts.entries) '${e.key}=${e.value}']);
   }
 
+  // ---------- التسبيح ----------
+
+  /// أذكار السبحة اللي المستخدم ضافها: نص|عدد.
+  List<(String, int)> get tasbeehCustom => [
+        for (final e in _p.getStringList('tasbeehCustom') ?? const <String>[])
+          if (e.contains('|')) (e.substring(0, e.lastIndexOf('|')), int.tryParse(e.substring(e.lastIndexOf('|') + 1)) ?? 33),
+      ];
+  Future<void> setTasbeehCustom(List<(String, int)> v) =>
+      _p.setStringList('tasbeehCustom', [for (final e in v) '${e.$1}|${e.$2}']);
+
+  /// عدّادات السبحة النهارده: id=عدد (بتتصفّر مع يوم جديد).
+  Map<String, int> tasbeehCounts(String day) {
+    if (_p.getString('tasbeehDay') != day) return {};
+    return {
+      for (final e in _p.getStringList('tasbeehCounts') ?? const <String>[])
+        if (e.contains('=')) e.substring(0, e.lastIndexOf('=')): int.tryParse(e.substring(e.lastIndexOf('=') + 1)) ?? 0,
+    };
+  }
+
+  Future<void> setTasbeehCounts(String day, Map<String, int> counts) async {
+    await _p.setString('tasbeehDay', day);
+    await _p.setStringList('tasbeehCounts', [for (final e in counts.entries) '${e.key}=${e.value}']);
+  }
+
+  String? get tasbeehSelected => _p.getString('tasbeehSelected');
+  Future<void> setTasbeehSelected(String id) => _p.setString('tasbeehSelected', id);
+
   // ---------- الصلاة ----------
   // الموقع بيتحفظ على الجهاز بس، ومبيتبعتش للسيرفر.
 
