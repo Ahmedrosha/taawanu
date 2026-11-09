@@ -207,7 +207,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// بينزّل الكلمة اللي عليها الدور لمكان القراية بنعومة.
   /// بيعيد المحاولة لحد ما النص يتبني والكلمة تبقى فعلًا في مكانها.
   void _alignToLine([int attempt = 0]) {
-    if (!mounted || _pages || !_auto.active) return;
+    // اليدوي: بيبدأ من مكان الشاشة ومبيتحركش لوحده لمكان الكلمة.
+    if (!mounted || _pages || !_auto.active || _auto.mode == 'manual') return;
     final top = _viewTop;
     final focus = _wordY();
     if (top == null || focus == null || !_scroll.hasClients) {
@@ -344,28 +345,37 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     }
   }
 
-  /// بكسل لكل كلمة في الفقرة اللي عند الخط ده.
+  /// بكسل لكل كلمة في الفقرة اللي عند الخط ده، ولو الخط على اسم سورة أو بسملة أو مسافة فاضية: أقرب فقرة.
   double? _rateAt(double y) {
     final q = _textQuran;
     if (q == null) return null;
+    MapEntry<String, _Paragraph>? best;
+    var bestDist = double.infinity;
     for (final e in _anchors.paragraphs.entries) {
       final rp = e.value.key.currentContext?.findRenderObject();
-      if (rp is! RenderParagraph || !rp.attached) continue;
+      if (rp is! RenderParagraph || !rp.attached || !rp.hasSize) continue;
       final t0 = rp.localToGlobal(Offset.zero).dy;
       final h = rp.size.height;
-      if (y < t0 || y > t0 + h) continue;
-      var rate = _paraRate[e.key];
-      if (rate == null || rate.$1 != h) {
-        var words = 0;
-        for (final x in e.value.starts) {
-          words += ayahWordStarts(q.ayahText(x.pos.surah, x.pos.ayah)).length;
-        }
-        rate = (h, words == 0 ? 0 : h / words);
-        _paraRate[e.key] = rate;
+      final dist = y < t0 ? t0 - y : (y > t0 + h ? y - (t0 + h) : 0.0);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = e;
       }
-      return rate.$2;
     }
-    return null;
+    final e = best;
+    if (e == null) return null;
+    final rp = e.value.key.currentContext!.findRenderObject()! as RenderParagraph;
+    final h = rp.size.height;
+    var rate = _paraRate[e.key];
+    if (rate == null || rate.$1 != h) {
+      var words = 0;
+      for (final x in e.value.starts) {
+        words += ayahWordStarts(q.ayahText(x.pos.surah, x.pos.ayah)).length;
+      }
+      rate = (h, words == 0 ? 0.0 : h / words);
+      _paraRate[e.key] = rate;
+    }
+    return rate.$2;
   }
 
   /// التلاوة في النص المتصل: الصفحة بتطلع بنعومة كإن فيه كلمة مستخبية ماشية جوه الآية على قد صوتها،
