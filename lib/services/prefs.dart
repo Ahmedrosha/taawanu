@@ -56,6 +56,13 @@ class Prefs {
     await _p.setStringList('adhkarCounts', [for (final e in counts.entries) '${e.key}=${e.value}']);
   }
 
+  // ---------- الزكاة (على الموبايل بس) ----------
+
+  String? get zakatData => _p.getString('zakatData');
+  Future<void> setZakatData(String v) => _p.setString('zakatData', v);
+  String? get metalPrices => _p.getString('metalPrices');
+  Future<void> setMetalPrices(String v) => _p.setString('metalPrices', v);
+
   // ---------- وقت التلاوة ----------
 
   /// ثواني القراءة لكل يوم على الموبايل ده (آخر ٦٠ يوم).

@@ -129,6 +129,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 22),
               Material(
+                color: AppColors.surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: AppColors.border)),
+                child: ListTile(
+                  leading: Icon(Icons.calculate_outlined, color: AppColors.accent),
+                  title: Text(t.zakatTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: Text(t.zakatSubtitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/zakat'),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Material(
                 key: _kGuide,
                 color: AppColors.surface,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: AppColors.border)),

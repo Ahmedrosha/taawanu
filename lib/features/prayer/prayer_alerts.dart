@@ -109,6 +109,28 @@ class PrayerAlerts {
     }
   }
 
+  /// تنبيه واحد في ميعاد (زي تذكير الحول). أرقامه برا رينج الصلاة.
+  Future<void> scheduleOne(int id, DateTime at, String title, String body) async {
+    try {
+      await _init();
+      await _plugin.cancel(id);
+      const details = NotificationDetails(
+        android: AndroidNotificationDetails('reminders', 'تذكيرات', importance: Importance.high, priority: Priority.high),
+        iOS: DarwinNotificationDetails(presentSound: true),
+      );
+      await _schedule(id, at, title, body, details);
+    } catch (e) {
+      debugPrint('reminder failed: $e');
+    }
+  }
+
+  Future<void> cancelOne(int id) async {
+    try {
+      await _init();
+      await _plugin.cancel(id);
+    } catch (_) {}
+  }
+
   Future<void> _schedule(int id, DateTime utc, String title, String body, NotificationDetails details) async {
     if (!utc.isAfter(DateTime.now())) return;
     await _plugin.zonedSchedule(
