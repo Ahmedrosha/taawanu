@@ -4,6 +4,8 @@ on:
     inputs:
       page:
         default: "50"
+permissions:
+  contents: write
 jobs:
   sample:
     runs-on: ubuntu-latest
@@ -22,7 +24,7 @@ jobs:
           python3 tools/tajweed_sample.py $P out/index.html
           npm init -y >/dev/null && npm i playwright@1.47.2 >/dev/null && npx playwright install --with-deps chromium >/dev/null
           node -e "const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:1700,height:900},deviceScaleFactor:2});await p.goto('file://'+process.cwd()+'/out/index.html');await p.waitForTimeout(1500);await p.screenshot({path:'out/sample.png',fullPage:true});await b.close()})()"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: sample
-          path: out/sample.png
+      - run: |
+          cd out && git init -q && git checkout -q -b tmp-sample && cp sample.png s.png && git add s.png
+          git -c user.name=ci -c user.email=ci@local commit -qm sample
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" tmp-sample
