@@ -273,10 +273,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     return null;
   }
 
-  int _pointers = 0;
+  int _touches = 0;
 
   void _pointerUp() {
-    if (_pointers > 0) _pointers--;
+    if (_touches > 0) _touches--;
     _userScrolledAt = DateTime.now();
   }
 
@@ -285,7 +285,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _lastTick = elapsed;
     if (last == null || !mounted || _pages || !_scroll.hasClients) return;
     // صباعه على الشاشة، أو الشاشة لسه بتتزحلق من سحبته: منلمسش التمرير.
-    if (_pointers > 0 || _scroll.position.isScrollingNotifier.value) return;
+    if (_touches > 0 || _scroll.position.isScrollingNotifier.value) return;
     final dt = (elapsed - last).inMicroseconds / 1e6;
     final now = DateTime.now();
     if (!_audio.active && _auto.mode == 'manual') {
@@ -1101,7 +1101,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       // (من غيرها كانت بتلغي السحب أول ما يبدأ، فمكانش بيعرف يحرّك غير لما يوقف).
       onPointerDown: (_) {
         ReadingTime.instance.activity();
-        _pointers++;
+        _touches++;
       },
       onPointerUp: (_) => _pointerUp(),
       onPointerCancel: (_) => _pointerUp(),
