@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../app.dart';
 import '../../l10n/gen/app_localizations.dart';
+import '../../services/reading_time.dart';
 import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_colors.dart';
@@ -113,6 +115,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _Kpi(title: t.khatmasLabel, value: '${s.khatmasGroup + s.khatmasPersonal}', note: '${t.groupKhatmas(s.khatmasGroup)} · ${t.personalKhatmas(s.khatmasPersonal)}'),
                 ],
               ),
+              const SizedBox(height: 12),
+              const _ReadingTimeCard(),
               const SizedBox(height: 22),
               SectionTitle(t.badges),
               const SizedBox(height: 10),
@@ -294,4 +298,116 @@ class _Badge extends StatelessWidget {
       ),
     );
   }
+}
+
+/// وقت التلاوة: النهارده، وآخر ٧ أيام، ورسمة لكل يوم.
+class _ReadingTimeCard extends StatefulWidget {
+  const _ReadingTimeCard();
+
+  @override
+  State<_ReadingTimeCard> createState() => _ReadingTimeCardState();
+}
+
+class _ReadingTimeCardState extends State<_ReadingTimeCard> {
+  @override
+  void initState() {
+    super.initState();
+    ReadingTime.instance.watch();
+  }
+
+  static String fmt(AppLocalizations t, int seconds) {
+    final m = (seconds / 60).round();
+    if (m < 60) return t.minutesShort(m);
+    return t.hoursMinutesShort(m ~/ 60, m % 60);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    return ListenableBuilder(
+      listenable: ReadingTime.instance,
+      builder: (context, _) {
+        final week = ReadingTime.instance.lastWeek();
+        final today = week.last.$2;
+        final total = week.fold(0, (a, b) => a + b.$2);
+        final maxS = week.fold(0, (a, b) => b.$2 > a ? b.$2 : a);
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.timer_outlined, color: AppColors.accent, size: 20),
+                  const SizedBox(width: 8),
+                  Text(t.readingTimeTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _Num(value: fmt(t, today), label: t.today)),
+                  Expanded(child: _Num(value: fmt(t, total), label: t.last7Days)),
+                  Expanded(child: _Num(value: fmt(t, total ~/ 7), label: t.dailyAverage)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 90,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    for (final (d, sec) in week)
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Container(
+                                height: maxS == 0 ? 3 : (3 + 60 * sec / maxS),
+                                decoration: BoxDecoration(
+                                  color: d == week.last.$1 ? AppColors.accent : AppColors.navy.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(DateFormat.E(locale).format(d),
+                                  maxLines: 1, overflow: TextOverflow.clip, style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(t.readingTimeNote, style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _Num extends StatelessWidget {
+  const _Num({required this.value, required this.label});
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        children: [
+          Text(value, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 2),
+          Text(label, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+        ],
+      );
 }

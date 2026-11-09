@@ -22,6 +22,7 @@ import 'recitation_bar.dart';
 import 'auto_read_bar.dart';
 import 'read_highlight.dart';
 import '../../services/read_positions.dart';
+import '../../services/reading_time.dart';
 import '../../theme/highlight_colors.dart';
 import '../../services/auto_reader.dart';
 import 'tafsir_sheet.dart';
@@ -522,6 +523,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _savePosition();
       ReadPositions.instance.flush();
     }
+    if (state == AppLifecycleState.resumed) {
+      ReadingTime.instance.resumeCounting();
+    } else {
+      ReadingTime.instance.pauseCounting();
+    }
     if (state != AppLifecycleState.resumed && _audio.playing) _audio.pause();
     if (state != AppLifecycleState.resumed && _auto.playing) _auto.pause();
   }
@@ -533,6 +539,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _auto.addListener(_onAudio);
     _loadRemotePosition();
     WidgetsBinding.instance.addObserver(this);
+    // وقت التلاوة: بيتحسب طول ما المصحف قدامك وفيه حركة أو تلاوة أو قراءة تلقائية.
+    ReadingTime.instance.begin(() => _audio.playing || _auto.playing);
     // الشاشة متقفلش طول ما المصحف مفتوح (قراءة أو تلاوة).
     WakelockPlus.enable();
     Tour.schedule(context, 'reader', () => [
@@ -562,6 +570,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _audio.removeListener(_onAudio);
     _auto.removeListener(_onAudio);
     _ticker.dispose();
+    ReadingTime.instance.end();
     WidgetsBinding.instance.removeObserver(this);
     WakelockPlus.disable();
     // التلاوة بتقف لما يقفل شاشة القراءة.
@@ -1052,6 +1061,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
+    return Listener(
+      // أي لمس للشاشة = لسه بيقرا.
+      onPointerDown: (_) => ReadingTime.instance.activity(),
+      child: _scaffold(context),
+    );
+  }
+
+  Widget _scaffold(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.paper,

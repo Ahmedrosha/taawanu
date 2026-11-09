@@ -56,6 +56,24 @@ class Prefs {
     await _p.setStringList('adhkarCounts', [for (final e in counts.entries) '${e.key}=${e.value}']);
   }
 
+  // ---------- وقت التلاوة ----------
+
+  /// ثواني القراءة لكل يوم على الموبايل ده (آخر ٦٠ يوم).
+  Map<String, int> get readingSeconds => {
+        for (final e in _p.getStringList('readingSeconds') ?? const <String>[])
+          if (e.contains('=')) e.split('=').first: int.tryParse(e.split('=').last) ?? 0,
+      };
+
+  Future<void> addReadingSeconds(String day, int seconds) async {
+    final m = readingSeconds;
+    m[day] = (m[day] ?? 0) + seconds;
+    final keys = m.keys.toList()..sort();
+    while (keys.length > 60) {
+      m.remove(keys.removeAt(0));
+    }
+    await _p.setStringList('readingSeconds', [for (final e in m.entries) '${e.key}=${e.value}']);
+  }
+
   // ---------- التسبيح ----------
 
   /// أذكار السبحة اللي المستخدم ضافها: نص|عدد.

@@ -79,6 +79,15 @@ service cloud.firestore {
             || request.resource.data.appVersionAt == request.time);
 
       // آخر آية وقف عندها في كل ختمة: خاص بصاحبه بس.
+      // وقت التلاوة لكل يوم: خاص بصاحبه بس.
+      match /private/{doc} {
+        allow read: if isSelf(uid);
+        allow write: if isSelf(uid) && doc == 'readingTime'
+          && request.resource.data.keys().hasOnly(['days', 'at'])
+          && request.resource.data.days is map
+          && request.resource.data.at == request.time;
+      }
+
       match /readPositions/{id} {
         allow read, delete: if isSelf(uid);
         allow write: if isSelf(uid)
