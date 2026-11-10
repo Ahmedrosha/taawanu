@@ -172,14 +172,14 @@ Future<Uint8List> buildGroupReport(
       names ? (m.hasNoName ? t.noName : m.name) : t.reportMemberN(i + 1),
       rangeLabel(t, from, from + g.wardQuarters - 1),
       segmentStatusLabel(t, st),
-      '${s?.read ?? (st == 'done' ? g.wardQuarters : 0)} / ${g.wardQuarters}',
+      '${s?.read ?? (st == 'done' || st == 'late_done' ? g.wardQuarters : 0)} / ${g.wardQuarters}',
       st,
     ));
   }
   final open = portions.where((p) => p.status == 'open').toList()..sort((a, b) => a.fromQuarter.compareTo(b.fromQuarter));
 
-  pw.Widget txt(String s, {double size = 11, PdfColor color = PdfColors.black, pw.TextAlign? align}) =>
-      pw.Text(s, style: pw.TextStyle(fontSize: size, color: color), textDirection: dir, textAlign: align);
+  pw.Widget txt(String s, {double size = 11, PdfColor color = PdfColors.black, pw.TextAlign? align, bool ltr = false}) =>
+      pw.Text(s, style: pw.TextStyle(fontSize: size, color: color), textDirection: ltr ? pw.TextDirection.ltr : dir, textAlign: align);
 
   pw.Widget stat(String label, String value, PdfColor color) => pw.Expanded(
         child: pw.Container(
@@ -215,10 +215,10 @@ Future<Uint8List> buildGroupReport(
       q = end;
     }
     return pw.Container(
-      padding: const pw.EdgeInsets.fromLTRB(5, 4, 5, 6),
+      padding: const pw.EdgeInsets.fromLTRB(4, 3, 4, 5),
       decoration: pw.BoxDecoration(border: pw.Border.all(color: _line), borderRadius: pw.BorderRadius.circular(6)),
-      child: pw.Column(children: [
-        txt('${j + 1}', size: 11),
+      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
+        txt('${j + 1}', size: 10, align: pw.TextAlign.center),
         pw.SizedBox(height: 3),
         // الشريط بيتبني شمال ليمين صريح، وفي العربي أول الجزء على اليمين.
         pw.Directionality(
@@ -250,8 +250,10 @@ Future<Uint8List> buildGroupReport(
     textDirection: dir,
     footer: (ctx) => pw.Row(children: [
       txt(t.reportFooter, size: 8, color: _muted),
+      pw.SizedBox(width: 4),
+      txt('taawanu.app', size: 8, color: _muted, ltr: true),
       pw.Spacer(),
-      txt('${ctx.pageNumber} / ${ctx.pagesCount}', size: 8, color: _muted),
+      txt('${ctx.pageNumber} / ${ctx.pagesCount}', size: 8, color: _muted, ltr: true),
     ]),
     build: (ctx) => [
       pw.Container(
@@ -271,7 +273,7 @@ Future<Uint8List> buildGroupReport(
             ]),
           ),
           pw.Column(children: [
-            txt('$percent%', size: 22, color: _gold),
+            txt('$percent%', size: 22, color: _gold, ltr: true),
             txt(t.reportRead, size: 9, color: const PdfColor.fromInt(0xFFC9D3E6)),
           ]),
         ]),
@@ -287,7 +289,14 @@ Future<Uint8List> buildGroupReport(
       pw.SizedBox(height: 12),
       txt(t.reportMap, size: 13),
       pw.SizedBox(height: 6),
-      pw.GridView(crossAxisCount: 10, childAspectRatio: 0.62, mainAxisSpacing: 5, crossAxisSpacing: 5, children: [for (var j = 0; j < 30; j++) juz(j)]),
+      for (var row = 0; row < 3; row++)
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 5),
+          child: pw.Row(children: [
+            for (var j = row * 10; j < row * 10 + 10; j++)
+              pw.Expanded(child: pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2.5), child: juz(j))),
+          ]),
+        ),
       pw.SizedBox(height: 6),
       pw.Wrap(spacing: 10, runSpacing: 4, children: [for (final st in ['done', 'in_progress', 'pending', 'late', 'late_done', 'open']) legend(st)]),
       pw.SizedBox(height: 14),
@@ -313,7 +322,7 @@ Future<Uint8List> buildGroupReport(
                   txt(r.$3, size: 10),
                 ]),
               ),
-              pw.Padding(padding: const pw.EdgeInsets.all(5), child: txt(r.$4, size: 10)),
+              pw.Padding(padding: const pw.EdgeInsets.all(5), child: txt(r.$4, size: 10, ltr: true, align: rtl ? pw.TextAlign.right : pw.TextAlign.left)),
             ]),
         ],
       ),
