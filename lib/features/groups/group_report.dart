@@ -181,6 +181,8 @@ Future<Uint8List> buildGroupReport(
   pw.Widget txt(String s, {double size = 11, PdfColor color = PdfColors.black, pw.TextAlign? align, bool ltr = false}) =>
       pw.Text(s, style: pw.TextStyle(fontSize: size, color: color), textDirection: ltr ? pw.TextDirection.ltr : dir, textAlign: align);
 
+  List<pw.Widget> ordered(List<pw.Widget> cells) => rtl ? cells.reversed.toList() : cells;
+
   pw.Widget stat(String label, String value, PdfColor color) => pw.Expanded(
         child: pw.Container(
           padding: const pw.EdgeInsets.symmetric(vertical: 8),
@@ -302,16 +304,19 @@ Future<Uint8List> buildGroupReport(
       pw.SizedBox(height: 14),
       txt(t.reportMembers(members.length), size: 13),
       pw.SizedBox(height: 6),
+      // الجدول بيترص شمال ليمين، ففي العربي الأعمدة بتتعكس (العضو على اليمين).
       pw.Table(
         border: pw.TableBorder(horizontalInside: pw.BorderSide(color: _line, width: 0.5), bottom: pw.BorderSide(color: _line, width: 0.5)),
-        columnWidths: const {0: pw.FlexColumnWidth(3), 1: pw.FlexColumnWidth(2), 2: pw.FlexColumnWidth(2), 3: pw.FlexColumnWidth(1.4)},
+        columnWidths: rtl
+            ? const {0: pw.FlexColumnWidth(1.4), 1: pw.FlexColumnWidth(2), 2: pw.FlexColumnWidth(2), 3: pw.FlexColumnWidth(3)}
+            : const {0: pw.FlexColumnWidth(3), 1: pw.FlexColumnWidth(2), 2: pw.FlexColumnWidth(2), 3: pw.FlexColumnWidth(1.4)},
         children: [
           pw.TableRow(
             decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFF1F3F7)),
-            children: [for (final h in [t.reportColName, t.reportColWard, t.reportColStatus, t.reportColRead]) pw.Padding(padding: const pw.EdgeInsets.all(5), child: txt(h, size: 9, color: _muted))],
+            children: ordered([for (final h in [t.reportColName, t.reportColWard, t.reportColStatus, t.reportColRead]) pw.Padding(padding: const pw.EdgeInsets.all(5), child: txt(h, size: 9, color: _muted))]),
           ),
           for (final r in rows)
-            pw.TableRow(children: [
+            pw.TableRow(children: ordered([
               pw.Padding(padding: const pw.EdgeInsets.all(5), child: txt(r.$1, size: 10)),
               pw.Padding(padding: const pw.EdgeInsets.all(5), child: txt(r.$2, size: 10)),
               pw.Padding(
@@ -323,7 +328,7 @@ Future<Uint8List> buildGroupReport(
                 ]),
               ),
               pw.Padding(padding: const pw.EdgeInsets.all(5), child: txt(r.$4, size: 10, ltr: true, align: rtl ? pw.TextAlign.right : pw.TextAlign.left)),
-            ]),
+            ])),
         ],
       ),
       if (open.isNotEmpty) ...[
