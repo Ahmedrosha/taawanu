@@ -165,6 +165,29 @@ class Prefs {
   int get prayerReminderMinutes => _p.getInt('prayerReminderMinutes') ?? 0;
   Future<void> setPrayerReminderMinutes(int v) => _p.setInt('prayerReminderMinutes', v);
 
+  // ---------- التذكيرات (على الموبايل) ----------
+  // المفاتيح: adhkarMorning / adhkarEvening / adhkarSleep / ward / kahf / salawat.
+
+  static const reminderDefaults = {
+    'adhkarMorning': 6 * 60 + 30,
+    'adhkarEvening': 17 * 60,
+    'adhkarSleep': 22 * 60 + 30,
+    'ward': 21 * 60,
+    'kahf': 9 * 60,
+    'salawat': 14 * 60,
+  };
+
+  bool reminderOn(String key) => _p.getBool('rem_$key') ?? false;
+  Future<void> setReminderOn(String key, bool v) => _p.setBool('rem_$key', v);
+
+  /// وقت التذكير بالدقايق من نص الليل.
+  int reminderMinutes(String key) => _p.getInt('remAt_$key') ?? reminderDefaults[key] ?? 9 * 60;
+  Future<void> setReminderMinutes(String key, int v) => _p.setInt('remAt_$key', v);
+
+  /// إشعارات المجموعات والرسائل (اللي بتيجي من السيرفر).
+  bool get groupPush => _p.getBool('groupPush') ?? true;
+  Future<void> setGroupPush(bool v) => _p.setBool('groupPush', v);
+
   // ---------- مكان القراءة ----------
   // آخر آية كانت أول الشاشة في كل ورد: "ربع:سورة:آية".
 

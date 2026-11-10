@@ -132,6 +132,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: AppColors.surface,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: AppColors.border)),
                 child: ListTile(
+                  leading: Icon(Icons.notifications_active_outlined, color: AppColors.accent),
+                  title: Text(t.notificationSettings, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: Text(t.notificationSettingsSub),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/notification-settings'),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Material(
+                color: AppColors.surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: AppColors.border)),
+                child: ListTile(
                   leading: Icon(Icons.calculate_outlined, color: AppColors.accent),
                   title: Text(t.zakatTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
                   subtitle: Text(t.zakatSubtitle),

@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
 import '../router.dart';
+import 'prefs.dart';
 import 'user_service.dart';
 
 /// الإشعارات: الإذن، وتسجيل الجهاز، وفتح المجموعة لما المستخدم يضغط على الإشعار.
@@ -23,9 +24,12 @@ class PushService {
       final settings = await messaging.requestPermission();
       if (settings.authorizationStatus == AuthorizationStatus.denied) return;
 
-      final token = await messaging.getToken();
-      if (token != null) await UserService.instance.addFcmToken(token);
-      _tokenSub = messaging.onTokenRefresh.listen(UserService.instance.addFcmToken);
+      // لو قافل إشعارات المجموعات من الإعدادات، الجهاز مبيتسجلش.
+      if (Prefs.instance.groupPush) {
+        final token = await messaging.getToken();
+        if (token != null) await UserService.instance.addFcmToken(token);
+        _tokenSub = messaging.onTokenRefresh.listen(UserService.instance.addFcmToken);
+      }
 
       FirebaseMessaging.onMessageOpenedApp.listen(_open);
       final initial = await messaging.getInitialMessage();
@@ -33,6 +37,27 @@ class PushService {
     } catch (e) {
       // الإشعارات مش أساسية لتشغيل التطبيق (مثلًا على محاكي من غير Google Play).
       debugPrint('Push setup failed: $e');
+    }
+  }
+
+  /// تشغيل أو قفل إشعارات المجموعات والرسائل على الجهاز ده.
+  Future<void> setEnabled(bool on) async {
+    await Prefs.instance.setGroupPush(on);
+    try {
+      final messaging = FirebaseMessaging.instance;
+      if (on) {
+        await messaging.requestPermission();
+        final token = await messaging.getToken();
+        if (token != null) await UserService.instance.addFcmToken(token);
+        _tokenSub ??= messaging.onTokenRefresh.listen(UserService.instance.addFcmToken);
+      } else {
+        await _tokenSub?.cancel();
+        _tokenSub = null;
+        final token = await messaging.getToken();
+        if (token != null) await UserService.instance.removeFcmToken(token);
+      }
+    } catch (e) {
+      debugPrint('Push toggle failed: $e');
     }
   }
 

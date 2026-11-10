@@ -50,7 +50,11 @@ class ReadingTime extends ChangeNotifier {
     _timer = null;
     _busy = null;
     flush();
+    onReadToday?.call();
   }
+
+  /// بيتنده لما المصحف يتقفل (عشان تذكير الورد بتاع النهارده يتشال لو قريت).
+  void Function()? onReadToday;
 
   void pauseCounting() {
     _timer?.cancel();

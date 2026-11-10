@@ -57,6 +57,7 @@ class PrayerAlerts {
 
   /// بيلغي القديم ويجدول من جديد حسب الإعدادات الحالية.
   Future<void> reschedule() async {
+    await rescheduleReminders();
     try {
       await _init();
       await _cancelOurs();
@@ -68,7 +69,8 @@ class PrayerAlerts {
       final enabled = prefs.prayerAlertsFor;
       final reminder = prefs.prayerReminderMinutes;
       // الآيفون بيسمح بـ٦٤ إشعار مجدول بس.
-      final days = reminder > 0 ? 6 : 7;
+      // (وبنسيب مكان للتذكيرات التانية: الأذكار والورد والجمعة.)
+      final days = reminder > 0 ? 5 : 7;
       final now = DateTime.now();
       final place = c.placeName(ar ? 'ar' : 'en');
 
@@ -107,6 +109,91 @@ class PrayerAlerts {
     } catch (e) {
       debugPrint('prayer alerts failed: $e');
     }
+  }
+
+  // ---------- تذكيرات الأذكار والورد والجمعة ----------
+  // أرقامها من ٦٠٠٠. اليومي والأسبوعي إشعار واحد بيتكرر، والورد إشعار لكل يوم عشان نقدر نشيل بتاع النهارده لو قريت.
+
+  static const _remBase = 6000;
+  static const _wardDays = 5;
+
+  /// [readToday]: قريت النهارده، فتذكير الورد بتاع النهارده مش هييجي.
+  Future<void> rescheduleReminders({bool? readToday}) async {
+    try {
+      await _init();
+      final prefs = Prefs.instance;
+      final ar = prefs.locale.languageCode != 'en';
+      const details = NotificationDetails(
+        android: AndroidNotificationDetails('reminders', 'تذكيرات', importance: Importance.high, priority: Priority.high),
+        iOS: DarwinNotificationDetails(presentSound: true),
+      );
+      final now = DateTime.now();
+      DateTime at(String key, int dayOffset) {
+        final m = prefs.reminderMinutes(key);
+        return DateTime(now.year, now.month, now.day + dayOffset, m ~/ 60, m % 60);
+      }
+
+      // يومي بيتكرر.
+      const daily = {
+        'adhkarMorning': (1, 'أذكار الصباح', 'Morning adhkar', 'ابدأ يومك بذكر الله', 'Start your day with dhikr'),
+        'adhkarEvening': (2, 'أذكار المساء', 'Evening adhkar', 'وقت أذكار المساء', 'Time for the evening adhkar'),
+        'adhkarSleep': (3, 'أذكار النوم', 'Sleep adhkar', 'قبل ما تنام، اقرا أذكار النوم', 'Read the sleep adhkar before bed'),
+      };
+      for (final e in daily.entries) {
+        final (n, tAr, tEn, bAr, bEn) = e.value;
+        await _plugin.cancel(_remBase + n);
+        if (!prefs.reminderOn(e.key)) continue;
+        var first = at(e.key, 0);
+        if (!first.isAfter(now)) first = at(e.key, 1);
+        await _repeat(_remBase + n, first, ar ? tAr : tEn, ar ? bAr : bEn, details, DateTimeComponents.time);
+      }
+
+      // الجمعة، أسبوعي.
+      const friday = {
+        'kahf': (4, 'سورة الكهف', 'Surah Al-Kahf', 'النهارده الجمعة، متنساش سورة الكهف', 'It\'s Friday: read Surah Al-Kahf'),
+        'salawat': (5, 'الصلاة على النبي ﷺ', 'Salawat upon the Prophet ﷺ', 'أكثروا من الصلاة عليه يوم الجمعة', 'Send plenty of salawat on Friday'),
+      };
+      for (final e in friday.entries) {
+        final (n, tAr, tEn, bAr, bEn) = e.value;
+        await _plugin.cancel(_remBase + n);
+        if (!prefs.reminderOn(e.key)) continue;
+        var offset = (DateTime.friday - now.weekday) % 7;
+        if (offset == 0 && !at(e.key, 0).isAfter(now)) offset = 7;
+        await _repeat(_remBase + n, at(e.key, offset), ar ? tAr : tEn, ar ? bAr : bEn, details, DateTimeComponents.dayOfWeekAndTime);
+      }
+
+      // الورد: لكل يوم لوحده.
+      for (var d = 0; d < _wardDays; d++) {
+        await _plugin.cancel(_remBase + 10 + d);
+      }
+      if (prefs.reminderOn('ward')) {
+        final read = readToday ?? ((prefs.readingSeconds[_dayKey(now)] ?? 0) >= 60);
+        var id = _remBase + 10;
+        for (var d = 0; d < _wardDays + 1 && id < _remBase + 10 + _wardDays; d++) {
+          if (d == 0 && read) continue;
+          final when = at('ward', d);
+          if (!when.isAfter(now)) continue;
+          await _schedule(id++, when, ar ? 'وردك النهارده' : 'Your reading today', ar ? 'لسه مقريتش النهارده، افتح المصحف وكمّل وردك' : 'You haven\'t read today yet. Open the Mushaf and continue.', details);
+        }
+      }
+    } catch (e) {
+      debugPrint('reminders failed: $e');
+    }
+  }
+
+  static String _dayKey(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  Future<void> _repeat(int id, DateTime local, String title, String body, NotificationDetails details, DateTimeComponents match) async {
+    await _plugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tz.TZDateTime.from(local.toUtc(), tz.UTC),
+      details,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: match,
+    );
   }
 
   /// تنبيه واحد في ميعاد (زي تذكير الحول). أرقامه برا رينج الصلاة.
