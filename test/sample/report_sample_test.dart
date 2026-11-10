@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:taawanu/features/groups/group_board_screen.dart';
 import 'package:taawanu/features/groups/group_report.dart';
 import 'package:taawanu/l10n/gen/app_localizations.dart';
@@ -11,6 +12,7 @@ import 'package:taawanu/models/group_models.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   test('report sample', () async {
+    await initializeDateFormatting('ar');
     final t = lookupAppLocalizations(const Locale('ar'));
     const g = Group(
       id: 'g', name: 'ختمة العيلة', type: 'private', wardQuarters: 8, slots: 30, cycleCount: 1, cycleUnit: 'week',
