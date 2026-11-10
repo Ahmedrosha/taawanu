@@ -16,6 +16,7 @@ import '../../widgets/segment_picker.dart';
 import 'assign_portions_screen.dart';
 import 'record_progress_sheet.dart';
 import 'group_messages.dart';
+import 'group_report.dart';
 import '../../widgets/tour.dart';
 import '../../widgets/tour_texts.dart';
 import '../../widgets/ui.dart';
@@ -1467,6 +1468,8 @@ class _BoardMenu extends StatelessWidget {
             context.push('/group/${group.id}/assign');
           case 'settings':
             context.push('/group/${group.id}/settings', extra: group);
+          case 'report':
+            await shareGroupReport(context, group);
           case 'leave':
             if (await confirmDialog(context, title: t.leaveGroup, body: t.leaveConfirm, destructive: true) && context.mounted) {
               final ok = await runAction(context, () => svc.leave(group.id));
@@ -1481,6 +1484,7 @@ class _BoardMenu extends StatelessWidget {
       },
       itemBuilder: (context) => [
         if (me?.isManager ?? false) PopupMenuItem(value: 'assign', child: Text(t.assignPortions)),
+        if (me?.isManager ?? false) PopupMenuItem(value: 'report', child: Text(t.shareReport)),
         if (me?.isManager ?? false) PopupMenuItem(value: 'settings', child: Text(t.groupSettings)),
         if (me != null && !me!.isAdmin) PopupMenuItem(value: 'leave', child: Text(t.leaveGroup)),
         if (me?.isAdmin ?? false)
