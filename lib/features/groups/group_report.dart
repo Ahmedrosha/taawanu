@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -282,7 +283,7 @@ Future<Uint8List> buildGroupReport(
           height: 11,
           child: owners.isEmpty
               ? null
-              : pw.FittedBox(fit: pw.BoxFit.scaleDown, child: txt(owners.join(names ? ' · ' : ' , '), size: 7, color: _muted, align: pw.TextAlign.center)),
+              : pw.FittedBox(fit: pw.BoxFit.scaleDown, child: txt(owners.join(names ? ' · ' : ' , '), size: 7.5, color: const PdfColor.fromInt(0xFF3A4254), align: pw.TextAlign.center)),
         ),
       ]),
     );

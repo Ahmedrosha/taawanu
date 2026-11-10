@@ -86,7 +86,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
           return ListView.separated(
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: list.length,
-            separatorBuilder: (_, _) => Divider(height: 1, color: AppColors.border),
+            separatorBuilder: (_, i) => Divider(height: 1, color: AppColors.border),
             itemBuilder: (context, i) {
               final c = list[i];
               final m = c.last;
