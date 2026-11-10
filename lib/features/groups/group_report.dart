@@ -151,17 +151,10 @@ Future<Uint8List> buildGroupReport(
   }
   final daysLeft = c?.endsAt == null ? null : c!.endsAt!.difference(now).inDays.clamp(0, 9999);
 
-  // الأعضاء: المتأخر الأول.
-  int rank(String st) => switch (st) { 'late' => 0, 'pending' => 1, 'in_progress' => 2, _ => 3 };
+  // الأعضاء بترتيب الورد (الجزء ١ الأول).
   final rows = <(String, String, String, String, String)>[];
-  final sorted = [...members];
   final segOf = {for (final m in members) m.uid: currentSegment(g, m)};
-  sorted.sort((a, b) {
-    final sa = bySeg[segOf[a.uid]];
-    final sb = bySeg[segOf[b.uid]];
-    final r = rank(sa == null ? 'pending' : shown(sa)).compareTo(rank(sb == null ? 'pending' : shown(sb)));
-    return r != 0 ? r : segOf[a.uid]!.compareTo(segOf[b.uid]!);
-  });
+  final sorted = [...members]..sort((a, b) => segOf[a.uid]!.compareTo(segOf[b.uid]!));
   for (var i = 0; i < sorted.length; i++) {
     final m = sorted[i];
     final seg = segOf[m.uid]!;
