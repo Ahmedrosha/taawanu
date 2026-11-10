@@ -171,8 +171,14 @@ Future<Uint8List> buildGroupReport(
   }
   final open = portions.where((p) => p.status == 'open').toList()..sort((a, b) => a.fromQuarter.compareTo(b.fromQuarter));
 
-  pw.Widget txt(String s, {double size = 11, PdfColor color = PdfColors.black, pw.TextAlign? align, bool ltr = false}) =>
-      pw.Text(s, style: pw.TextStyle(fontSize: size, color: color), textDirection: ltr ? pw.TextDirection.ltr : dir, textAlign: align);
+  // نص من غير حروف عربي (زي اسم إنجليزي) بيتكتب شمال ليمين، وإلا بيطلع معكوس.
+  final arabic = RegExp(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]');
+  pw.Widget txt(String s, {double size = 11, PdfColor color = PdfColors.black, pw.TextAlign? align, bool ltr = false}) {
+    final d = ltr || !arabic.hasMatch(s) ? pw.TextDirection.ltr : dir;
+    // في العربي النص الإنجليزي بيفضل على يمين خانته.
+    final a = align ?? (rtl && d == pw.TextDirection.ltr ? pw.TextAlign.right : null);
+    return pw.Text(s, style: pw.TextStyle(fontSize: size, color: color), textDirection: d, textAlign: a);
+  }
 
   List<pw.Widget> ordered(List<pw.Widget> cells) => rtl ? cells.reversed.toList() : cells;
 
@@ -238,11 +244,16 @@ Future<Uint8List> buildGroupReport(
         txt(segmentStatusLabel(t, st), size: 8, color: _muted),
       ]);
 
-  final doc = pw.Document(theme: theme, title: g.name, author: 'Taawanu');
+  final doc = pw.Document(title: g.name, author: 'Taawanu');
   doc.addPage(pw.MultiPage(
-    pageFormat: PdfPageFormat.a4,
-    margin: const pw.EdgeInsets.all(28),
-    textDirection: dir,
+    // خلفية بيضا صريحة: الصورة من غيرها شفافة، والكلام الأسود مبيبانش في الوضع الغامق.
+    pageTheme: pw.PageTheme(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(28),
+      textDirection: dir,
+      theme: theme,
+      buildBackground: (ctx) => pw.FullPage(ignoreMargins: true, child: pw.Container(color: PdfColors.white)),
+    ),
     footer: (ctx) => pw.Row(children: [
       txt(t.reportFooter, size: 8, color: _muted),
       pw.SizedBox(width: 4),
