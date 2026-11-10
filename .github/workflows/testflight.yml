@@ -3,6 +3,11 @@ name: TestFlight
 # يدوي بس: بيبني نسخة الآيفون ويرفعها على TestFlight.
 on:
   workflow_dispatch:
+    inputs:
+      full_build:
+        description: "الطريقة القديمة: بناء كامل من غير توقيع قبل الـArchive (أبطأ)"
+        type: boolean
+        default: false
 
 jobs:
   ios:
@@ -42,10 +47,11 @@ jobs:
       - run: flutter gen-l10n
 
       # رقم البناء بيزيد تلقائيًا مع كل تشغيل، لأن TestFlight مبيقبلش نفس الرقم مرتين.
-      - name: Flutter build (no signing)
+      - name: Flutter prepare (config only unless full_build)
         run: |
           set +e
-          flutter build ios --release --no-codesign --build-number=${{ github.run_number }} > flutter-build.log 2>&1
+          # الافتراضي: تجهيز المشروع بس (pod install والإعدادات)، والـArchive هو اللي بيبني مرة واحدة.
+          flutter build ios --release --no-codesign ${{ inputs.full_build && ' ' || '--config-only' }} --build-number=${{ github.run_number }} > flutter-build.log 2>&1
           code=$?
           tail -40 flutter-build.log
           if [ $code -ne 0 ]; then
