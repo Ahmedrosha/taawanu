@@ -279,7 +279,7 @@ class _DhikrListScreenState extends State<DhikrListScreen> {
 }
 
 class _DhikrCard extends StatelessWidget {
-  const _DhikrCard({super.key, required this.dhikr, required this.count, required this.quran, required this.onTap});
+  const _DhikrCard({required this.dhikr, required this.count, required this.quran, required this.onTap});
 
   final Dhikr dhikr;
   final int count;
