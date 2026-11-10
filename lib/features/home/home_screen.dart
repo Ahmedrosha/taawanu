@@ -11,6 +11,8 @@ import '../../services/quran_repository.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/name_dialog.dart';
+import '../messages/messages_screen.dart';
+import '../notifications/notifications_screen.dart';
 import '../update/update_widgets.dart';
 import '../../widgets/ui.dart';
 import '../groups/group_board_screen.dart' show ReadRequest, TimeLeftChip;
@@ -55,16 +57,33 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(t.greeting, style: TextStyle(color: AppColors.textMuted)),
-            StreamBuilder<UserStats>(
+            // التحية والاسم، وجنبهم الرسائل والإشعارات.
+            Row(
               key: const ValueKey('greeting'),
-              stream: _stats,
-              builder: (context, snap) {
-                final full = (snap.data?.name.isNotEmpty ?? false) ? snap.data!.name : authName;
-                final name = full.split(' ').first;
-                return Text(name.isEmpty ? t.defaultUserName : name,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700));
-              },
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(t.greeting, style: TextStyle(color: AppColors.textMuted)),
+                      StreamBuilder<UserStats>(
+                        stream: _stats,
+                        builder: (context, snap) {
+                          final full = (snap.data?.name.isNotEmpty ?? false) ? snap.data!.name : authName;
+                          final name = full.split(' ').first;
+                          return Text(name.isEmpty ? t.defaultUserName : name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700));
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const MessagesButton(),
+                const NotificationBell(),
+              ],
             ),
             const SizedBox(height: 16),
             StreamBuilder<UserStats>(

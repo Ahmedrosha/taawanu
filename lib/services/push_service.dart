@@ -43,6 +43,12 @@ class PushService {
   }
 
   void _open(RemoteMessage message) {
+    // الرسائل بتفتح قسم الرسائل.
+    final type = message.data['type'];
+    if (type == 'message' || type == 'reminder') {
+      appRouter.push('/messages');
+      return;
+    }
     final groupId = message.data['groupId'];
     if (groupId is String && groupId.isNotEmpty) {
       appRouter.push('/group/$groupId');

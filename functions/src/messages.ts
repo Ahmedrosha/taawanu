@@ -1,16 +1,17 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { logger } from 'firebase-functions/v2';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 
 import { cycleRef, db, groupData, groupRef, isManager as isManagerRole, MemberDoc, memberRef, requireMember, requireString, requireUid } from './common';
 import { notifyUsers } from './notify';
 
 const MAX_TEXT = 300;
-const PER_HOUR = 20;
+const PER_HOUR = 40;
 const REMINDER_EVERY_MS = 6 * 3600 * 1000;
 
 const isManager = (m: MemberDoc) => isManagerRole(m.role);
 
-/** كل شخص لحد ٢٠ رسالة في الساعة (عشان محدش يسيء الاستخدام). */
+/** كل شخص لحد ٤٠ رسالة في الساعة (عشان محدش يسيء الاستخدام). الرسالة بتتحسب مرة حتى لو رايحة لكذا حد. */
 async function rateLimit(uid: string, count: number): Promise<void> {
   const ref = db.collection('rateLimits').doc(uid);
   await db.runTransaction(async (tx) => {
@@ -28,6 +29,54 @@ function cleanText(v: unknown): string {
   const t = v.trim().replace(/\n{3,}/g, '\n\n');
   if (t.length < 1 || t.length > MAX_TEXT) throw new HttpsError('invalid-argument', `Message must be 1 to ${MAX_TEXT} characters.`);
   return t;
+}
+
+/**
+ * قسم الرسائل (زي الشات): كل رسالة بتتحفظ نسخة عند اللي استلمها ونسخة عند اللي بعتها، في users/{uid}/messages.
+ * المحادثة (thread):
+ * - العضو العادي: محادثة واحدة مع "إدارة المجموعة" (`{groupId}_managers`)، فيها رسايله ورسايل أي حد من الإدارة.
+ * - الأدمن والمساعد: محادثة لكل شخص (`{groupId}_{uid}`).
+ * تذكير المتأخرين بيتحفظ عند اللي استلموه بس (مش ١٣ محادثة عند الأدمن).
+ */
+async function saveToMessages(
+  groupId: string, groupName: string, uid: string, me: MemberDoc, recipients: string[], text: string, type: string,
+): Promise<void> {
+  const snaps = await db.getAll(...recipients.map((u) => memberRef(groupId, u)));
+  const meManager = isManager(me);
+  const base = { groupId, groupName, text, type, fromUid: uid, fromName: me.name, at: FieldValue.serverTimestamp() };
+  const writes: { uid: string; data: Record<string, unknown> }[] = [];
+  for (const s of snaps) {
+    if (!s.exists) continue;
+    const m = s.data() as MemberDoc;
+    const toManagers = !isManager(m);
+    writes.push({
+      uid: s.id,
+      data: {
+        ...base, mine: false, read: false,
+        thread: toManagers ? `${groupId}_managers` : `${groupId}_${uid}`,
+        peerUid: toManagers ? 'managers' : uid,
+        peerName: toManagers ? '' : me.name,
+      },
+    });
+    // نسخة الأدمن/المساعد: محادثة لكل شخص.
+    if (type !== 'reminder' && meManager) {
+      writes.push({
+        uid,
+        data: { ...base, mine: true, read: true, thread: `${groupId}_${s.id}`, peerUid: s.id, peerName: m.name ?? '' },
+      });
+    }
+  }
+  // نسخة العضو العادي: رسالة واحدة في محادثته مع الإدارة.
+  if (type !== 'reminder' && !meManager) {
+    writes.push({ uid, data: { ...base, mine: true, read: true, thread: `${groupId}_managers`, peerUid: 'managers', peerName: '' } });
+  }
+  for (let i = 0; i < writes.length; i += 400) {
+    const batch = db.batch();
+    for (const w of writes.slice(i, i + 400)) {
+      batch.set(db.collection('users').doc(w.uid).collection('messages').doc(), w.data);
+    }
+    await batch.commit();
+  }
 }
 
 /**
@@ -70,7 +119,7 @@ export const sendGroupMessage = onCall(async (request) => {
   }
   if (recipients.length === 0) return { sent: 0 };
 
-  await rateLimit(uid, type === 'reminder' ? 1 : recipients.length);
+  await rateLimit(uid, 1);
   if (type === 'reminder') await groupRef(groupId).update({ lastReminderAt: FieldValue.serverTimestamp() });
 
   const role = me.role === 'admin' ? { ar: 'الأدمن', en: 'admin' } : me.role === 'assistant' ? { ar: 'مساعد', en: 'assistant' } : null;
@@ -79,5 +128,10 @@ export const sendGroupMessage = onCall(async (request) => {
     ar: { title: `${from.ar} · ${g.name}`, body: text },
     en: { title: `${from.en} · ${g.name}`, body: text },
   }), { groupId, type, fromUid: uid, fromName: me.name });
+  try {
+    await saveToMessages(groupId, g.name, uid, me, recipients, text, type);
+  } catch (e) {
+    logger.warn('saveToMessages failed', e);
+  }
   return { sent: recipients.length };
 });

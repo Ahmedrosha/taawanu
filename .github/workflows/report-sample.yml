@@ -1,0 +1,18 @@
+name: Report sample (temp)
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  s:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get && flutter gen-l10n
+      - run: flutter test test/sample/report_sample_test.dart
+      - run: |
+          mkdir o && cp build/report_sample_*.pdf o/ && cd o && git init -q && git checkout -q -b tmp-sample && git add . && git -c user.name=ci -c user.email=ci@local commit -qm s
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" tmp-sample

@@ -56,6 +56,16 @@ class InboxService {
 
   static const limit = 100;
 
+  /// من التاريخ ده الرسائل بقت في قسم الرسائل، فمبتظهرش في الجرس (اللي قبله بيفضل زي ما هو).
+  static final _messagesMoved = DateTime.utc(2026, 11, 10, 17);
+
+  static bool _inBell(Map<String, dynamic> d) {
+    final type = d['type'];
+    if (type != 'message' && type != 'reminder') return true;
+    final at = (d['createdAt'] as Timestamp?)?.toDate();
+    return at != null && at.isBefore(_messagesMoved);
+  }
+
   DocumentReference<Map<String, dynamic>>? get _me {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     return uid == null ? null : FirebaseFirestore.instance.collection('users').doc(uid);
@@ -69,7 +79,7 @@ class InboxService {
         .orderBy('createdAt', descending: true)
         .limit(limit)
         .snapshots()
-        .map((s) => [for (final d in s.docs) InboxItem.fromDoc(d)]);
+        .map((s) => [for (final d in s.docs) if (_inBell(d.data())) InboxItem.fromDoc(d)]);
   }
 
   /// آخر مرة فتح صفحة الإشعارات (null لو عمره ما فتحها).
@@ -99,7 +109,7 @@ class InboxService {
           if (old != null) unawaited(old.cancel());
           Query<Map<String, dynamic>> q = me.collection('notifications');
           if (seen != null) q = q.where('createdAt', isGreaterThan: Timestamp.fromDate(seen));
-          inner = q.limit(limit).snapshots().map((s) => s.size).listen(out.add, onError: (_) {});
+          inner = q.limit(limit).snapshots().map((s) => s.docs.where((d) => _inBell(d.data())).length).listen(out.add, onError: (_) {});
         }, onError: (_) {});
       },
       onCancel: () async {

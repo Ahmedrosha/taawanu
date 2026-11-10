@@ -97,6 +97,13 @@ service cloud.firestore {
           && request.resource.data.at == request.time;
       }
 
+      // الرسائل: صاحب الحساب يقرا رسايله، والسيرفر بس اللي بيكتبها. صاحبها يعلّمها مقروءة بس.
+      match /messages/{id} {
+        allow read: if isSelf(uid);
+        allow update: if isSelf(uid) && changedOnly(['read']) && request.resource.data.read == true;
+        allow create, delete: if false;
+      }
+
       // الجرس: صاحب الحساب يقرا إشعاراته بس، والسيرفر بس اللي بيكتبها.
       match /notifications/{id} {
         allow read: if isSelf(uid);

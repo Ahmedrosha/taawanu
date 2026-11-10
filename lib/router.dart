@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 
 import 'features/adhkar/adhkar_screen.dart';
+import 'features/messages/messages_screen.dart';
 import 'features/zakat/zakat_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/groups/assign_portions_screen.dart';
@@ -50,6 +51,8 @@ final appRouter = GoRouter(
     GoRoute(path: '/create-group', builder: (context, state) => const CreateGroupScreen()),
     GoRoute(path: '/explore', builder: (context, state) => const ExploreScreen()),
     GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
+    GoRoute(path: '/messages', builder: (context, state) => const MessagesScreen()),
+    GoRoute(path: '/messages/:thread', builder: (context, state) => ThreadScreen(thread: state.pathParameters['thread']!)),
     GoRoute(path: '/guide', builder: (context, state) => const GuideScreen()),
     GoRoute(path: '/zakat', builder: (context, state) => const ZakatScreen()),
     GoRoute(
