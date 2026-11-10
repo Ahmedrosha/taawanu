@@ -52,6 +52,7 @@ flutter:
     - assets/tafsir/muyassar.json
     - assets/adhkar/daily.json
     - assets/adhkar/hisn.json
+    - assets/adhkar/ruqyah.json
     - assets/fonts/KFGQPC-LICENSE.txt
     - assets/fonts/report/
   fonts:

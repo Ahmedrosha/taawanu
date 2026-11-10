@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import '../../l10n/gen/app_localizations.dart';
 import '../../services/prefs.dart';
 import '../../theme/app_colors.dart';
+import 'adhkar_data.dart';
+import 'adhkar_screen.dart';
 
 /// ذكر في السبحة: النص والعدد المطلوب في الدورة.
 class _Tasbeeh {
@@ -179,6 +181,17 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
       appBar: AppBar(
         title: Text(t.tasbeeh, style: const TextStyle(fontWeight: FontWeight.w700)),
         actions: [
+          IconButton(
+            tooltip: t.tasbeehTexts,
+            icon: const Icon(Icons.format_list_bulleted),
+            onPressed: () async {
+              // التسابيح المأثورة بفضلها (كانت قسم لوحده في الأذكار).
+              final cats = await AdhkarRepository.instance.daily();
+              final c = cats.where((x) => x.id == 'tasbeeh').toList();
+              if (c.isEmpty || !context.mounted) return;
+              await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => DhikrListScreen(title: t.tasbeehTexts, sections: c)));
+            },
+          ),
           IconButton(tooltip: t.undo, onPressed: c == 0 ? null : _undo, icon: const Icon(Icons.undo)),
           IconButton(tooltip: t.reset, onPressed: c == 0 ? null : _reset, icon: const Icon(Icons.refresh)),
         ],

@@ -77,8 +77,8 @@ const tourTexts = <String, (String, String)>{
     'Calculation method, Asr time, prayer alerts and reminders before each prayer.',
   ),
   // الأذكار
-  'adhkar.cats': ('الصباح، والمساء، وبعد الصلاة، والنوم.', 'Morning, evening, after prayer and before sleep.'),
-  'adhkar.item': ('دوس على الذكر عشان العداد يزيد.', 'Tap a dhikr to count it.'),
+  'adhkar.cats': ('التسبيح، وحصن المسلم، والرقية الشرعية.', 'Tasbeeh, Hisn al-Muslim and Ruqyah.'),
+  'adhkar.item': ('دوس على العنوان عشان تفتح أذكاره، وجوه دوس على الذكر عشان العداد يزيد.', 'Tap a title to open it, then tap a dhikr to count it.'),
   'adhkar.reset': ('يرجّع العدادات من الأول.', 'Resets the counters.'),
   'adhkar.hisn': ('حصن المسلم كامل، وفيه بحث.', 'The full Hisn al-Muslim, with search.'),
   // حسابي

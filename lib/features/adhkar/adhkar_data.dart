@@ -54,19 +54,25 @@ class AdhkarRepository {
 
   Future<List<AdhkarCategory>>? _daily;
   Future<List<HisnChapter>>? _hisn;
+  Future<List<AdhkarCategory>>? _ruqyah;
 
-  Future<List<AdhkarCategory>> daily() => _daily ??= () async {
-        final d = jsonDecode(await rootBundle.loadString('assets/adhkar/daily.json')) as Map<String, dynamic>;
-        return [
-          for (final c in d['categories'] as List)
-            AdhkarCategory(
-              id: c['id'] as String,
-              ar: c['ar'] as String,
-              en: c['en'] as String,
-              items: [for (final i in c['items'] as List) Dhikr.fromJson(i as Map<String, dynamic>)],
-            ),
-        ];
-      }();
+  /// الرقية الشرعية: قسم من القرآن وقسم من السنة.
+  Future<List<AdhkarCategory>> ruqyah() => _ruqyah ??= _categories('assets/adhkar/ruqyah.json');
+
+  static Future<List<AdhkarCategory>> _categories(String asset) async {
+    final d = jsonDecode(await rootBundle.loadString(asset)) as Map<String, dynamic>;
+    return [
+      for (final c in d['categories'] as List)
+        AdhkarCategory(
+          id: c['id'] as String,
+          ar: c['ar'] as String,
+          en: c['en'] as String,
+          items: [for (final i in c['items'] as List) Dhikr.fromJson(i as Map<String, dynamic>)],
+        ),
+    ];
+  }
+
+  Future<List<AdhkarCategory>> daily() => _daily ??= _categories('assets/adhkar/daily.json');
 
   Future<List<HisnChapter>> hisn() => _hisn ??= () async {
         final d = jsonDecode(await rootBundle.loadString('assets/adhkar/hisn.json')) as Map<String, dynamic>;
