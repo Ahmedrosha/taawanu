@@ -259,9 +259,16 @@ class _PageBody extends StatelessWidget {
       }
       children.add(SizedBox(height: lineH, child: Center(child: child)));
     }
-    return Column(
-      mainAxisAlignment: lines.length < _slots ? MainAxisAlignment.center : MainAxisAlignment.start,
-      children: children,
+    // لو الخط صغر بسبب طول الشاشة، الصفحة بتضيق معاه وتتوسّط (زي المطبوع)، بدل ما الكلمات تتفرد وتبعد عن بعض.
+    final blockW = m.maxNatural > 0 && m.maxNatural / 0.97 < width ? m.maxNatural / 0.97 : width;
+    return Center(
+      child: SizedBox(
+        width: blockW,
+        child: Column(
+          mainAxisAlignment: lines.length < _slots ? MainAxisAlignment.center : MainAxisAlignment.start,
+          children: children,
+        ),
+      ),
     );
   }
 }
@@ -287,7 +294,7 @@ class _PageMetrics {
     required List<MushafLine> lines,
     required String Function(MushafWord) word,
   }) {
-    final key = '$page|$qpc|${width.round()}|${lineH.round()}';
+    final key = '$page|$family|${width.round()}|${lineH.round()}';
     final hit = _cache[key];
     if (hit != null) return hit;
     if (_cache.length > 60) _cache.clear();
@@ -311,7 +318,8 @@ class _PageMetrics {
     final maxRef = widths.fold<double>(0, (a, b) => b > a ? b : a);
     // أطول سطر = ٩٧٪ من العرض، ومن غير ما الخط يكبر عن ارتفاع السطر.
     var size = maxRef > 0 ? ref * width * 0.97 / maxRef : lineH * 0.5;
-    final cap = lineH * (qpc ? 0.62 : 0.5);
+    // خطوط التجويد (V4) حروفها أصغر بالنسبة لحجم الخط، فبتاخد حجم أكبر عشان السطر يملى العرض.
+    final cap = lineH * (!qpc ? 0.5 : (family.startsWith('QPC4') ? 0.74 : 0.62));
     if (size > cap) size = cap;
     final scale = size / ref;
     return _cache[key] = _PageMetrics(size, [for (final w in widths) w * scale], maxRef * scale);
@@ -449,10 +457,12 @@ class _MushafSampleState extends State<MushafSample> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           for (final l in lines.where((l) => l.type == MushafLineType.text).take(_lines))
             SizedBox(
               height: lineH,
+              width: m.maxNatural > 0 && m.maxNatural / 0.97 < width ? m.maxNatural / 0.97 : width,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
