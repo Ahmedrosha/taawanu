@@ -261,12 +261,16 @@ class _PageBody extends StatelessWidget {
     }
     // لو الخط صغر بسبب طول الشاشة، الصفحة بتضيق معاه وتتوسّط (زي المطبوع)، بدل ما الكلمات تتفرد وتبعد عن بعض.
     final blockW = m.maxNatural > 0 && m.maxNatural / 0.97 < width ? m.maxNatural / 0.97 : width;
-    return Center(
-      child: SizedBox(
-        width: blockW,
-        child: Column(
-          mainAxisAlignment: lines.length < _slots ? MainAxisAlignment.center : MainAxisAlignment.start,
-          children: children,
+    // حجم الخط محسوب على مقاس الصفحة، فإعداد "حجم الخط" بتاع الموبايل ميتطبقش عليه
+    // (من غير كده الخط بيصغر أو يكبر والكلمات بتبعد عن بعض أو تدخل في بعض).
+    return MediaQuery.withNoTextScaling(
+      child: Center(
+        child: SizedBox(
+          width: blockW,
+          child: Column(
+            mainAxisAlignment: lines.length < _slots ? MainAxisAlignment.center : MainAxisAlignment.start,
+            children: children,
+          ),
         ),
       ),
     );
@@ -318,8 +322,7 @@ class _PageMetrics {
     final maxRef = widths.fold<double>(0, (a, b) => b > a ? b : a);
     // أطول سطر = ٩٧٪ من العرض، ومن غير ما الخط يكبر عن ارتفاع السطر.
     var size = maxRef > 0 ? ref * width * 0.97 / maxRef : lineH * 0.5;
-    // خطوط التجويد (V4) حروفها أصغر بالنسبة لحجم الخط، فبتاخد حجم أكبر عشان السطر يملى العرض.
-    final cap = lineH * (!qpc ? 0.5 : (family.startsWith('QPC4') ? 0.74 : 0.62));
+    final cap = lineH * (qpc ? 0.62 : 0.5);
     if (size > cap) size = cap;
     final scale = size / ref;
     return _cache[key] = _PageMetrics(size, [for (final w in widths) w * scale], maxRef * scale);
@@ -454,7 +457,8 @@ class _MushafSampleState extends State<MushafSample> {
     final lines = layout.page(_page);
     final m = _PageMetrics.of(page: _page, qpc: qpc, family: family, width: width, lineH: lineH, lines: lines, word: word);
     final style = TextStyle(fontFamily: family, fontSize: m.fontSize, height: 1.0, color: AppColors.text);
-    return Directionality(
+    return MediaQuery.withNoTextScaling(
+        child: Directionality(
       textDirection: TextDirection.rtl,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -473,6 +477,6 @@ class _MushafSampleState extends State<MushafSample> {
             ),
         ],
       ),
-    );
+    ));
   }
 }
