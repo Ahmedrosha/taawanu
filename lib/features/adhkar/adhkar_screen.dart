@@ -190,7 +190,7 @@ class RuqyahScreen extends StatelessWidget {
     return FutureBuilder<List<AdhkarCategory>>(
       future: AdhkarRepository.instance.ruqyah(),
       builder: (context, snap) => snap.hasData
-          ? DhikrListScreen(title: t.ruqyah, sections: snap.data!, note: t.ruqyahNote)
+          ? DhikrListScreen(title: t.ruqyah, sections: snap.data!, note: t.ruqyahNote, footer: t.ruqyahTahseenTip)
           : Scaffold(appBar: AppBar(title: Text(t.ruqyah)), body: const Center(child: CircularProgressIndicator())),
     );
   }
@@ -198,11 +198,14 @@ class RuqyahScreen extends StatelessWidget {
 
 /// أذكار قسم (أو كذا قسم بعناوين): دوس على الذكر عشان العداد يزيد.
 class DhikrListScreen extends StatefulWidget {
-  const DhikrListScreen({super.key, required this.title, required this.sections, this.note});
+  const DhikrListScreen({super.key, required this.title, required this.sections, this.note, this.footer});
 
   final String title;
   final List<AdhkarCategory> sections;
   final String? note;
+
+  /// نص يظهر في آخر القائمة (نصيحة مثلًا).
+  final String? footer;
 
   @override
   State<DhikrListScreen> createState() => _DhikrListScreenState();
@@ -269,6 +272,17 @@ class _DhikrListScreenState extends State<DhikrListScreen> {
                     child: _DhikrCard(dhikr: d, count: _counts[d.id] ?? 0, quran: q, onTap: () => _tap(d)),
                   ),
               ],
+              if (widget.footer != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Text(widget.footer!, style: TextStyle(fontSize: 13, color: AppColors.text, height: 1.8)),
+                ),
               Text(t.tapToCount, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
             ],
           );
