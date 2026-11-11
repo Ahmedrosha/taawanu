@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Taawanu</string>
+    <string name="widget_prayer_label">Next prayer</string>
+    <string name="widget_prayer_desc">The next prayer, its time and how long is left.</string>
+    <string name="widget_ward_label">My portion</string>
+    <string name="widget_ward_desc">Your current portion, your progress and the time left in the cycle.</string>
+    <string name="widget_dhikr_label">Dhikr of the day</string>
+    <string name="widget_dhikr_desc">A dhikr or dua that changes every day.</string>
+    <string name="widget_open_app">Open Taawanu to set this up</string>
 </resources>

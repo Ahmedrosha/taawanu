@@ -165,6 +165,9 @@ class Prefs {
   int get prayerReminderMinutes => _p.getInt('prayerReminderMinutes') ?? 0;
   Future<void> setPrayerReminderMinutes(int v) => _p.setInt('prayerReminderMinutes', v);
 
+  /// بيانات ويدجتس الشاشة الرئيسية (JSON)، بيقراها كود أندرويد من نفس الملف.
+  Future<void> setWidgetData(String key, String json) => _p.setString(key, json);
+
   // ---------- التذكيرات (على الموبايل) ----------
   // المفاتيح: adhkarMorning / adhkarEvening / adhkarSleep / ward / kahf / salawat.
 

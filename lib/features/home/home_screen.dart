@@ -10,6 +10,7 @@ import '../../services/prefs.dart';
 import '../../services/quran_repository.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_colors.dart';
+import '../../services/home_widgets.dart';
 import '../../widgets/name_dialog.dart';
 import '../messages/messages_screen.dart';
 import '../notifications/notifications_screen.dart';
@@ -243,6 +244,8 @@ class _HomeGroupCardState extends State<_HomeGroupCard> {
                       final a = aSnap.data;
                       // لسه بيحمّل: مكان فاضي بدل "ملكش ورد" اللي كان بيظهر لحظة.
                       if (a == null && aSnap.connectionState == ConnectionState.waiting) return const SizedBox(height: 60);
+                      // ويدجت "وردي" على الشاشة الرئيسية للموبايل.
+                      HomeWidgets.instance.setWard(g, a);
                       if (a == null) return Text(t.noPortionThisCycle, style: TextStyle(color: AppColors.textMuted));
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,

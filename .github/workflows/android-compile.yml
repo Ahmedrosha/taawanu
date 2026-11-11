@@ -1,0 +1,28 @@
+name: Android compile check
+
+# يدوي: بيبني نسخة debug من غير توقيع ولا رفع، عشان نتأكد إن كود أندرويد (زي الويدجتس) بيتبني قبل بناء النسخة.
+on: workflow_dispatch
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter gen-l10n
+      - name: Build debug APK
+        run: |
+          set +e
+          flutter build apk --debug > build.log 2>&1
+          code=$?
+          tail -n 40 build.log
+          grep -nE "^e: |error:|FAILURE|What went wrong" -A3 build.log | head -60
+          exit $code

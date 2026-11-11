@@ -6,6 +6,7 @@ import 'features/prayer/prayer_alerts.dart';
 import 'features/prayer/prayer_controller.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
+import 'services/home_widgets.dart';
 import 'services/prefs.dart';
 import 'services/push_service.dart';
 import 'services/reading_time.dart';
@@ -31,6 +32,7 @@ Future<void> main() async {
   // تنبيهات الصلاة: بتتجدد مع كل فتح للتطبيق، ولما المكان أو الإعدادات تتغير.
   PrayerController.instance.addListener(PrayerAlerts.instance.reschedule);
   PrayerAlerts.instance.reschedule();
+  HomeWidgets.instance.start();
   ReadingTime.instance.onReadToday = () => PrayerAlerts.instance.rescheduleReminders();
   // مقارنة النسخة بآخر نسخة، وتسجيلها في حساب المستخدم.
   UpdateService.instance.start();
