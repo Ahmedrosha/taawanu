@@ -1,0 +1,19 @@
+name: iOS widget target (one-off)
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  add:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+      - run: gem install xcodeproj --no-document
+      - run: ruby tools/add_widget_target.rb
+      - run: |
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add ios/Runner.xcodeproj/project.pbxproj
+          git diff --cached --quiet && echo "no change" || (git commit -m "iOS: add TaawanuWidgets extension target" && git push)

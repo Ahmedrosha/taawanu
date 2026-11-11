@@ -12,7 +12,8 @@ import '../models/group_models.dart';
 import 'prefs.dart';
 import 'quran_repository.dart';
 
-/// ويدجتس الشاشة الرئيسية (أندرويد): التطبيق بيكتب البيانات جاهزة بالنصوص، والويدجت بيعرضها.
+/// ويدجتس الشاشة الرئيسية (أندرويد وأيفون): التطبيق بيكتب البيانات جاهزة بالنصوص، والويدجت بيعرضها.
+/// أندرويد بيقراها من ملف الإعدادات، والأيفون بتتبعتله وبيحفظها في App Group.
 class HomeWidgets {
   HomeWidgets._();
   static final instance = HomeWidgets._();
@@ -20,7 +21,8 @@ class HomeWidgets {
   static const _channel = MethodChannel('taawanu/widgets');
   static const _prayers = [Prayer.fajr, Prayer.dhuhr, Prayer.asr, Prayer.maghrib, Prayer.isha];
 
-  bool get _supported => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  bool get _supported =>
+      !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
   AppLocalizations get _t => lookupAppLocalizations(Prefs.instance.locale);
 
   final _wards = <String, Map<String, dynamic>>{};
@@ -32,7 +34,7 @@ class HomeWidgets {
     _last[key] = raw;
     try {
       await Prefs.instance.setWidgetData(key, raw);
-      await _channel.invokeMethod<void>('update');
+      await _channel.invokeMethod<void>('update', {key: raw});
     } catch (_) {
       // الويدجتس مش أساسية.
     }
