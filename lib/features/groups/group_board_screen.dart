@@ -410,16 +410,16 @@ Color segmentColor(String status) => switch (status) {
       _ => AppColors.statusPending,
     };
 
-/// خانة لون الحالة: "متاح" فاضية بإطار بس، و"جاري" بيتملى أصفر على قد اللي اتقرا (fill من ٠ لـ١).
+/// خانة لون الحالة: "متاح" فاضية بإطار بس، و"جاري" و"متأخر" بيتملوا أصفر على قد اللي اتقرا (fill من ٠ لـ١): الباقي رمادي للجاري وأحمر للمتأخر.
 Widget segmentSwatch(String status, {double? width, double height = 10, double radius = 3, double fill = 1}) {
   final open = status == 'open';
-  final partial = status == 'in_progress' && fill < 1;
+  final partial = (status == 'in_progress' || status == 'late') && fill < 1;
   return Container(
     width: width,
     height: height,
     clipBehavior: Clip.antiAlias,
     decoration: BoxDecoration(
-      color: partial ? AppColors.statusPending : segmentColor(status),
+      color: partial ? (status == 'late' ? AppColors.statusLate : AppColors.statusPending) : segmentColor(status),
       borderRadius: BorderRadius.circular(radius),
       // "متاح" فاضي بإطار، و"اتأخر واتكمّل" أخضر بإطار أحمر.
       border: open
