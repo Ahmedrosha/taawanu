@@ -62,9 +62,9 @@ class _PersonalWardScreenState extends State<PersonalWardScreen> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _openRead({int? surah, bool goal = false}) async {
+  Future<void> _openRead({int? surah, int? ayah, bool goal = false}) async {
     final t = AppLocalizations.of(context);
-    await context.push('/read', extra: ReadRequest.personal(label: t.personalFreeMushaf, surah: surah, goal: goal));
+    await context.push('/read', extra: ReadRequest.personal(label: t.personalFreeMushaf, surah: surah, ayah: ayah, goal: goal));
     if (mounted) setState(() {});
   }
 
@@ -80,15 +80,14 @@ class _PersonalWardScreenState extends State<PersonalWardScreen> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _pickSurah(QuranData q) async {
-    final en = Localizations.localeOf(context).languageCode == 'en';
-    final s = await showModalBottomSheet<int>(
+  Future<void> _goTo(QuranData q) async {
+    final pos = await showModalBottomSheet<(int, int)>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => _SurahPicker(names: en ? q.surahNamesEn : q.surahNamesAr),
+      builder: (_) => _GoToSheet(quran: q),
     );
-    if (s != null) _openRead(surah: s);
+    if (pos != null) _openRead(surah: pos.$1, ayah: pos.$2);
   }
 
   Future<void> _add(QuranData q) async {
@@ -129,7 +128,7 @@ class _PersonalWardScreenState extends State<PersonalWardScreen> {
                     const SizedBox(width: 8),
                     Expanded(child: Text(t.personalFreeMushaf, style: const TextStyle(fontWeight: FontWeight.w700))),
                     TextButton(onPressed: () => _openRead(), child: Text(t.personalContinueShort)),
-                    TextButton(onPressed: q == null ? null : () => _pickSurah(q), child: Text(t.personalPickSurah)),
+                    TextButton(onPressed: q == null ? null : () => _goTo(q), child: Text(t.personalGoTo)),
                   ],
                 ),
               ),
@@ -248,51 +247,136 @@ class _ItemTile extends StatelessWidget {
   }
 }
 
-class _SurahPicker extends StatefulWidget {
-  const _SurahPicker({required this.names});
+/// "انتقل إلى": سورة (من أولها)، أو جزء، أو سورة وآية. بيرجّع (سورة، آية).
+class _GoToSheet extends StatefulWidget {
+  const _GoToSheet({required this.quran});
 
-  final List<String> names;
+  final QuranData quran;
 
   @override
-  State<_SurahPicker> createState() => _SurahPickerState();
+  State<_GoToSheet> createState() => _GoToSheetState();
 }
 
-class _SurahPickerState extends State<_SurahPicker> {
+class _GoToSheetState extends State<_GoToSheet> {
+  String _mode = 'surah'; // surah | juz | ayah
   String _q = '';
+  int? _surah; // في وضع الآية: السورة اللي اخترتها
+  final _ayah = TextEditingController();
+
+  @override
+  void dispose() {
+    _ayah.dispose();
+    super.dispose();
+  }
+
+  int? get _ayahValue {
+    final s = _surah;
+    final a = int.tryParse(_ayah.text.trim());
+    if (s == null || a == null || a < 1 || a > widget.quran.ayahCount(s)) return null;
+    return a;
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final en = Localizations.localeOf(context).languageCode == 'en';
+    final q = widget.quran;
+    final names = en ? q.surahNamesEn : q.surahNamesAr;
     final key = normalizeArabic(_q.trim().toLowerCase());
     final shown = [
-      for (var i = 0; i < widget.names.length; i++)
-        if (key.isEmpty || normalizeArabic(widget.names[i].toLowerCase()).contains(key) || '${i + 1}' == key) i + 1,
+      for (var i = 0; i < names.length; i++)
+        if (key.isEmpty || normalizeArabic(names[i].toLowerCase()).contains(key) || '${i + 1}' == key) i + 1,
     ];
+    final picking = _mode != 'juz' && (_mode == 'surah' || _surah == null);
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.7,
+        height: MediaQuery.sizeOf(context).height * 0.75,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: TextField(
-                decoration: InputDecoration(hintText: t.personalSearchSurah, prefixIcon: const Icon(Icons.search)),
-                onChanged: (v) => setState(() => _q = v),
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                children: [
-                  for (final s in shown)
-                    ListTile(
-                      leading: Text('$s', style: TextStyle(color: AppColors.textMuted)),
-                      title: Text(widget.names[s - 1]),
-                      onTap: () => Navigator.pop(context, s),
-                    ),
+              child: SegmentedButton<String>(
+                segments: [
+                  ButtonSegment(value: 'surah', label: Text(t.personalTypeSurah)),
+                  ButtonSegment(value: 'juz', label: Text(t.personalJuz)),
+                  ButtonSegment(value: 'ayah', label: Text(t.personalAyah)),
                 ],
+                selected: {_mode},
+                onSelectionChanged: (v) => setState(() {
+                  _mode = v.first;
+                  _surah = null;
+                  _ayah.clear();
+                }),
               ),
             ),
+            if (picking)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: TextField(
+                  decoration: InputDecoration(hintText: t.personalSearchSurah, prefixIcon: const Icon(Icons.search)),
+                  onChanged: (v) => setState(() => _q = v),
+                ),
+              ),
+            if (_mode == 'juz')
+              Expanded(
+                child: ListView(
+                  children: [
+                    for (var j = 1; j <= 30; j++)
+                      Builder(builder: (context) {
+                        final (s, a) = q.quarterStart((j - 1) * 8 + 1);
+                        return ListTile(
+                          leading: Text('$j', style: TextStyle(color: AppColors.textMuted)),
+                          title: Text(t.juzLabel(j)),
+                          subtitle: Text('${names[s - 1]} · $a'),
+                          onTap: () => Navigator.pop(context, (s, a)),
+                        );
+                      }),
+                  ],
+                ),
+              )
+            else if (picking)
+              Expanded(
+                child: ListView(
+                  children: [
+                    for (final s in shown)
+                      ListTile(
+                        leading: Text('$s', style: TextStyle(color: AppColors.textMuted)),
+                        title: Text(names[s - 1]),
+                        trailing: _mode == 'ayah' ? const Icon(Icons.chevron_right) : null,
+                        onTap: () => _mode == 'surah' ? Navigator.pop(context, (s, 1)) : setState(() => _surah = s),
+                      ),
+                  ],
+                ),
+              )
+            else ...[
+              // وضع الآية بعد اختيار السورة: رقم الآية.
+              ListTile(
+                title: Text(names[_surah! - 1], style: const TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: Text(t.personalAyahRange(q.ayahCount(_surah!))),
+                trailing: TextButton(onPressed: () => setState(() => _surah = null), child: Text(t.personalChange)),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  controller: _ayah,
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(labelText: t.personalAyahNumber),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: FilledButton(
+                  onPressed: _ayahValue == null ? null : () => Navigator.pop(context, (_surah!, _ayahValue!)),
+                  child: Text(t.personalGoTo),
+                ),
+              ),
+              const Spacer(),
+            ],
           ],
         ),
       ),

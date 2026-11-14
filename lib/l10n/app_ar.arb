@@ -665,5 +665,11 @@
   "personalPrevJuz": "الجزء اللي قبله",
   "personalNextJuz": "الجزء اللي بعده",
   "personalContinueShort": "أكمل",
-  "personalAddN": "إضافة ({n})"
+  "personalAddN": "إضافة ({n})",
+  "personalGoTo": "انتقل إلى",
+  "personalJuz": "جزء",
+  "personalAyah": "آية",
+  "personalAyahNumber": "رقم الآية",
+  "personalChange": "غيّر",
+  "personalAyahRange": "من ١ لـ {n}"
 }

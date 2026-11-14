@@ -1185,5 +1185,12 @@
   "personalNextJuz": "Next juz",
   "personalContinueShort": "Continue",
   "personalAddN": "Add ({n})",
-  "@personalAddN": {"placeholders": {"n": {"type": "int"}}}
+  "@personalAddN": {"placeholders": {"n": {"type": "int"}}},
+  "personalGoTo": "Go to",
+  "personalJuz": "Juz",
+  "personalAyah": "Ayah",
+  "personalAyahNumber": "Ayah number",
+  "personalChange": "Change",
+  "personalAyahRange": "1 to {n}",
+  "@personalAyahRange": {"placeholders": {"n": {"type": "int"}}}
 }
