@@ -25,7 +25,7 @@ class RecitationBar extends StatelessWidget {
     final ar = Localizations.localeOf(context).languageCode != 'en';
     final r = audio.reciter;
     final bar = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
@@ -85,7 +85,9 @@ class RecitationBar extends StatelessWidget {
         ],
       ),
     );
-    if (!audio.waiting) return bar;
+    // الشاشات العريضة (الفولد مفتوح، التابلت): الشريط بعرض مناسب في النص.
+    final shown = Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: bar));
+    if (!audio.waiting) return shown;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -94,7 +96,7 @@ class RecitationBar extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 6),
           child: Text(t.recitationWaiting, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.accent, fontWeight: FontWeight.w600)),
         ),
-        bar,
+        shown,
       ],
     );
   }

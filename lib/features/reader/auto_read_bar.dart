@@ -22,7 +22,7 @@ class AutoReadBar extends StatelessWidget {
     final auto = AutoReader.instance;
     final speed = auto.speed;
     final bar = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
@@ -52,21 +52,29 @@ class AutoReadBar extends StatelessWidget {
                 textDirection: TextDirection.ltr,
                 children: [
                   _SpeedButton(icon: Icons.remove, onPressed: speed > AutoReader.speeds.first ? () => auto.changeSpeed(-1) : null),
-                  SizedBox(
-                    width: 38,
-                    child: Text(speedLabel(speed), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  // الرقم في سطر واحد دايمًا، والخانة بتكبر على قده لو الخط كبير.
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 40),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(speedLabel(speed),
+                          maxLines: 1, softWrap: false, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                    ),
                   ),
                   _SpeedButton(icon: Icons.add, onPressed: speed < AutoReader.speeds.last ? () => auto.changeSpeed(1) : null),
                 ],
               ),
-              Text(t.speed, style: TextStyle(fontSize: 10, color: AppColors.textMuted, height: 1)),
+              const SizedBox(height: 2),
+              Text(t.speed, maxLines: 1, style: TextStyle(fontSize: 10, color: AppColors.textMuted, height: 1)),
             ],
           ),
           IconButton(tooltip: t.stopAutoRead, onPressed: auto.stop, icon: const Icon(Icons.close), visualDensity: VisualDensity.compact),
         ],
       ),
     );
-    if (!auto.waiting) return bar;
+    // الشاشات العريضة (الفولد مفتوح، التابلت): الشريط بعرض مناسب في النص.
+    final shown = Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: bar));
+    if (!auto.waiting) return shown;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -75,7 +83,7 @@ class AutoReadBar extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 6),
           child: Text(t.autoReadWaiting, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.accent, fontWeight: FontWeight.w600)),
         ),
-        bar,
+        shown,
       ],
     );
   }
