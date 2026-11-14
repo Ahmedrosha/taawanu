@@ -1209,5 +1209,14 @@
   "reportFullDays": "Complete days",
   "reportStreak": "Days in a row up to today",
   "reportBestStreak": "Longest streak in period",
-  "reportPerItem": "Each item"
+  "reportPerItem": "Each item",
+  "notifPersonal": "Remind me of my personal ward",
+  "notifPersonalHint": "Lists what is left, and skips the day if you finished. Each item can also have its own time from the ward page.",
+  "personalItemTime": "Time for {name}",
+  "@personalItemTime": {"placeholders": {"name": {"type": "String"}}},
+  "personalRemind": "Reminder time",
+  "personalRemindOff": "Remove reminder",
+  "personalRemindAt": "Reminder {time}",
+  "@personalRemindAt": {"placeholders": {"time": {"type": "String"}}},
+  "personalRemindToggle": "Remind me at a set time"
 }

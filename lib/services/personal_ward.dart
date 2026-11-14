@@ -12,7 +12,13 @@ import 'quran_repository.dart';
 
 /// بند في الورد الشخصي: أذكار (قسم كامل) أو سورة كاملة.
 class PersonalItem {
-  const PersonalItem({required this.id, required this.type, required this.ref, this.days = const [], this.since});
+  const PersonalItem({required this.id, required this.type, required this.ref, this.days = const [], this.since, this.remindAt});
+
+  /// ميعاد تذكير خاص بالبند (دقايق من نص الليل)، أو null.
+  final int? remindAt;
+
+  PersonalItem withRemind(int? minutes) =>
+      PersonalItem(id: id, type: type, ref: ref, days: days, since: since, remindAt: minutes);
 
   /// 'adhkar' (ref = id القسم) | 'surah' (ref = رقم السورة).
   final String id;
@@ -39,7 +45,8 @@ class PersonalItem {
 
   bool dueOn(DateTime d) => days.isEmpty || days.contains(d.weekday);
 
-  Map<String, dynamic> toJson() => {'id': id, 'type': type, 'ref': ref, 'days': days, if (since != null) 'since': since};
+  Map<String, dynamic> toJson() =>
+      {'id': id, 'type': type, 'ref': ref, 'days': days, if (since != null) 'since': since, if (remindAt != null) 'remindAt': remindAt};
 
   static PersonalItem? fromJson(Object? j) {
     if (j is! Map) return null;
@@ -51,6 +58,7 @@ class PersonalItem {
       ref: ref,
       days: [for (final d in (j['days'] as List? ?? const [])) if (d is int && d >= 1 && d <= 7) d],
       since: j['since'] is String ? j['since'] as String : null,
+      remindAt: j['remindAt'] is int && (j['remindAt'] as int) >= 0 && (j['remindAt'] as int) < 1440 ? j['remindAt'] as int : null,
     );
   }
 }
@@ -169,7 +177,22 @@ class PersonalWard extends ChangeNotifier {
     _schedulePush();
   }
 
+  /// ميعاد تذكير البند اتغير.
+  Future<void> setRemind(String id, int? minutes) async {
+    final k = items.indexWhere((i) => i.id == id);
+    if (k < 0) return;
+    items[k] = items[k].withRemind(minutes);
+    _itemsChanged();
+    notifyListeners();
+    await _saveItems();
+    _schedulePush();
+  }
+
+  /// بيتنده لما حاجة تأثر على التذكيرات تتغير (بند اتضاف/اتشال/اتعمل).
+  void Function()? onScheduleChanged;
+
   void _itemsChanged() {
+    onScheduleChanged?.call();
     _itemsDirty = true;
     Prefs.instance.setPersonalWardItemsAt(DateTime.now().millisecondsSinceEpoch);
     _noteDue();
@@ -212,6 +235,7 @@ class PersonalWard extends ChangeNotifier {
     }
     final before = _dirtyDays.length;
     _noteDue();
+    if (changed) onScheduleChanged?.call();
     if (changed || _dirtyDays.length != before) {
       _dirtyDays.add(day);
       _saveDone();
@@ -231,10 +255,26 @@ class PersonalWard extends ChangeNotifier {
     }
     _dirtyDays.add(day);
     _noteDue();
+    onScheduleChanged?.call();
     notifyListeners();
     await _saveDone();
     _schedulePush();
   }
+
+  /// أقسام الأذكار من غير إشعار (للتذكيرات).
+  Future<void> ensureAdhkar() async {
+    if (_adhkar.isEmpty) _adhkar = await AdhkarRepository.instance.daily();
+  }
+
+  /// عدد التذكيرات اللي الورد الشخصي محتاجها (عشان حد الآيفون: ٦٤ إشعار مجدول).
+  int get reminderSlots {
+    if (items.isEmpty) return 0;
+    final general = Prefs.instance.reminderOn('personal') ? 2 : 0;
+    final own = items.where((i) => i.remindAt != null).length;
+    return general + (own > maxItemReminders ? maxItemReminders : own);
+  }
+
+  static const maxItemReminders = 12;
 
   // ---------- الحفظ في الحساب (users/{uid}/private/personalWard) ----------
   // البنود بتتبعت كاملة مع وقت آخر تعديل، والسجل يوم بيوم (دمج)، عشان جهازين مايمسحوش بعض.
@@ -295,6 +335,7 @@ class PersonalWard extends ChangeNotifier {
       _items = [for (final j in remoteItems) if (PersonalItem.fromJson(j) case final i?) i];
       Prefs.instance.setPersonalWardItemsAt(remoteAt);
       _saveItems();
+      onScheduleChanged?.call();
     }
     final done = data['done'];
     if (done is Map) {

@@ -166,6 +166,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           ]),
           _section(Icons.menu_book_outlined, t.notifWard, [
             _reminder('ward', t.notifWardDaily, subtitle: t.notifWardHint),
+            _reminder('personal', t.notifPersonal, subtitle: t.notifPersonalHint),
           ]),
           _section(Icons.event_outlined, t.notifFriday, [
             _reminder('kahf', t.notifKahf),

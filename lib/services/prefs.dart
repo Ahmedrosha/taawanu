@@ -198,9 +198,11 @@ class Prefs {
     'ward': 21 * 60,
     'kahf': 9 * 60,
     'salawat': 14 * 60,
+    'personal': 20 * 60,
   };
 
-  bool reminderOn(String key) => _p.getBool('rem_$key') ?? false;
+  /// تذكير الورد الشخصي شغال من الأول (بييجي بس لو فيه بنود لسه ما خلصتش).
+  bool reminderOn(String key) => _p.getBool('rem_$key') ?? (key == 'personal');
   Future<void> setReminderOn(String key, bool v) => _p.setBool('rem_$key', v);
 
   /// وقت التذكير بالدقايق من نص الليل.

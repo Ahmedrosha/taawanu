@@ -686,5 +686,12 @@
   "reportFullDays": "أيام كاملة",
   "reportStreak": "أيام ورا بعض لحد النهارده",
   "reportBestStreak": "أطول سلسلة في الفترة",
-  "reportPerItem": "كل بند"
+  "reportPerItem": "كل بند",
+  "notifPersonal": "فكرني بوردي الشخصي",
+  "notifPersonalHint": "بيقولك اللي باقي، ومبييجيش لو خلّصت كله. ولكل بند تقدر تحدد ميعاد لوحده من صفحة الورد.",
+  "personalItemTime": "وقت {name}",
+  "personalRemind": "ميعاد التذكير",
+  "personalRemindOff": "شيل التذكير",
+  "personalRemindAt": "تذكير {time}",
+  "personalRemindToggle": "فكرني في ميعاد معيّن"
 }

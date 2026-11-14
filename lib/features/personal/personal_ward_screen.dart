@@ -10,6 +10,7 @@ import '../../widgets/ui.dart';
 import '../adhkar/adhkar_data.dart';
 import '../adhkar/adhkar_screen.dart' show DhikrListScreen;
 import '../groups/group_board_screen.dart' show ReadRequest;
+import '../prayer/prayer_alerts.dart';
 import 'personal_report_screen.dart';
 
 /// اسم البند: القسم بالعربي أو الإنجليزي، أو اسم السورة.
@@ -32,6 +33,17 @@ String _daysLabel(AppLocalizations t, PersonalItem i, String locale) {
   if (i.days.length == 1 && i.days.first == DateTime.friday) return t.personalFridayOnly;
   // ١ = الاثنين: 2 يناير 2023 كان اثنين.
   return [for (final d in i.days) DateFormat.E(locale).format(DateTime(2023, 1, 1 + d))].join(' · ');
+}
+
+String _timeLabel(BuildContext context, int m) => TimeOfDay(hour: m ~/ 60, minute: m % 60).format(context);
+
+/// ميعاد تذكير لبند (وبنطلب إذن الإشعارات لو لسه).
+Future<int?> _pickRemindTime(BuildContext context, int? current) async {
+  final m = current ?? 20 * 60;
+  final picked = await showTimePicker(context: context, initialTime: TimeOfDay(hour: m ~/ 60, minute: m % 60));
+  if (picked == null) return null;
+  await PrayerAlerts.instance.requestPermission();
+  return picked.hour * 60 + picked.minute;
 }
 
 /// الورد الشخصي: مصحف حر + قايمة أهداف يومية (أذكار وسور).
@@ -237,7 +249,13 @@ class _ItemTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: dim ? AppColors.textMuted : AppColors.text)),
-                      Text(auto ? t.personalAutoDone : _daysLabel(t, item, locale), style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                      Text(
+                        [
+                          auto ? t.personalAutoDone : _daysLabel(t, item, locale),
+                          if (item.remindAt != null) t.personalRemindAt(_timeLabel(context, item.remindAt!)),
+                        ].join(' · '),
+                        style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                      ),
                     ],
                   ),
                 ),
@@ -248,8 +266,17 @@ class _ItemTile extends StatelessWidget {
                     child: Text(item.isSurah ? t.personalRead : t.personalOpen, style: TextStyle(fontSize: 11, color: AppColors.navy)),
                   ),
                 PopupMenuButton<String>(
-                  onSelected: (_) => ward.remove(item.id),
-                  itemBuilder: (_) => [PopupMenuItem(value: 'remove', child: Text(t.personalRemove))],
+                  onSelected: (v) async {
+                    if (v == 'remove') return ward.remove(item.id);
+                    if (v == 'remindOff') return ward.setRemind(item.id, null);
+                    final m = await _pickRemindTime(context, item.remindAt);
+                    if (m != null) await ward.setRemind(item.id, m);
+                  },
+                  itemBuilder: (_) => [
+                    PopupMenuItem(value: 'remind', child: Text(t.personalRemind)),
+                    if (item.remindAt != null) PopupMenuItem(value: 'remindOff', child: Text(t.personalRemindOff)),
+                    PopupMenuItem(value: 'remove', child: Text(t.personalRemove)),
+                  ],
                 ),
               ],
             ),
@@ -412,6 +439,7 @@ class _AddSheetState extends State<_AddSheet> {
   final _refs = <String>{};
   String _repeat = 'daily'; // daily | friday | custom
   final _days = <int>{};
+  int? _remind;
   String _q = '';
 
   List<int> get _chosenDays => switch (_repeat) {
@@ -520,6 +548,17 @@ class _AddSheetState extends State<_AddSheet> {
                   ],
                 ),
               ),
+            SwitchListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              title: Text(t.personalRemindToggle),
+              subtitle: _remind == null ? null : Text(_timeLabel(context, _remind!)),
+              value: _remind != null,
+              onChanged: (v) async {
+                if (!v) return setState(() => _remind = null);
+                final m = await _pickRemindTime(context, _remind);
+                if (m != null && mounted) setState(() => _remind = m);
+              },
+            ),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
@@ -538,7 +577,7 @@ class _AddSheetState extends State<_AddSheet> {
                                   : order.indexOf(a).compareTo(order.indexOf(b)));
                             Navigator.pop(context, [
                               for (final (k, ref) in refs.indexed)
-                                PersonalItem(id: '${base + k}', type: _type, ref: ref, days: _chosenDays, since: personalDayKey()),
+                                PersonalItem(id: '${base + k}', type: _type, ref: ref, days: _chosenDays, since: personalDayKey(), remindAt: _remind),
                             ]);
                           },
                     child: Text(_refs.isEmpty ? t.personalAdd : t.personalAddN(_refs.length)),

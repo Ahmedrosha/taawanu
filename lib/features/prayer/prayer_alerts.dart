@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
@@ -6,6 +7,10 @@ import 'package:timezone/timezone.dart' as tz;
 import '../../services/prefs.dart';
 import 'prayer_controller.dart';
 import 'prayer_times.dart';
+import '../../l10n/gen/app_localizations.dart';
+import '../../services/personal_ward.dart';
+import '../../services/quran_repository.dart';
+import '../personal/personal_ward_screen.dart' show personalItemTitle;
 
 /// تنبيهات مواقيت الصلاة: بتتجدول على الجهاز (من غير سيرفر)، بصوت الإشعار العادي.
 /// بنجدول كام يوم لقدام، وبنجدد كل ما التطبيق يتفتح أو الإعدادات تتغير.
@@ -70,7 +75,8 @@ class PrayerAlerts {
       final reminder = prefs.prayerReminderMinutes;
       // الآيفون بيسمح بـ٦٤ إشعار مجدول بس.
       // (وبنسيب مكان للتذكيرات التانية: الأذكار والورد والجمعة.)
-      final days = reminder > 0 ? 5 : 7;
+      // لو الورد الشخصي محتاج أكتر من ٤ تذكيرات، الصلاة بتتجدول ٤ أيام بدل ٥.
+      final days = reminder > 0 ? (PersonalWard.instance.reminderSlots > 4 ? 4 : 5) : 7;
       final now = DateTime.now();
       final place = c.placeName(ar ? 'ar' : 'en');
 
@@ -176,8 +182,50 @@ class PrayerAlerts {
           await _schedule(id++, when, ar ? 'وردك النهارده' : 'Your reading today', ar ? 'لسه مقريتش النهارده، افتح المصحف وكمّل وردك' : 'You haven\'t read today yet. Open the Mushaf and continue.', details);
         }
       }
+
+      await _personalReminders(ar, details, now);
     } catch (e) {
       debugPrint('reminders failed: $e');
+    }
+  }
+
+  /// الورد الشخصي: تذكير عام باللي باقي (النهارده وبكره)، وأقرب مرة لكل بند ليه ميعاد.
+  /// بيتجدد مع كل تغيير في الورد ومع فتح التطبيق.
+  Future<void> _personalReminders(bool ar, NotificationDetails details, DateTime now) async {
+    for (var k = 0; k < 2 + PersonalWard.maxItemReminders; k++) {
+      await _plugin.cancel(_remBase + 20 + k);
+    }
+    final ward = PersonalWard.instance;
+    if (ward.items.isEmpty) return;
+    await ward.ensureAdhkar();
+    final quran = await QuranRepository.instance.load();
+    final t = lookupAppLocalizations(Locale(ar ? 'ar' : 'en'));
+    String name(PersonalItem i) => personalItemTitle(t, i, quran, ward.adhkarCategories, !ar);
+    final prefs = Prefs.instance;
+
+    if (prefs.reminderOn('personal')) {
+      final m = prefs.reminderMinutes('personal');
+      for (var d = 0; d < 2; d++) {
+        final day = DateTime(now.year, now.month, now.day + d);
+        final when = DateTime(day.year, day.month, day.day, m ~/ 60, m % 60);
+        if (!when.isAfter(now)) continue;
+        final due = [for (final i in ward.today(day)) if (d > 0 || !ward.isDone(i)) i];
+        if (due.isEmpty) continue;
+        await _schedule(_remBase + 20 + d, when, t.personalWard, t.personalLeft(due.map(name).join('، ')), details);
+      }
+    }
+
+    var id = _remBase + 22;
+    for (final i in ward.items) {
+      final m = i.remindAt;
+      if (m == null || id >= _remBase + 22 + PersonalWard.maxItemReminders) continue;
+      for (var d = 0; d < 8; d++) {
+        final day = DateTime(now.year, now.month, now.day + d);
+        final when = DateTime(day.year, day.month, day.day, m ~/ 60, m % 60);
+        if (!when.isAfter(now) || !i.dueOn(day) || (d == 0 && ward.isDone(i))) continue;
+        await _schedule(id++, when, t.personalWard, t.personalItemTime(name(i)), details);
+        break;
+      }
     }
   }
 

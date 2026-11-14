@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
@@ -11,6 +12,7 @@ import 'services/prefs.dart';
 import 'services/push_service.dart';
 import 'services/reading_time.dart';
 import 'services/update_service.dart';
+import 'services/personal_ward.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +36,12 @@ Future<void> main() async {
   PrayerAlerts.instance.reschedule();
   HomeWidgets.instance.start();
   ReadingTime.instance.onReadToday = () => PrayerAlerts.instance.rescheduleReminders();
+  // الورد الشخصي اتغير: التذكيرات تتجدد (بعد ثانيتين، عشان التعديلات ورا بعض تبقى مرة واحدة).
+  Timer? personalTimer;
+  PersonalWard.instance.onScheduleChanged = () {
+    personalTimer?.cancel();
+    personalTimer = Timer(const Duration(seconds: 2), PrayerAlerts.instance.reschedule);
+  };
   // مقارنة النسخة بآخر نسخة، وتسجيلها في حساب المستخدم.
   UpdateService.instance.start();
   runApp(const TaawanuApp());
