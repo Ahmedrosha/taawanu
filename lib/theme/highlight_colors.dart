@@ -6,7 +6,7 @@ import 'app_colors.dart';
 /// ألوان تظليل الآية/الكلمة في القراءة: (فاتح، غامق) لكل لون. الغامق أقوى عشان يبان على الخلفية الغامقة.
 const highlightPalette = <String, (Color, Color)>{
   'gold': (Color(0xFFF6E3A8), Color(0xFF6E5716)),
-  'yellow': (Color(0xFFFFF176), Color(0xFF857A10)),
+  'yellow': (Color(0xFFFFF176), Color(0xFF746B0E)),
   'green': (Color(0xFFC6EFCF), Color(0xFF22643A)),
   'blue': (Color(0xFFCFE2FF), Color(0xFF214E86)),
   'pink': (Color(0xFFF9D0E4), Color(0xFF7E3159)),
