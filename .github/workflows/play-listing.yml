@@ -1,0 +1,56 @@
+name: Play listing
+
+# يدوي بس: بيعرض أسماء التطبيق في صفحة المتجر على Google Play، أو بيغيّر الاسم للغة واحدة.
+on:
+  workflow_dispatch:
+    inputs:
+      language:
+        description: "اللغة (مثلاً ar أو en-US)"
+        required: false
+        default: "ar"
+      title:
+        description: "الاسم الجديد (فاضي = اعرض الأسماء بس)"
+        required: false
+        default: ""
+
+jobs:
+  listing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show or update app name
+        env:
+          PLAY_KEY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          LANG_CODE: ${{ inputs.language }}
+          NEW_TITLE: ${{ inputs.title }}
+        run: |
+          pip install --quiet google-auth requests
+          python3 - <<'PY'
+          import json, os
+          from google.oauth2 import service_account
+          from google.auth.transport.requests import AuthorizedSession
+          key = json.loads(os.environ['PLAY_KEY'], strict=False)
+          creds = service_account.Credentials.from_service_account_info(
+              key, scopes=['https://www.googleapis.com/auth/androidpublisher'])
+          s = AuthorizedSession(creds)
+          base = 'https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.taawanu.taawanu'
+          def check(r):
+              if r.status_code >= 300:
+                  msg = r.text.replace('%', '%25').replace('\n', ' ')[:900]
+                  print(f'::error title=Play API {r.status_code}::{msg}')
+                  raise SystemExit(1)
+              return r.json()
+          edit = check(s.post(f'{base}/edits'))['id']
+          for l in check(s.get(f'{base}/edits/{edit}/listings')).get('listings', []):
+              print(f"::notice title={l['language']}::{l.get('title', '')}")
+          title = os.environ['NEW_TITLE'].strip()
+          if not title:
+              s.delete(f'{base}/edits/{edit}')
+              raise SystemExit(0)
+          if len(title) > 30:
+              print(f'::error::Title is {len(title)} characters (max 30)')
+              raise SystemExit(1)
+          lang = os.environ['LANG_CODE'].strip()
+          check(s.patch(f'{base}/edits/{edit}/listings/{lang}', json={'title': title}))
+          check(s.post(f'{base}/edits/{edit}:commit'))
+          print(f'::notice title=Updated {lang}::{title}')
+          PY
