@@ -663,5 +663,7 @@
   "personalLeft": "باقي: {names}",
   "personalSurahTitle": "سورة {name}",
   "personalPrevJuz": "الجزء اللي قبله",
-  "personalNextJuz": "الجزء اللي بعده"
+  "personalNextJuz": "الجزء اللي بعده",
+  "personalContinueShort": "أكمل",
+  "personalAddN": "إضافة ({n})"
 }

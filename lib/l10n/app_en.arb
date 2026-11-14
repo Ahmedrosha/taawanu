@@ -1182,5 +1182,8 @@
   "personalSurahTitle": "Surah {name}",
   "@personalSurahTitle": {"placeholders": {"name": {"type": "String"}}},
   "personalPrevJuz": "Previous juz",
-  "personalNextJuz": "Next juz"
+  "personalNextJuz": "Next juz",
+  "personalContinueShort": "Continue",
+  "personalAddN": "Add ({n})",
+  "@personalAddN": {"placeholders": {"n": {"type": "int"}}}
 }
