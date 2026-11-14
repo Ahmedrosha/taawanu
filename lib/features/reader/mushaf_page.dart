@@ -208,6 +208,10 @@ class _PageBody extends StatelessWidget {
     final ink = AppColors.text;
     final dim = AppColors.textMuted.withValues(alpha: 0.3);
     final style = TextStyle(fontFamily: _family, fontSize: m.fontSize, height: 1.0, color: ink);
+    // خط التجويد الملوّن (QPC v4): ألوانه جوه الخط ومش بنتحكم فيها، فالتظليل بيبقى أخف عشان كل الألوان تبان،
+    // وخط تحت الكلمة بلون التظليل الكامل يعلّمها.
+    final colorFont = _family.startsWith('QPC4');
+    final litFill = colorFont ? readHighlightColor.withValues(alpha: 0.45) : readHighlightColor;
     // صفحة ١ و٢ في المصحف سطورها في النص.
     final allCentered = page <= 2;
 
@@ -239,7 +243,10 @@ class _PageBody extends StatelessWidget {
                     softWrap: false,
                     textDirection: TextDirection.rtl,
                     style: (inRange == null || inRange!(w.surah, w.ayah) ? style : style.copyWith(color: dim)).copyWith(
-                      backgroundColor: _lit(w, wordIndex[w]) ? readHighlightColor : null,
+                      backgroundColor: _lit(w, wordIndex[w]) ? litFill : null,
+                      decoration: _lit(w, wordIndex[w]) && colorFont ? TextDecoration.underline : null,
+                      decorationColor: readHighlightColor,
+                      decorationThickness: 2.5,
                     ),
                   ),
                 ),

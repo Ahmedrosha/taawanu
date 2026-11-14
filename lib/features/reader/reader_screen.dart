@@ -1611,7 +1611,10 @@ class _QuarterText extends StatelessWidget {
       starts.add(_AyahStart(_AyahPos(quarter, a.surah, a.number), length));
       final text = '${a.text} ';
       final h = highlight;
-      final lit = quranStyle.copyWith(backgroundColor: readHighlightColor);
+      final lit = quranStyle.copyWith(
+        backgroundColor: readHighlightColor,
+        color: quranStyle.color == null ? null : readableOn(quranStyle.color!, readHighlightColor, min: 4.5),
+      );
       final tj = data.tajweedOf(a.surah, a.number);
       // جزء من الآية بستايل معيّن، ولو التجويد شغال بيتقسم بألوان الأحكام.
       void add(int from, int to, TextStyle st) {
@@ -1627,7 +1630,7 @@ class _QuarterText extends StatelessWidget {
           if (s0 >= to) break;
           if (s0 > i) spans.add(TextSpan(text: text.substring(i, s0), style: st));
           final st0 = s0 > i ? s0 : i;
-          spans.add(TextSpan(text: text.substring(st0, e0), style: st.copyWith(color: tajweedColor(tj[r]))));
+          spans.add(TextSpan(text: text.substring(st0, e0), style: st.copyWith(color: tajweedColor(tj[r], on: st.backgroundColor))));
           i = e0;
         }
         if (i < to) spans.add(TextSpan(text: text.substring(i, to), style: st));
