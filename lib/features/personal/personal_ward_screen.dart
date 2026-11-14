@@ -58,16 +58,16 @@ class _PersonalWardScreenState extends State<PersonalWardScreen> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _openRead({int? surah}) async {
+  Future<void> _openRead({int? surah, bool goal = false}) async {
     final t = AppLocalizations.of(context);
-    await context.push('/read', extra: ReadRequest.personal(label: t.personalFreeMushaf, surah: surah));
+    await context.push('/read', extra: ReadRequest.personal(label: t.personalFreeMushaf, surah: surah, goal: goal));
     if (mounted) setState(() {});
   }
 
   Future<void> _openItem(PersonalItem i) async {
     final en = Localizations.localeOf(context).languageCode == 'en';
     final t = AppLocalizations.of(context);
-    if (i.isSurah) return _openRead(surah: i.surah);
+    if (i.isSurah) return _openRead(surah: i.surah, goal: true);
     final cat = _ward.adhkarCategories.where((c) => c.id == i.ref).firstOrNull;
     if (cat == null) return;
     await Navigator.of(context).push(MaterialPageRoute<void>(

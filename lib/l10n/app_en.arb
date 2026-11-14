@@ -1180,5 +1180,7 @@
   "personalLeft": "Left: {names}",
   "@personalLeft": {"placeholders": {"names": {"type": "String"}}},
   "personalSurahTitle": "Surah {name}",
-  "@personalSurahTitle": {"placeholders": {"name": {"type": "String"}}}
+  "@personalSurahTitle": {"placeholders": {"name": {"type": "String"}}},
+  "personalPrevJuz": "Previous juz",
+  "personalNextJuz": "Next juz"
 }

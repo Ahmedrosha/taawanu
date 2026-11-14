@@ -378,8 +378,10 @@ class ReadRequest {
   });
 
   /// المصحف الحر: كل القرآن من غير حدود ولا تسجيل لمجموعة. [surah]/[ayah]: افتح عندها، وإلا آخر مكان وقفت عنده.
-  factory ReadRequest.personal({required String label, int? surah, int? ayah}) => ReadRequest(
+  /// [goal]: سورة من الورد الشخصي، مكانها بيتحفظ لوحده ومبيغيّرش مكانك في المصحف الحر.
+  factory ReadRequest.personal({required String label, int? surah, int? ayah, bool goal = false}) => ReadRequest(
         groupId: '_personal',
+        portionId: goal && surah != null ? 's$surah' : null,
         groupName: label,
         fromQuarter: 1,
         toQuarter: 240,

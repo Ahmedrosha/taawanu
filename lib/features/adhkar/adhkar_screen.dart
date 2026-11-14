@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../l10n/gen/app_localizations.dart';
+import '../../services/personal_ward.dart';
 import '../../services/prefs.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
@@ -225,7 +226,7 @@ class _DhikrListScreenState extends State<DhikrListScreen> {
     } else {
       HapticFeedback.selectionClick();
     }
-    Prefs.instance.setAdhkarCounts(_today, _counts);
+    Prefs.instance.setAdhkarCounts(_today, _counts).then((_) => PersonalWard.instance.touch());
   }
 
   void _reset() {
@@ -236,7 +237,7 @@ class _DhikrListScreenState extends State<DhikrListScreen> {
         }
       }
     });
-    Prefs.instance.setAdhkarCounts(_today, _counts);
+    Prefs.instance.setAdhkarCounts(_today, _counts).then((_) => PersonalWard.instance.touch());
   }
 
   @override

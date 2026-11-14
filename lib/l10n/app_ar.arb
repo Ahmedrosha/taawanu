@@ -661,5 +661,7 @@
   "personalDoneToast": "خلصت {names} في وردك الشخصي",
   "personalProgress": "{done} من {total}",
   "personalLeft": "باقي: {names}",
-  "personalSurahTitle": "سورة {name}"
+  "personalSurahTitle": "سورة {name}",
+  "personalPrevJuz": "الجزء اللي قبله",
+  "personalNextJuz": "الجزء اللي بعده"
 }

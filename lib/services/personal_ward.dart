@@ -167,6 +167,12 @@ class PersonalWard extends ChangeNotifier {
     } catch (_) {}
   }
 
+  /// المصحف اتفتح من جديد: آخر صفحة من الجلسة اللي فاتت مبتتحسبش "اللي قبلها".
+  void resetCursor() => _lastPage = null;
+
+  /// عدّادات الأذكار اتغيّرت: اللي بيعرض الورد يتحدّث.
+  void touch() => notifyListeners();
+
   /// صفحة اتفتحت في المصحف الحر. بترجّع السور اللي خلصت بسببها (عشان الإشعار).
   List<int> notePage(int page, MushafLayout layout, QuranData quran) {
     _loadSeen();
