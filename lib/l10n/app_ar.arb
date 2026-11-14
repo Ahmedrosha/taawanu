@@ -673,5 +673,18 @@
   "personalChange": "غيّر",
   "personalAyahRange": "من ١ لـ {n}",
   "pageLabel": "صفحة {n}",
-  "pageRangeLabel": "صفحة {a} – {b}"
+  "pageRangeLabel": "صفحة {a} – {b}",
+  "personalReport": "أدائي",
+  "reportLastWeek": "آخر أسبوع",
+  "reportLast10": "آخر ١٠ أيام",
+  "reportLast30": "آخر ٣٠ يوم",
+  "reportThisMonth": "الشهر ده",
+  "reportLastMonth": "الشهر اللي فات",
+  "reportCustom": "من تاريخ لتاريخ",
+  "reportEmpty": "مفيش ورد شخصي في الفترة دي.",
+  "reportCompletion": "نسبة الإنجاز",
+  "reportFullDays": "أيام كاملة",
+  "reportStreak": "أيام ورا بعض لحد النهارده",
+  "reportBestStreak": "أطول سلسلة في الفترة",
+  "reportPerItem": "كل بند"
 }

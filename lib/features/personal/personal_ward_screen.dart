@@ -10,6 +10,7 @@ import '../../widgets/ui.dart';
 import '../adhkar/adhkar_data.dart';
 import '../adhkar/adhkar_screen.dart' show DhikrListScreen;
 import '../groups/group_board_screen.dart' show ReadRequest;
+import 'personal_report_screen.dart';
 
 /// اسم البند: القسم بالعربي أو الإنجليزي، أو اسم السورة.
 String personalItemTitle(AppLocalizations t, PersonalItem i, QuranData? q, List<AdhkarCategory> adhkar, bool en) {
@@ -130,6 +131,18 @@ class _PersonalWardScreenState extends State<PersonalWardScreen> {
                     TextButton(onPressed: () => _openRead(), child: Text(t.personalContinueShort)),
                     TextButton(onPressed: q == null ? null : () => _goTo(q), child: Text(t.personalGoTo)),
                   ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              // تقرير أدائي.
+              AppCard(
+                padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.insights_outlined, color: AppColors.navy),
+                  title: Text(t.personalReport, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PersonalReportScreen())),
                 ),
               ),
               const SizedBox(height: 16),

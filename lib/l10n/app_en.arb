@@ -1196,5 +1196,18 @@
   "pageLabel": "Page {n}",
   "pageRangeLabel": "Pages {a}–{b}",
   "@pageLabel": {"placeholders": {"n": {"type": "String"}}},
-  "@pageRangeLabel": {"placeholders": {"a": {"type": "String"}, "b": {"type": "String"}}}
+  "@pageRangeLabel": {"placeholders": {"a": {"type": "String"}, "b": {"type": "String"}}},
+  "personalReport": "My performance",
+  "reportLastWeek": "Last week",
+  "reportLast10": "Last 10 days",
+  "reportLast30": "Last 30 days",
+  "reportThisMonth": "This month",
+  "reportLastMonth": "Last month",
+  "reportCustom": "Date range",
+  "reportEmpty": "No personal ward in this period.",
+  "reportCompletion": "Completion",
+  "reportFullDays": "Complete days",
+  "reportStreak": "Days in a row up to today",
+  "reportBestStreak": "Longest streak in period",
+  "reportPerItem": "Each item"
 }
