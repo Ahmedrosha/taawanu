@@ -671,5 +671,7 @@
   "personalAyah": "آية",
   "personalAyahNumber": "رقم الآية",
   "personalChange": "غيّر",
-  "personalAyahRange": "من ١ لـ {n}"
+  "personalAyahRange": "من ١ لـ {n}",
+  "pageLabel": "صفحة {n}",
+  "pageRangeLabel": "صفحة {a} – {b}"
 }

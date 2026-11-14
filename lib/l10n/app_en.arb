@@ -1192,5 +1192,9 @@
   "personalAyahNumber": "Ayah number",
   "personalChange": "Change",
   "personalAyahRange": "1 to {n}",
-  "@personalAyahRange": {"placeholders": {"n": {"type": "int"}}}
+  "@personalAyahRange": {"placeholders": {"n": {"type": "int"}}},
+  "pageLabel": "Page {n}",
+  "pageRangeLabel": "Pages {a}–{b}",
+  "@pageLabel": {"placeholders": {"n": {"type": "String"}}},
+  "@pageRangeLabel": {"placeholders": {"a": {"type": "String"}, "b": {"type": "String"}}}
 }

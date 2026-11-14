@@ -566,8 +566,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     super.initState();
     _audio.addListener(_onAudio);
     _auto.addListener(_onAudio);
+    // أرقام صفحات مصحف المدينة في النص المتصل.
+    MushafLayout.load().then((_) {
+      if (mounted && !_pages) setState(() {});
+    });
+    _scroll.addListener(_onScrollPages);
     if (r.personal) {
-      unawaited(MushafLayout.load());
       PersonalWard.instance.resetCursor();
     }
     _loadRemotePosition();
@@ -617,6 +621,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _flashTimer?.cancel();
     if (_audio.active) _audio.stop();
     if (_auto.active) _auto.stop();
+    _pageTimer?.cancel();
     _scroll.dispose();
     _pager?.dispose();
     super.dispose();
@@ -733,6 +738,53 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   /// الآية اللي عند خط القراية (تلت الشاشة من فوق) في النص المتصل.
+  /// رقم الصفحة (أو الصفحتين) اللي ظاهرين في النص المتصل.
+  String? _pageLabel;
+  Timer? _pageTimer;
+
+  void _onScrollPages() {
+    if (_pageTimer?.isActive ?? false) return;
+    _pageTimer = Timer(const Duration(milliseconds: 150), _updatePageLabel);
+  }
+
+  /// الآية اللي عند خط معيّن في الشاشة (٠ = فوق، ١ = تحت).
+  _AyahPos? _ayahAtFraction(double f) {
+    final top = _viewTop;
+    if (top == null || !_scroll.hasClients) return null;
+    final line = top + _scroll.position.viewportDimension * f;
+    _AyahPos? best;
+    var bestY = double.negativeInfinity;
+    for (final p in _anchors.paragraphs.values) {
+      final rp = p.key.currentContext?.findRenderObject();
+      if (rp is! RenderParagraph || !rp.attached) continue;
+      final paraTop = rp.localToGlobal(Offset.zero).dy;
+      for (final a in p.starts) {
+        final y = paraTop + rp.getOffsetForCaret(TextPosition(offset: a.offset), Rect.zero).dy;
+        if (y <= line && y > bestY) {
+          best = a.pos;
+          bestY = y;
+        }
+      }
+    }
+    return best;
+  }
+
+  void _updatePageLabel() {
+    if (!mounted || _pages) return;
+    final layout = MushafLayout.cached;
+    final a = _ayahAtFraction(0.02), b = _ayahAtFraction(0.95);
+    String? label;
+    if (layout != null && a != null) {
+      final p1 = layout.pageOf(a.surah, a.ayah);
+      final p2 = b == null ? p1 : layout.pageOf(b.surah, b.ayah);
+      final t = AppLocalizations.of(context);
+      final ar = Localizations.localeOf(context).languageCode == 'ar';
+      String n(int v) => ar ? arabicDigits(v) : '$v';
+      label = p2 > p1 ? t.pageRangeLabel(n(p1), n(p2)) : t.pageLabel(n(p1));
+    }
+    if (label != _pageLabel) setState(() => _pageLabel = label);
+  }
+
   _AyahPos? _lineAyah() {
     final top = _viewTop;
     if (top == null || !_scroll.hasClients) return null;
@@ -1261,8 +1313,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           if (layout != null) return _pagesBody(q, layout);
           _textQuran = q;
           _scrollToCurrent();
+          WidgetsBinding.instance.addPostFrameCallback((_) => _updatePageLabel());
           // بنحفظ المكان بعد ما التمرير يقف بثانية.
-          return NotificationListener<ScrollEndNotification>(
+          return Stack(
+            children: [
+              NotificationListener<ScrollEndNotification>(
             onNotification: (_) {
               _saveTimer?.cancel();
               _saveTimer = Timer(const Duration(milliseconds: 800), _savePosition);
@@ -1302,7 +1357,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 18),
-                  sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize, anchors: _anchors, onAyahTap: _ayahMenu, highlight: _highlight, onlySurah: _goal)),
+                  sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize, anchors: _anchors, onAyahTap: _ayahMenu, highlight: _highlight, onlySurah: _goal, layout: MushafLayout.cached)),
                 ),
                 if (i == _read)
                   SliverToBoxAdapter(
@@ -1334,6 +1389,27 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             ],
           ),
             ),
+          ),
+              // رقم صفحة مصحف المدينة للي ظاهر على الشاشة (صفحة أو صفحتين).
+              if (_pageLabel != null)
+                Positioned(
+                  top: 8,
+                  left: 0,
+                  right: 0,
+                  child: IgnorePointer(
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.navy.withValues(alpha: 0.92),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text(_pageLabel!, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           );
         },
       ),
@@ -1445,10 +1521,14 @@ class _QuarterText extends StatelessWidget {
     required this.onAyahTap,
     this.highlight,
     this.onlySurah,
+    this.layout,
   });
 
   /// سورة من الورد الشخصي: آياتها بس من الربع.
   final int? onlySurah;
+
+  /// توزيع صفحات مصحف المدينة: علامة "صفحة N" قبل أول آية بتبدأ في صفحة جديدة.
+  final MushafLayout? layout;
 
   /// اللي بيتنوّر (آية أو كلمة) في التلاوة أو القراءة التلقائية.
   final ReadHighlight? highlight;
@@ -1500,7 +1580,27 @@ class _QuarterText extends StatelessWidget {
       length = 0;
     }
 
+    // الصفحة اللي قبل أول آية هنا، عشان العلامة متتكررش في أول كل ربع.
+    final pages = layout;
+    int? prevPage;
+    if (pages != null && ayahs.isNotEmpty) {
+      final f = ayahs.first;
+      if (f.number > 1) {
+        prevPage = pages.pageOf(f.surah, f.number - 1);
+      } else if (f.surah > 1) {
+        prevPage = pages.pageOf(f.surah - 1, data.ayahCount(f.surah - 1));
+      }
+    }
+    final ar = Localizations.localeOf(context).languageCode == 'ar';
     for (final a in ayahs) {
+      if (pages != null) {
+        final pg = pages.pageOf(a.surah, a.number);
+        if (pg != prevPage) {
+          flush();
+          blocks.add(_PageMark(label: AppLocalizations.of(context).pageLabel(ar ? arabicDigits(pg) : '$pg')));
+        }
+        prevPage = pg;
+      }
       if (a.number == 1) {
         flush();
         blocks.add(_SurahTitle(name: data.surahNamesAr[a.surah - 1], fontSize: fontSize));
@@ -1561,6 +1661,32 @@ class _QuarterText extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: blocks),
+    );
+  }
+}
+
+/// أرقام عربي (٠١٢…).
+String arabicDigits(int n) => n.toString().split('').map((d) => '٠١٢٣٤٥٦٧٨٩'[int.parse(d)]).join();
+
+/// علامة بداية صفحة مصحف المدينة جوه النص المتصل.
+class _PageMark extends StatelessWidget {
+  const _PageMark({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(child: Divider(color: AppColors.paperLine)),
+          const SizedBox(width: 10),
+          Text(label, style: TextStyle(fontSize: 13, color: AppColors.paperLabel)),
+          const SizedBox(width: 10),
+          Expanded(child: Divider(color: AppColors.paperLine)),
+        ],
+      ),
     );
   }
 }
