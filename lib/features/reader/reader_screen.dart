@@ -566,7 +566,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     ReadingTime.instance.begin(() => _audio.playing || _auto.playing);
     // الشاشة متقفلش طول ما المصحف مفتوح (قراءة أو تلاوة).
     WakelockPlus.enable();
-    if (!r.personal) Tour.schedule(context, 'reader', () => [
+    if (!r.personal) {
+      Tour.schedule(context, 'reader', () => [
           TourStep(_kPage, tourText(context, 'reader.page'), padding: 0),
           TourStep(_kPlay, tourText(context, 'reader.play'), radius: 24),
           TourStep(_kAuto, tourText(context, 'reader.auto'), radius: 24),
@@ -574,6 +575,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           TourStep(_kMark, tourText(context, 'reader.mark')),
           TourStep(_kUndo, tourText(context, 'reader.undo')),
         ], delay: const Duration(milliseconds: 1200));
+    }
     // الجولة بتشرح الضغط على الآية، فالتلميح القديم للي شاف الجولة قبل كده بس.
     if (!Prefs.instance.tourDone('reader')) Prefs.instance.setTafsirTipShown();
     if (!Prefs.instance.tafsirTipShown) {

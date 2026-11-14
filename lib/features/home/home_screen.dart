@@ -234,7 +234,7 @@ class _PersonalWardCardState extends State<_PersonalWardCard> {
                     Expanded(child: Text(t.personalWard, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
                     if (today.isNotEmpty)
                       Text(t.personalProgress(done, today.length), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.statusDone)),
-                    Icon(Icons.chevron_right, color: AppColors.textMuted, matchTextDirection: true),
+                    Icon(Icons.chevron_right, color: AppColors.textMuted),
                   ],
                 ),
                 const SizedBox(height: 6),
