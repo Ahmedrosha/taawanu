@@ -195,6 +195,7 @@ class _PersonalWardCardState extends State<_PersonalWardCard> {
     super.initState();
     _ward.addListener(_changed);
     _ward.loadAdhkar();
+    _ward.sync();
   }
 
   @override

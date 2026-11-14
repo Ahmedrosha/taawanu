@@ -82,10 +82,18 @@ service cloud.firestore {
       // وقت التلاوة لكل يوم: خاص بصاحبه بس.
       match /private/{doc} {
         allow read: if isSelf(uid);
-        allow write: if isSelf(uid) && doc == 'readingTime'
+        allow write: if isSelf(uid) && ((doc == 'readingTime'
           && request.resource.data.keys().hasOnly(['days', 'at'])
           && request.resource.data.days is map
-          && request.resource.data.at == request.time;
+          && request.resource.data.at == request.time)
+          // الورد الشخصي: البنود والسجل اليومي، لصاحبه بس.
+          || (doc == 'personalWard'
+          && request.resource.data.keys().hasOnly(['items', 'itemsAt', 'done', 'due', 'at'])
+          && (!('items' in request.resource.data) || (request.resource.data.items is list && request.resource.data.items.size() <= 200))
+          && (!('itemsAt' in request.resource.data) || request.resource.data.itemsAt is int)
+          && (!('done' in request.resource.data) || request.resource.data.done is map)
+          && (!('due' in request.resource.data) || request.resource.data.due is map)
+          && request.resource.data.at == request.time));
       }
 
       match /readPositions/{id} {

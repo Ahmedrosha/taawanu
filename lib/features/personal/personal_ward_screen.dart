@@ -525,7 +525,7 @@ class _AddSheetState extends State<_AddSheet> {
                                   : order.indexOf(a).compareTo(order.indexOf(b)));
                             Navigator.pop(context, [
                               for (final (k, ref) in refs.indexed)
-                                PersonalItem(id: '${base + k}', type: _type, ref: ref, days: _chosenDays),
+                                PersonalItem(id: '${base + k}', type: _type, ref: ref, days: _chosenDays, since: personalDayKey()),
                             ]);
                           },
                     child: Text(_refs.isEmpty ? t.personalAdd : t.personalAddN(_refs.length)),

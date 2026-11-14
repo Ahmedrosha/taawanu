@@ -9,6 +9,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../firebase_options.dart';
 import 'push_service.dart';
 import 'user_service.dart';
+import 'personal_ward.dart';
 
 /// معرّف عميل الويب من google-services.json (client_type 3).
 /// أندرويد محتاجه عشان يطلب idToken يقدر Firebase يتحقق منه.
@@ -114,6 +115,7 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    await PersonalWard.instance.signOut();
     // الموبايل ده ميفضلش يستقبل إشعارات الحساب بعد الخروج (وعنوانه بيتجدد للحساب الجاي).
     PushService.instance.stop();
     try {

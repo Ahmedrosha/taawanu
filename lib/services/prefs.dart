@@ -73,6 +73,17 @@ class Prefs {
   Future<void> setPersonalWardItems(String v) => _p.setString('personalWardItems', v);
   String? get personalWardDone => _p.getString('personalWardDone');
   Future<void> setPersonalWardDone(String v) => _p.setString('personalWardDone', v);
+  /// الخروج من الحساب: الورد الشخصي محفوظ في الحساب، فبيتمسح من الموبايل.
+  Future<void> clearPersonalWard() async {
+    for (final k in ['personalWardItems', 'personalWardDone', 'personalWardDue', 'personalWardItemsAt', 'personalWardSeen']) {
+      await _p.remove(k);
+    }
+  }
+
+  String? get personalWardDue => _p.getString('personalWardDue');
+  Future<void> setPersonalWardDue(String v) => _p.setString('personalWardDue', v);
+  int? get personalWardItemsAt => _p.getInt('personalWardItemsAt');
+  Future<void> setPersonalWardItemsAt(int v) => _p.setInt('personalWardItemsAt', v);
   String? get personalWardSeen => _p.getString('personalWardSeen');
   Future<void> setPersonalWardSeen(String v) => _p.setString('personalWardSeen', v);
 
