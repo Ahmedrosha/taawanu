@@ -41,7 +41,7 @@ jobs:
               return r.json()
           edit = check(s.post(f'{base}/edits'))['id']
           for l in check(s.get(f'{base}/edits/{edit}/listings')).get('listings', []):
-              print(f"::notice title={l['language']}::{l.get('title', '')}")
+              print(f"::notice::{l['language']} = {l.get('title', '')}")
           title = os.environ['NEW_TITLE'].strip()
           if not title:
               s.delete(f'{base}/edits/{edit}')
