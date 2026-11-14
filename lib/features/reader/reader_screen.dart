@@ -10,6 +10,7 @@ import '../../l10n/gen/app_localizations.dart';
 import '../../services/groups_service.dart';
 import '../../services/mushaf_fonts.dart';
 import '../../services/mushaf_layout.dart';
+import '../../services/personal_ward.dart';
 import '../../services/prefs.dart';
 import '../../services/recitation_player.dart';
 import '../../services/quran_repository.dart';
@@ -558,13 +559,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     super.initState();
     _audio.addListener(_onAudio);
     _auto.addListener(_onAudio);
+    if (r.personal) unawaited(MushafLayout.load());
     _loadRemotePosition();
     WidgetsBinding.instance.addObserver(this);
     // وقت التلاوة: بيتحسب طول ما المصحف قدامك وفيه حركة أو تلاوة أو قراءة تلقائية.
     ReadingTime.instance.begin(() => _audio.playing || _auto.playing);
     // الشاشة متقفلش طول ما المصحف مفتوح (قراءة أو تلاوة).
     WakelockPlus.enable();
-    Tour.schedule(context, 'reader', () => [
+    if (!r.personal) Tour.schedule(context, 'reader', () => [
           TourStep(_kPage, tourText(context, 'reader.page'), padding: 0),
           TourStep(_kPlay, tourText(context, 'reader.play'), radius: 24),
           TourStep(_kAuto, tourText(context, 'reader.auto'), radius: 24),
@@ -607,11 +609,20 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     super.dispose();
   }
 
+  /// المكان اللي القارئ يفتح عنده: السورة المطلوبة في المصحف الحر، وإلا آخر مكان محفوظ.
+  _AyahPos? _launchPos(QuranData? q) {
+    if (r.personal && r.startSurah != null && q != null) {
+      final s = r.startSurah!, a = r.startAyah ?? 1;
+      return _AyahPos(q.quarterOf(s, a), s, a);
+    }
+    return _AyahPos.parse(ReadPositions.instance.local(_posKey));
+  }
+
   /// أول ما الشاشة تفتح: نرجع لآخر آية كانت أول الشاشة، أو لأول ربع لسه مسجّلتهوش.
   void _scrollToCurrent() {
     if (_scrolled) return;
     _scrolled = true;
-    final saved = _AyahPos.parse(ReadPositions.instance.local(_posKey));
+    final saved = _launchPos(_textQuran);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (saved != null) {
         // آخر آية وقفت عندها، في التلت اللي فوق، ومنوّرة لحظة عشان تعرف إنت فين.
@@ -702,6 +713,22 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void _savePosition() {
     final pos = _readingPosition();
     if (pos != null) _storePosition(pos);
+    if (r.personal) _trackPersonal(pos);
+  }
+
+  /// المصحف الحر: الصفحة الحالية بتتحسب مقروءة، والسور اللي كملت النهارده بتتعلّم في الورد الشخصي.
+  void _trackPersonal(_AyahPos? pos) {
+    final layout = _layout ?? MushafLayout.cached;
+    final q = _pageQuran ?? _textQuran;
+    if (layout == null || q == null) return;
+    final page = _pages ? _page : (pos == null ? null : layout.pageOf(pos.surah, pos.ayah));
+    if (page == null) return;
+    final done = PersonalWard.instance.notePage(page, layout, q);
+    if (done.isEmpty || !mounted) return;
+    final t = AppLocalizations.of(context);
+    final en = Localizations.localeOf(context).languageCode == 'en';
+    final names = [for (final s in done) en ? q.surahNamesEn[s - 1] : q.surahNamesAr[s - 1]];
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.personalDoneToast(names.join(', ')))));
   }
 
   // ---------- تنوير آخر آية لحظة لما المصحف يفتح ----------
@@ -718,6 +745,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   /// المكان اللي على السيرفر لو أحدث (مثلًا قريت من موبايل تاني): نروح له.
   Future<void> _loadRemotePosition() async {
+    if (r.personal && r.startSurah != null) return;
     final remote = await ReadPositions.instance.remoteIfNewer(docId: _posDoc, key: _posKey);
     final pos = _AyahPos.parse(remote);
     if (pos == null || !mounted || _following) return;
@@ -865,7 +893,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final (es, ea) = allDone ? (s2, a2) : q.quarterEnd(r.fromQuarter + _read);
     final limit = allDone ? last : layout.endPageOf(es, ea).clamp(first, last);
     if (_pager == null) {
-      final saved = _AyahPos.parse(ReadPositions.instance.local(_posKey));
+      final saved = _launchPos(q);
       var start = first;
       if (saved != null) {
         start = layout.pageOf(saved.surah, saved.ayah);
@@ -876,6 +904,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       }
       _page = start.clamp(first, limit);
       _pager = PageController(initialPage: _page - first);
+      if (r.personal) WidgetsBinding.instance.addPostFrameCallback((_) => _trackPersonal(null));
       if (_qpc) MushafFonts.instance.prefetch(_page);
     }
     // بعد التراجع: لو واقف بعد الحد الجديد نرجع لصفحة نهاية الربع.
@@ -1118,8 +1147,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(rangeLabel(t, r.fromQuarter, r.toQuarter), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
-            Text(r.groupName, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+            if (r.personal)
+              Text(r.groupName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17))
+            else ...[
+              Text(rangeLabel(t, r.fromQuarter, r.toQuarter), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
+              Text(r.groupName, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+            ],
           ],
         ),
         // زرار الكتاب دايمًا آخر واحد (أقصى الشمال)، فمكانه ثابت بين الصفحات والنص المتصل.
@@ -1200,7 +1233,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   child: _QuarterHeader(
                     key: _keyFor(r.fromQuarter + i),
                     label: rangeLabel(t, r.fromQuarter + i, r.fromQuarter + i),
-                    done: i < _read,
+                    done: !r.personal && i < _read,
                   ),
                 ),
                 SliverPadding(
@@ -1274,6 +1307,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                     downloadKey: _kDownload,
                   ),
                 ),
+              if (!r.personal)
               Row(
             children: [
               Expanded(

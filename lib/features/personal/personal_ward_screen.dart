@@ -1,0 +1,448 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+
+import '../../l10n/gen/app_localizations.dart';
+import '../../services/personal_ward.dart';
+import '../../services/quran_repository.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/ui.dart';
+import '../adhkar/adhkar_data.dart';
+import '../adhkar/adhkar_screen.dart' show DhikrListScreen;
+import '../groups/group_board_screen.dart' show ReadRequest;
+
+/// اسم البند: القسم بالعربي أو الإنجليزي، أو اسم السورة.
+String personalItemTitle(AppLocalizations t, PersonalItem i, QuranData? q, List<AdhkarCategory> adhkar, bool en) {
+  if (i.isSurah) {
+    final names = q == null ? null : (en ? q.surahNamesEn : q.surahNamesAr);
+    final name = names == null ? '${i.surah}' : names[i.surah - 1];
+    return t.personalSurahTitle(name);
+  }
+  final c = adhkar.where((c) => c.id == i.ref).firstOrNull;
+  return c == null ? i.ref : (en ? c.en : c.ar);
+}
+
+String _daysLabel(AppLocalizations t, PersonalItem i, String locale) {
+  if (i.days.isEmpty) return t.personalEveryDay;
+  if (i.days.length == 1 && i.days.first == DateTime.friday) return t.personalFridayOnly;
+  // ١ = الاثنين: 2 يناير 2023 كان اثنين.
+  return [for (final d in i.days) DateFormat.E(locale).format(DateTime(2023, 1, 1 + d))].join(' · ');
+}
+
+/// الورد الشخصي: مصحف حر + قايمة أهداف يومية (أذكار وسور).
+class PersonalWardScreen extends StatefulWidget {
+  const PersonalWardScreen({super.key});
+
+  @override
+  State<PersonalWardScreen> createState() => _PersonalWardScreenState();
+}
+
+class _PersonalWardScreenState extends State<PersonalWardScreen> {
+  final _ward = PersonalWard.instance;
+  late final Future<QuranData> _quran = QuranRepository.instance.load();
+
+  @override
+  void initState() {
+    super.initState();
+    _ward.addListener(_changed);
+    _ward.loadAdhkar();
+  }
+
+  @override
+  void dispose() {
+    _ward.removeListener(_changed);
+    super.dispose();
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _openRead({int? surah}) async {
+    final t = AppLocalizations.of(context);
+    await context.push('/read', extra: ReadRequest.personal(label: t.personalFreeMushaf, surah: surah));
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _openItem(PersonalItem i) async {
+    final en = Localizations.localeOf(context).languageCode == 'en';
+    final t = AppLocalizations.of(context);
+    if (i.isSurah) return _openRead(surah: i.surah);
+    final cat = _ward.adhkarCategories.where((c) => c.id == i.ref).firstOrNull;
+    if (cat == null) return;
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => DhikrListScreen(title: personalItemTitle(t, i, null, _ward.adhkarCategories, en), sections: [cat]),
+    ));
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _pickSurah(QuranData q) async {
+    final en = Localizations.localeOf(context).languageCode == 'en';
+    final s = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _SurahPicker(names: en ? q.surahNamesEn : q.surahNamesAr),
+    );
+    if (s != null) _openRead(surah: s);
+  }
+
+  Future<void> _add(QuranData q) async {
+    final item = await showModalBottomSheet<PersonalItem>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _AddSheet(quran: q, adhkar: _ward.adhkarCategories),
+    );
+    if (item == null) return;
+    if (_ward.has(item.type, item.ref)) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).personalAlready)));
+      return;
+    }
+    await _ward.add(item);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).languageCode;
+    final en = locale == 'en';
+    return Scaffold(
+      appBar: AppBar(title: Text(t.personalWard, style: const TextStyle(fontWeight: FontWeight.w700))),
+      body: FutureBuilder<QuranData>(
+        future: _quran,
+        builder: (context, snap) {
+          final q = snap.data;
+          final today = _ward.today();
+          final later = [for (final i in _ward.items) if (!today.contains(i)) i];
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+            children: [
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(t.personalFreeMushaf, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                    const SizedBox(height: 4),
+                    Text(t.personalFreeSub, style: TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.6)),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(child: FilledButton(onPressed: () => _openRead(), child: Text(t.personalContinue))),
+                        const SizedBox(width: 8),
+                        OutlinedButton(onPressed: q == null ? null : () => _pickSurah(q), child: Text(t.personalPickSurah)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Text(t.personalToday, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
+                  const Spacer(),
+                  if (today.isNotEmpty)
+                    Text(t.personalProgress(_ward.doneCount, today.length), style: TextStyle(fontSize: 12, color: AppColors.statusDone, fontWeight: FontWeight.w700)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (_ward.items.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text(t.personalEmpty, style: TextStyle(color: AppColors.textMuted, height: 1.7)),
+                )
+              else if (today.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(t.personalNoneToday, style: TextStyle(color: AppColors.textMuted)),
+                ),
+              for (final i in today) _ItemTile(item: i, title: personalItemTitle(t, i, q, _ward.adhkarCategories, en), locale: locale, onOpen: () => _openItem(i)),
+              if (later.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(t.personalOffToday, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
+                const SizedBox(height: 8),
+                for (final i in later) _ItemTile(item: i, title: personalItemTitle(t, i, q, _ward.adhkarCategories, en), locale: locale, onOpen: () => _openItem(i), dim: true),
+              ],
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: q == null ? null : () => _add(q),
+                icon: const Icon(Icons.add),
+                label: Text(t.personalAdd),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ItemTile extends StatelessWidget {
+  const _ItemTile({required this.item, required this.title, required this.locale, required this.onOpen, this.dim = false});
+
+  final PersonalItem item;
+  final String title;
+  final String locale;
+  final VoidCallback onOpen;
+  final bool dim;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final ward = PersonalWard.instance;
+    final done = !dim && ward.isDone(item);
+    final auto = !dim && ward.autoDone(item);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: Material(
+        color: done ? AppColors.doneTint : AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onOpen,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: done ? AppColors.doneBorder : AppColors.border),
+            ),
+            child: Row(
+              children: [
+                // الدايرة: دوس عليها تعلّم أو تشيل "تم" بإيدك (الأذكار بتتعلّم لوحدها لما العدّاد يخلص).
+                GestureDetector(
+                  onTap: dim || auto ? null : () => ward.setDone(item, !done),
+                  child: Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: done ? AppColors.statusDone : Colors.transparent,
+                      border: Border.all(color: done ? AppColors.statusDone : AppColors.mutedLine, width: 2),
+                    ),
+                    child: done ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: dim ? AppColors.textMuted : AppColors.text)),
+                      Text(auto ? t.personalAutoDone : _daysLabel(t, item, locale), style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                    ],
+                  ),
+                ),
+                if (!done && !dim)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(color: AppColors.sky, borderRadius: BorderRadius.circular(99)),
+                    child: Text(item.isSurah ? t.personalRead : t.personalOpen, style: TextStyle(fontSize: 11, color: AppColors.navy)),
+                  ),
+                PopupMenuButton<String>(
+                  onSelected: (_) => ward.remove(item.id),
+                  itemBuilder: (_) => [PopupMenuItem(value: 'remove', child: Text(t.personalRemove))],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SurahPicker extends StatefulWidget {
+  const _SurahPicker({required this.names});
+
+  final List<String> names;
+
+  @override
+  State<_SurahPicker> createState() => _SurahPickerState();
+}
+
+class _SurahPickerState extends State<_SurahPicker> {
+  String _q = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final key = normalizeArabic(_q.trim().toLowerCase());
+    final shown = [
+      for (var i = 0; i < widget.names.length; i++)
+        if (key.isEmpty || normalizeArabic(widget.names[i].toLowerCase()).contains(key) || '${i + 1}' == key) i + 1,
+    ];
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.7,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: TextField(
+                decoration: InputDecoration(hintText: t.personalSearchSurah, prefixIcon: const Icon(Icons.search)),
+                onChanged: (v) => setState(() => _q = v),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                children: [
+                  for (final s in shown)
+                    ListTile(
+                      leading: Text('$s', style: TextStyle(color: AppColors.textMuted)),
+                      title: Text(widget.names[s - 1]),
+                      onTap: () => Navigator.pop(context, s),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AddSheet extends StatefulWidget {
+  const _AddSheet({required this.quran, required this.adhkar});
+
+  final QuranData quran;
+  final List<AdhkarCategory> adhkar;
+
+  @override
+  State<_AddSheet> createState() => _AddSheetState();
+}
+
+class _AddSheetState extends State<_AddSheet> {
+  String _type = 'adhkar';
+  String? _ref;
+  String _repeat = 'daily'; // daily | friday | custom
+  final _days = <int>{};
+  String _q = '';
+
+  List<int> get _chosenDays => switch (_repeat) {
+        'friday' => [DateTime.friday],
+        'custom' => (_days.toList()..sort()),
+        _ => const [],
+      };
+
+  bool get _canAdd => _ref != null && (_repeat != 'custom' || _days.isNotEmpty);
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).languageCode;
+    final en = locale == 'en';
+    final names = en ? widget.quran.surahNamesEn : widget.quran.surahNamesAr;
+    final key = normalizeArabic(_q.trim().toLowerCase());
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.85,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(t.personalAddTitle, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SegmentedButton<String>(
+                segments: [
+                  ButtonSegment(value: 'adhkar', label: Text(t.personalTypeAdhkar)),
+                  ButtonSegment(value: 'surah', label: Text(t.personalTypeSurah)),
+                ],
+                selected: {_type},
+                onSelectionChanged: (v) => setState(() {
+                  _type = v.first;
+                  _ref = null;
+                  _q = '';
+                }),
+              ),
+            ),
+            if (_type == 'surah')
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: TextField(
+                  decoration: InputDecoration(hintText: t.personalSearchSurah, prefixIcon: const Icon(Icons.search)),
+                  onChanged: (v) => setState(() => _q = v),
+                ),
+              ),
+            Expanded(
+              child: ListView(
+                children: [
+                  if (_type == 'adhkar')
+                    for (final c in widget.adhkar)
+                      ListTile(
+                        selected: _ref == c.id,
+                        title: Text(en ? c.en : c.ar),
+                        trailing: _ref == c.id ? const Icon(Icons.check_circle) : null,
+                        onTap: () => setState(() => _ref = c.id),
+                      )
+                  else
+                    for (var i = 0; i < names.length; i++)
+                      if (key.isEmpty || normalizeArabic(names[i].toLowerCase()).contains(key) || '${i + 1}' == key)
+                        ListTile(
+                          selected: _ref == '${i + 1}',
+                          leading: Text('${i + 1}', style: TextStyle(color: AppColors.textMuted)),
+                          title: Text(names[i]),
+                          trailing: _ref == '${i + 1}' ? const Icon(Icons.check_circle) : null,
+                          onTap: () => setState(() => _ref = '${i + 1}'),
+                        ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Text(t.personalRepeat, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  ChoiceChip(label: Text(t.personalEveryDay), selected: _repeat == 'daily', onSelected: (_) => setState(() => _repeat = 'daily')),
+                  ChoiceChip(label: Text(t.personalFridayOnly), selected: _repeat == 'friday', onSelected: (_) => setState(() => _repeat = 'friday')),
+                  ChoiceChip(label: Text(t.personalCustomDays), selected: _repeat == 'custom', onSelected: (_) => setState(() => _repeat = 'custom')),
+                ],
+              ),
+            ),
+            if (_repeat == 'custom')
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                child: Wrap(
+                  spacing: 6,
+                  children: [
+                    for (var d = 1; d <= 7; d++)
+                      FilterChip(
+                        label: Text(DateFormat.E(locale).format(DateTime(2023, 1, 1 + d))),
+                        selected: _days.contains(d),
+                        onSelected: (v) => setState(() => v ? _days.add(d) : _days.remove(d)),
+                      ),
+                  ],
+                ),
+              ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: !_canAdd
+                        ? null
+                        : () => Navigator.pop(
+                              context,
+                              PersonalItem(id: DateTime.now().microsecondsSinceEpoch.toString(), type: _type, ref: _ref!, days: _chosenDays),
+                            ),
+                    child: Text(t.personalAdd),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

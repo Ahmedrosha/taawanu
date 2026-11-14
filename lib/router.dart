@@ -4,6 +4,7 @@ import 'features/adhkar/adhkar_screen.dart';
 import 'features/profile/notification_settings.dart';
 import 'features/messages/messages_screen.dart';
 import 'features/zakat/zakat_screen.dart';
+import 'features/personal/personal_ward_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/groups/assign_portions_screen.dart';
 import 'features/groups/create_group_screen.dart';
@@ -56,6 +57,7 @@ final appRouter = GoRouter(
     GoRoute(path: '/messages/:thread', builder: (context, state) => ThreadScreen(thread: state.pathParameters['thread']!)),
     GoRoute(path: '/guide', builder: (context, state) => const GuideScreen()),
     GoRoute(path: '/zakat', builder: (context, state) => const ZakatScreen()),
+    GoRoute(path: '/personal-ward', builder: (context, state) => const PersonalWardScreen()),
     GoRoute(path: '/notification-settings', builder: (context, state) => const NotificationSettingsScreen()),
     GoRoute(
       path: '/group/:id',

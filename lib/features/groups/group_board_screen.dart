@@ -372,7 +372,22 @@ class ReadRequest {
     required this.toQuarter,
     required this.quartersRead,
     this.portionId,
+    this.personal = false,
+    this.startSurah,
+    this.startAyah,
   });
+
+  /// المصحف الحر: كل القرآن من غير حدود ولا تسجيل لمجموعة. [surah]/[ayah]: افتح عندها، وإلا آخر مكان وقفت عنده.
+  factory ReadRequest.personal({required String label, int? surah, int? ayah}) => ReadRequest(
+        groupId: '_personal',
+        groupName: label,
+        fromQuarter: 1,
+        toQuarter: 240,
+        quartersRead: 240,
+        personal: true,
+        startSurah: surah,
+        startAyah: ayah ?? (surah == null ? null : 1),
+      );
 
   factory ReadRequest.regular({required Group group, required Assignment assignment}) => ReadRequest(
         groupId: group.id,
@@ -397,6 +412,11 @@ class ReadRequest {
   final int toQuarter;
   final int quartersRead;
   final String? portionId;
+
+  /// قراءة حرة (مش ورد في مجموعة).
+  final bool personal;
+  final int? startSurah;
+  final int? startAyah;
 
   bool get isPortion => portionId != null;
   int get quarterCount => toQuarter - fromQuarter + 1;

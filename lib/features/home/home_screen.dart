@@ -6,6 +6,7 @@ import '../../models/group_models.dart';
 import '../../models/group_options.dart';
 import '../../services/auth_service.dart';
 import '../../services/groups_service.dart';
+import '../../services/personal_ward.dart';
 import '../../services/prefs.dart';
 import '../../services/quran_repository.dart';
 import '../../services/user_service.dart';
@@ -17,6 +18,7 @@ import '../notifications/notifications_screen.dart';
 import '../update/update_widgets.dart';
 import '../../widgets/ui.dart';
 import '../groups/group_board_screen.dart' show ReadRequest, TimeLeftChip;
+import '../personal/personal_ward_screen.dart' show personalItemTitle;
 import '../prayer/next_prayer_tile.dart';
 import '../shell/home_shell.dart' show shellNavKey;
 import '../../widgets/tour.dart';
@@ -167,10 +169,88 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
+            const SizedBox(height: 12),
+            const _PersonalWardCard(),
           ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// وردي الشخصي: التقدم النهارده، وبالضغط تفتح الصفحة الكاملة.
+class _PersonalWardCard extends StatefulWidget {
+  const _PersonalWardCard();
+
+  @override
+  State<_PersonalWardCard> createState() => _PersonalWardCardState();
+}
+
+class _PersonalWardCardState extends State<_PersonalWardCard> {
+  final _ward = PersonalWard.instance;
+  late final Future<QuranData> _quran = QuranRepository.instance.load();
+
+  @override
+  void initState() {
+    super.initState();
+    _ward.addListener(_changed);
+    _ward.loadAdhkar();
+  }
+
+  @override
+  void dispose() {
+    _ward.removeListener(_changed);
+    super.dispose();
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final en = Localizations.localeOf(context).languageCode == 'en';
+    final today = _ward.today();
+    final done = _ward.doneCount;
+    final left = [for (final i in today) if (!_ward.isDone(i)) i];
+    return FutureBuilder<QuranData>(
+      future: _quran,
+      builder: (context, snap) {
+        final names = [for (final i in left.take(3)) personalItemTitle(t, i, snap.data, _ward.adhkarCategories, en)];
+        return InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () async {
+            await context.push('/personal-ward');
+            if (mounted) setState(() {});
+          },
+          child: AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: Text(t.personalWard, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
+                    if (today.isNotEmpty)
+                      Text(t.personalProgress(done, today.length), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.statusDone)),
+                    Icon(Icons.chevron_right, color: AppColors.textMuted, matchTextDirection: true),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                if (today.isNotEmpty) ...[
+                  ProgressLine(value: done / today.length),
+                  const SizedBox(height: 6),
+                ],
+                Text(
+                  today.isEmpty ? t.personalWardSub : (left.isEmpty ? t.personalProgress(done, today.length) : t.personalLeft(names.join(' · '))),
+                  style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

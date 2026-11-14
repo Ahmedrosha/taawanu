@@ -67,6 +67,15 @@ class Prefs {
     await _p.setStringList('adhkarCounts', [for (final e in counts.entries) '${e.key}=${e.value}']);
   }
 
+  // ---------- الورد الشخصي (على الموبايل بس) ----------
+
+  String? get personalWardItems => _p.getString('personalWardItems');
+  Future<void> setPersonalWardItems(String v) => _p.setString('personalWardItems', v);
+  String? get personalWardDone => _p.getString('personalWardDone');
+  Future<void> setPersonalWardDone(String v) => _p.setString('personalWardDone', v);
+  String? get personalWardSeen => _p.getString('personalWardSeen');
+  Future<void> setPersonalWardSeen(String v) => _p.setString('personalWardSeen', v);
+
   // ---------- الزكاة (على الموبايل بس) ----------
 
   String? get zakatData => _p.getString('zakatData');
