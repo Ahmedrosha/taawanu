@@ -20,7 +20,10 @@ String personalItemTitle(AppLocalizations t, PersonalItem i, QuranData? q, List<
     return en ? t.personalSurahTitle(name) : name;
   }
   final c = adhkar.where((c) => c.id == i.ref).firstOrNull;
-  return c == null ? i.ref : (en ? c.en : c.ar);
+  if (c == null) return i.ref;
+  // اسم القسم لوحده ("الصباح") مش واضح في الورد، فبنقول "أذكار الصباح".
+  if (en) return c.en.toLowerCase().contains('adhkar') ? c.en : '${c.en} adhkar';
+  return c.ar.contains('أذكار') ? c.ar : 'أذكار ${c.ar}';
 }
 
 String _daysLabel(AppLocalizations t, PersonalItem i, String locale) {
