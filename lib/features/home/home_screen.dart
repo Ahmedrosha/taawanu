@@ -131,6 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? const SizedBox.shrink()
                   : Padding(padding: const EdgeInsets.only(top: 12), child: _GuideCard(onDone: () => setState(() {}))),
             ),
+            const Padding(padding: EdgeInsets.only(top: 12), child: _PersonalWardCard()),
             const SizedBox(height: 20),
             Row(
               children: [
@@ -169,8 +170,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
-            const SizedBox(height: 12),
-            const _PersonalWardCard(),
           ],
           ),
         ),

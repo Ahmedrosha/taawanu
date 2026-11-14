@@ -16,7 +16,8 @@ String personalItemTitle(AppLocalizations t, PersonalItem i, QuranData? q, List<
   if (i.isSurah) {
     final names = q == null ? null : (en ? q.surahNamesEn : q.surahNamesAr);
     final name = names == null ? '${i.surah}' : names[i.surah - 1];
-    return t.personalSurahTitle(name);
+    // الأسماء العربي فيها كلمة "سورة" أصلًا.
+    return en ? t.personalSurahTitle(name) : name;
   }
   final c = adhkar.where((c) => c.id == i.ref).firstOrNull;
   return c == null ? i.ref : (en ? c.en : c.ar);
@@ -88,18 +89,16 @@ class _PersonalWardScreenState extends State<PersonalWardScreen> {
   }
 
   Future<void> _add(QuranData q) async {
-    final item = await showModalBottomSheet<PersonalItem>(
+    final items = await showModalBottomSheet<List<PersonalItem>>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => _AddSheet(quran: q, adhkar: _ward.adhkarCategories),
     );
-    if (item == null) return;
-    if (_ward.has(item.type, item.ref)) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).personalAlready)));
-      return;
+    if (items == null) return;
+    for (final item in items) {
+      if (!_ward.has(item.type, item.ref)) await _ward.add(item);
     }
-    await _ward.add(item);
   }
 
   @override
@@ -118,21 +117,16 @@ class _PersonalWardScreenState extends State<PersonalWardScreen> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
             children: [
+              // مصحفي الحر: سطر واحد.
               AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+                child: Row(
                   children: [
-                    Text(t.personalFreeMushaf, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                    const SizedBox(height: 4),
-                    Text(t.personalFreeSub, style: TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.6)),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(child: FilledButton(onPressed: () => _openRead(), child: Text(t.personalContinue))),
-                        const SizedBox(width: 8),
-                        OutlinedButton(onPressed: q == null ? null : () => _pickSurah(q), child: Text(t.personalPickSurah)),
-                      ],
-                    ),
+                    Icon(Icons.menu_book_outlined, size: 20, color: AppColors.navy),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(t.personalFreeMushaf, style: const TextStyle(fontWeight: FontWeight.w700))),
+                    TextButton(onPressed: () => _openRead(), child: Text(t.personalContinueShort)),
+                    TextButton(onPressed: q == null ? null : () => _pickSurah(q), child: Text(t.personalPickSurah)),
                   ],
                 ),
               ),
@@ -315,7 +309,7 @@ class _AddSheet extends StatefulWidget {
 
 class _AddSheetState extends State<_AddSheet> {
   String _type = 'adhkar';
-  String? _ref;
+  final _refs = <String>{};
   String _repeat = 'daily'; // daily | friday | custom
   final _days = <int>{};
   String _q = '';
@@ -326,7 +320,21 @@ class _AddSheetState extends State<_AddSheet> {
         _ => const [],
       };
 
-  bool get _canAdd => _ref != null && (_repeat != 'custom' || _days.isNotEmpty);
+  bool get _canAdd => _refs.isNotEmpty && (_repeat != 'custom' || _days.isNotEmpty);
+
+  /// بند في القايمة: متعلّم لو اخترته، ومقفول بعلامة لو مضاف قبل كده.
+  Widget _option(String ref, Widget title, {Widget? leading}) {
+    final added = PersonalWard.instance.has(_type, ref);
+    final on = added || _refs.contains(ref);
+    return CheckboxListTile(
+      value: on,
+      enabled: !added,
+      secondary: leading,
+      title: title,
+      controlAffinity: ListTileControlAffinity.trailing,
+      onChanged: (v) => setState(() => v == true ? _refs.add(ref) : _refs.remove(ref)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -356,7 +364,7 @@ class _AddSheetState extends State<_AddSheet> {
                 selected: {_type},
                 onSelectionChanged: (v) => setState(() {
                   _type = v.first;
-                  _ref = null;
+                  _refs.clear();
                   _q = '';
                 }),
               ),
@@ -374,22 +382,11 @@ class _AddSheetState extends State<_AddSheet> {
                 children: [
                   if (_type == 'adhkar')
                     for (final c in widget.adhkar)
-                      ListTile(
-                        selected: _ref == c.id,
-                        title: Text(en ? c.en : c.ar),
-                        trailing: _ref == c.id ? const Icon(Icons.check_circle) : null,
-                        onTap: () => setState(() => _ref = c.id),
-                      )
+                      _option(c.id, Text(en ? c.en : c.ar))
                   else
                     for (var i = 0; i < names.length; i++)
                       if (key.isEmpty || normalizeArabic(names[i].toLowerCase()).contains(key) || '${i + 1}' == key)
-                        ListTile(
-                          selected: _ref == '${i + 1}',
-                          leading: Text('${i + 1}', style: TextStyle(color: AppColors.textMuted)),
-                          title: Text(names[i]),
-                          trailing: _ref == '${i + 1}' ? const Icon(Icons.check_circle) : null,
-                          onTap: () => setState(() => _ref = '${i + 1}'),
-                        ),
+                        _option('${i + 1}', Text(names[i]), leading: Text('${i + 1}', style: TextStyle(color: AppColors.textMuted))),
                 ],
               ),
             ),
@@ -431,11 +428,20 @@ class _AddSheetState extends State<_AddSheet> {
                   child: FilledButton(
                     onPressed: !_canAdd
                         ? null
-                        : () => Navigator.pop(
-                              context,
-                              PersonalItem(id: DateTime.now().microsecondsSinceEpoch.toString(), type: _type, ref: _ref!, days: _chosenDays),
-                            ),
-                    child: Text(t.personalAdd),
+                        : () {
+                            final base = DateTime.now().microsecondsSinceEpoch;
+                            // بالترتيب: أذكار بترتيب القايمة، والسور بترتيب المصحف.
+                            final order = [for (final c in widget.adhkar) c.id];
+                            final refs = _refs.toList()
+                              ..sort((a, b) => _type == 'surah'
+                                  ? int.parse(a).compareTo(int.parse(b))
+                                  : order.indexOf(a).compareTo(order.indexOf(b)));
+                            Navigator.pop(context, [
+                              for (final (k, ref) in refs.indexed)
+                                PersonalItem(id: '${base + k}', type: _type, ref: ref, days: _chosenDays),
+                            ]);
+                          },
+                    child: Text(_refs.isEmpty ? t.personalAdd : t.personalAddN(_refs.length)),
                   ),
                 ),
               ),

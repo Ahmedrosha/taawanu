@@ -66,11 +66,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   int get _limitPage {
     final q = _pageQuran, layout = _layout;
     if (q == null || layout == null) return 1 << 30;
-    final (s2, a2) = q.quarterEnd(r.toQuarter);
+    final (s2, a2) = _to(q);
     final last = layout.endPageOf(s2, a2);
     if (_read >= r.quarterCount) return last;
     final (es, ea) = q.quarterEnd(r.fromQuarter + _read);
-    final (s1, a1) = q.quarterStart(r.fromQuarter);
+    final (s1, a1) = _from(q);
     return layout.endPageOf(es, ea).clamp(layout.pageOf(s1, a1), last);
   }
   QuranData? _pageQuran;
@@ -97,6 +97,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       (await QuranRepository.instance.loadFor(Prefs.instance.readerFont), null);
 
   ReadRequest get r => widget.request;
+
+  /// سورة من الورد الشخصي: القارئ بيتعامل معاها بس (من أول آية لآخر آية).
+  int? get _goal => r.personal && r.portionId != null ? r.startSurah : null;
+  (int, int) _from(QuranData q) => _goal == null ? q.quarterStart(r.fromQuarter) : (_goal!, 1);
+  (int, int) _to(QuranData q) => _goal == null ? q.quarterEnd(r.toQuarter) : (_goal!, q.ayahCount(_goal!));
 
   /// مفتاح حفظ مكان القراءة لكل ورد.
   String get _posKey => '${r.groupId}|${r.portionId ?? 'main'}|${r.fromQuarter}-${r.toQuarter}';
@@ -152,7 +157,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (_pages) {
       final layout = _layout, q = _pageQuran;
       if (layout == null || q == null || !(_pager?.hasClients ?? false)) return;
-      final (s1, a1) = q.quarterStart(r.fromQuarter);
+      final (s1, a1) = _from(q);
       final first = layout.pageOf(s1, a1);
       final p = layout.pageOf(s, a);
       if (p != _page && p <= _limitPage) _pager!.animateToPage(p - first, duration: const Duration(milliseconds: 350), curve: Curves.easeOut);
@@ -459,9 +464,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   List<(int, int)> _recitationAyahs({(int, int)? from}) {
     final q = _pages ? _pageQuran : _textQuran;
     if (q == null) return const [];
-    final (s1, a1) = q.quarterStart(r.fromQuarter);
+    final (s1, a1) = _from(q);
     final endQuarter = _read >= r.quarterCount ? r.toQuarter : r.fromQuarter + _read;
-    var (s2, a2) = q.quarterEnd(endQuarter);
+    var (s2, a2) = _goal != null ? _to(q) : q.quarterEnd(endQuarter);
     var start = from;
     if (start == null) {
       // آخر آية وقفت عندها لو لسه قدامك، وإلا أول الشاشة.
@@ -473,7 +478,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (_cmp(s, a, s1, a1) < 0) (s, a) = (s1, a1);
     if (_cmp(s, a, s2, a2) > 0) (s, a) = (s1, a1);
     // المصحف الحر: التلاوة والقراءة التلقائية جزء واحد (٨ أرباع) من مكانك، مش لآخر المصحف.
-    if (r.personal) (s2, a2) = q.quarterEnd((q.quarterOf(s, a) + 7).clamp(1, 240));
+    if (r.personal && _goal == null) (s2, a2) = q.quarterEnd((q.quarterOf(s, a) + 7).clamp(1, 240));
     final out = <(int, int)>[];
     while (_cmp(s, a, s2, a2) <= 0) {
       out.add((s, a));
@@ -643,6 +648,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   int _windowStart(int quarter) => ((quarter.clamp(1, 240) - 1) ~/ 8) * 8 + 1;
 
+  /// أول وآخر ربع في قايمة النص (بالترتيب من صفر): السورة بس، أو الجزء المعروض، أو الورد كله.
+  int _listStart(QuranData q) => _goal != null ? q.quarterOf(_goal!, 1) - 1 : (r.personal ? _winFrom - 1 : 0);
+  int _listEnd(QuranData q) =>
+      _goal != null ? q.quarterOf(_goal!, q.ayahCount(_goal!)) - 1 : (r.personal ? _winFrom + 6 : r.quarterCount - 1);
+
   void _shiftWindow(int from, {bool toEnd = false}) {
     setState(() => _winFrom = _windowStart(from));
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -792,7 +802,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (_pages) {
       final layout = _layout, q = _pageQuran;
       if (layout == null || q == null || !(_pager?.hasClients ?? false)) return;
-      final (s1, a1) = q.quarterStart(r.fromQuarter);
+      final (s1, a1) = _from(q);
       final target = layout.pageOf(pos.surah, pos.ayah).clamp(layout.pageOf(s1, a1), _limitPage);
       _pager!.jumpToPage(target - layout.pageOf(s1, a1));
     } else {
@@ -809,8 +819,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final q = _pageQuran, layout = _layout;
     if (q == null || layout == null) return null;
     var (s, a) = layout.firstAyahOf(_page);
-    final (s1, a1) = q.quarterStart(r.fromQuarter);
-    final (s2, a2) = q.quarterEnd(r.toQuarter);
+    final (s1, a1) = _from(q);
+    final (s2, a2) = _to(q);
     if (_cmp(s, a, s1, a1) < 0) (s, a) = (s1, a1);
     if (_cmp(s, a, s2, a2) > 0) (s, a) = (s2, a2);
     return _AyahPos(q.quarterOf(s, a).clamp(r.fromQuarter, r.toQuarter), s, a);
@@ -921,8 +931,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   Widget _pagesBody(QuranData q, MushafLayout layout) {
     _pageQuran = q;
     _layout = layout;
-    final (s1, a1) = q.quarterStart(r.fromQuarter);
-    final (s2, a2) = q.quarterEnd(r.toQuarter);
+    final (s1, a1) = _from(q);
+    final (s2, a2) = _to(q);
     final first = layout.pageOf(s1, a1);
     final last = layout.endPageOf(s2, a2);
     // القارئ مبيعديش الربع اللي عليه غير لما يسجّله.
@@ -988,7 +998,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   /// بيوصل لربع حتى لو لسه مش متبني في القايمة (بيقرّب بالتقدير وبعدين بيظبط).
   void _revealQuarter(int quarter, {required VoidCallback then, int tries = 0}) {
-    if (r.personal && (quarter < _winFrom || quarter > _winFrom + 7)) {
+    if (r.personal && _goal == null && (quarter < _winFrom || quarter > _winFrom + 7)) {
       // برا الجزء المعروض: نعرض جزءه الأول وبعدين نروح له.
       if (tries > 6 || !mounted) return;
       setState(() => _winFrom = _windowStart(quarter));
@@ -1272,24 +1282,27 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               // القراءة الصامتة: مسافة فوق وتحت، عشان أول آية وآخر آية يقدروا يوصلوا لمكان القراية.
               SliverToBoxAdapter(child: SizedBox(height: _autoPadTop)),
               // الأرباع اللي بعد الربع الحالي مبتظهرش غير لما يسجّله.
-              if (r.personal && _winFrom > 1)
+              if (r.personal && _goal == null && _winFrom > 1)
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
                     child: OutlinedButton(onPressed: () => _shiftWindow(_winFrom - 8, toEnd: true), child: Text(t.personalPrevJuz)),
                   ),
                 ),
-              for (var i = r.personal ? _winFrom - 1 : 0; i < r.quarterCount && i <= _read && (!r.personal || i < _winFrom + 7); i++) ...[
+              for (var i = _listStart(q); i < r.quarterCount && i <= _read && i <= _listEnd(q); i++) ...[
                 SliverToBoxAdapter(
-                  child: _QuarterHeader(
-                    key: _keyFor(r.fromQuarter + i),
-                    label: rangeLabel(t, r.fromQuarter + i, r.fromQuarter + i),
-                    done: !r.personal && i < _read,
-                  ),
+                  // سورة الورد الشخصي: من غير عناوين أرباع، بس المفتاح فاضل عشان نوصل للآية.
+                  child: _goal != null
+                      ? SizedBox(key: _keyFor(r.fromQuarter + i))
+                      : _QuarterHeader(
+                          key: _keyFor(r.fromQuarter + i),
+                          label: rangeLabel(t, r.fromQuarter + i, r.fromQuarter + i),
+                          done: !r.personal && i < _read,
+                        ),
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 18),
-                  sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize, anchors: _anchors, onAyahTap: _ayahMenu, highlight: _highlight)),
+                  sliver: SliverToBoxAdapter(child: _QuarterText(data: q, quarter: r.fromQuarter + i, fontSize: _fontSize, anchors: _anchors, onAyahTap: _ayahMenu, highlight: _highlight, onlySurah: _goal)),
                 ),
                 if (i == _read)
                   SliverToBoxAdapter(
@@ -1309,7 +1322,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                     ),
                   ),
               ],
-              if (r.personal && _winFrom + 8 <= 240)
+              if (r.personal && _goal == null && _winFrom + 8 <= 240)
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -1431,7 +1444,11 @@ class _QuarterText extends StatelessWidget {
     required this.anchors,
     required this.onAyahTap,
     this.highlight,
+    this.onlySurah,
   });
+
+  /// سورة من الورد الشخصي: آياتها بس من الربع.
+  final int? onlySurah;
 
   /// اللي بيتنوّر (آية أو كلمة) في التلاوة أو القراءة التلقائية.
   final ReadHighlight? highlight;
@@ -1449,7 +1466,7 @@ class _QuarterText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ayahs = data.ayahsOfQuarter(quarter);
+    final ayahs = [for (final a in data.ayahsOfQuarter(quarter)) if (onlySurah == null || a.surah == onlySurah) a];
     final quranStyle = quranTextStyle(Prefs.instance.textFont, fontSize: fontSize, color: AppColors.text);
     final markStyle = quranStyle.copyWith(fontSize: fontSize * 0.8, color: AppColors.goldInk);
 
