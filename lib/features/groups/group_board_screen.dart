@@ -347,7 +347,8 @@ class _MyPortionCard extends StatelessWidget {
               icon: const Icon(Icons.menu_book_outlined),
               label: Text(a.quartersRead > 0 ? t.continueReading : t.readNow),
             ),
-
+            const SizedBox(height: 8),
+            FinishAllButton(groupId: group.id, assignment: a),
           ] else if (a.isDone && !a.closed) ...[
             // الورد خلص: يقدر يفتحه تاني (ومنه يتراجع لو سجّل بالغلط).
             const SizedBox(height: 10),
@@ -1533,5 +1534,46 @@ class TimeLeftChip extends StatelessWidget {
             : t.hoursLeft(left.inHours.clamp(1, 24));
     final full = DateFormat.MMMEd(Localizations.localeOf(context).toLanguageTag()).add_jm().format(endsAt);
     return Tooltip(message: full, child: StatusPill(label: label, color: AppColors.accent, light: true));
+  }
+}
+
+/// "خلصت الورد كله": بيسجّل الورد كله مرة واحدة (للي بيقرا من مصحف ورق)، بعد تأكيد بعدد الأرباع الباقية.
+class FinishAllButton extends StatefulWidget {
+  const FinishAllButton({super.key, required this.groupId, required this.assignment});
+
+  final String groupId;
+  final Assignment assignment;
+
+  @override
+  State<FinishAllButton> createState() => _FinishAllButtonState();
+}
+
+class _FinishAllButtonState extends State<FinishAllButton> {
+  bool _busy = false;
+
+  Future<void> _finish() async {
+    final t = AppLocalizations.of(context);
+    final a = widget.assignment;
+    final left = a.quarterCount - a.quartersRead;
+    if (left <= 0) return;
+    if (!await confirmDialog(context, title: t.finishAllTitle, body: t.finishAllBody(left)) || !mounted) return;
+    setState(() => _busy = true);
+    var points = 0;
+    final ok = await runAction(context, () async {
+      points = await GroupsService.instance.updateProgress(widget.groupId, a.quarterCount);
+    });
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (ok) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.earnedPoints(points))));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return OutlinedButton.icon(
+      onPressed: _busy ? null : _finish,
+      icon: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.done_all),
+      label: Text(t.finishAll),
+    );
   }
 }

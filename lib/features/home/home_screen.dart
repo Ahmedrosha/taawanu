@@ -17,7 +17,7 @@ import '../messages/messages_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../update/update_widgets.dart';
 import '../../widgets/ui.dart';
-import '../groups/group_board_screen.dart' show ReadRequest, TimeLeftChip;
+import '../groups/group_board_screen.dart' show FinishAllButton, ReadRequest, TimeLeftChip;
 import '../personal/personal_ward_screen.dart' show personalItemTitle;
 import '../prayer/next_prayer_tile.dart';
 import '../shell/home_shell.dart' show shellNavKey;
@@ -351,6 +351,8 @@ class _HomeGroupCardState extends State<_HomeGroupCard> {
                               icon: const Icon(Icons.menu_book_outlined),
                               label: Text(a.quartersRead > 0 ? t.continueReading : t.readNow),
                             ),
+                            const SizedBox(height: 8),
+                            FinishAllButton(groupId: g.id, assignment: a),
                           ],
                         ],
                       );
