@@ -508,7 +508,7 @@ class PageSideIcon extends StatelessWidget {
     final right = page.isOdd;
     return Semantics(
       label: AppLocalizations.of(context).pageSide(right ? 'right' : 'left'),
-      child: CustomPaint(size: const Size(22, 15), painter: _PageSidePainter(right: right, color: color)),
+      child: CustomPaint(size: const Size(28, 18), painter: _PageSidePainter(right: right, color: color)),
     );
   }
 }
@@ -521,19 +521,30 @@ class _PageSidePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width / 2, h = size.height;
+    // مصحف مفتوح بصفحتين منحنيتين وكعب في النص (مرسوم على ٤٤×٢٨ وبيتكبّر على المقاس).
+    final k = size.width / 44;
+    canvas.save();
+    canvas.scale(k, size.height / 28);
+    Path page(bool r) {
+      final d = r ? 1.0 : -1.0;
+      return Path()
+        ..moveTo(22, 6)
+        ..cubicTo(22 + 6 * d, 2, 22 + 14 * d, 2, 22 + 19 * d, 4)
+        ..lineTo(22 + 19 * d, 24)
+        ..cubicTo(22 + 14 * d, 22, 22 + 6 * d, 22, 22, 26)
+        ..close();
+    }
+
     final stroke = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4;
-    final fill = Paint()..color = color;
-    const r = Radius.circular(2);
-    // الصفحتين (رسم ثابت: الشمال شمال واليمين يمين في أي لغة).
-    final left = RRect.fromRectAndCorners(Rect.fromLTWH(0.7, 0.7, w - 1.2, h - 1.4), topLeft: r, bottomLeft: r);
-    final rightPage = RRect.fromRectAndCorners(Rect.fromLTWH(w + 0.5, 0.7, w - 1.2, h - 1.4), topRight: r, bottomRight: r);
-    canvas.drawRRect(right ? rightPage : left, fill);
-    canvas.drawRRect(left, stroke);
-    canvas.drawRRect(rightPage, stroke);
+      ..strokeWidth = 1.7
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(page(right), Paint()..color = color.withValues(alpha: 0.85));
+    canvas.drawPath(page(true), stroke);
+    canvas.drawPath(page(false), stroke);
+    canvas.drawLine(const Offset(22, 6), const Offset(22, 26), stroke..strokeWidth = 1.3);
+    canvas.restore();
   }
 
   @override
