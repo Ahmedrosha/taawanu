@@ -1218,5 +1218,7 @@
   "personalRemindOff": "Remove reminder",
   "personalRemindAt": "Reminder {time}",
   "@personalRemindAt": {"placeholders": {"time": {"type": "String"}}},
-  "personalRemindToggle": "Remind me at a set time"
+  "personalRemindToggle": "Remind me at a set time",
+  "pageSide": "{side, select, right{Right-hand page} other{Left-hand page}}",
+  "@pageSide": {"placeholders": {"side": {"type": "String"}}}
 }

@@ -739,7 +739,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   /// الآية اللي عند خط القراية (تلت الشاشة من فوق) في النص المتصل.
   /// رقم الصفحة (أو الصفحتين) اللي ظاهرين في النص المتصل.
-  String? _pageLabel;
+  (int, int)? _pageLabel;
   Timer? _pageTimer;
 
   void _onScrollPages() {
@@ -773,14 +773,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (!mounted || _pages) return;
     final layout = MushafLayout.cached;
     final a = _ayahAtFraction(0.02), b = _ayahAtFraction(0.95);
-    String? label;
+    (int, int)? label;
     if (layout != null && a != null) {
       final p1 = layout.pageOf(a.surah, a.ayah);
       final p2 = b == null ? p1 : layout.pageOf(b.surah, b.ayah);
-      final t = AppLocalizations.of(context);
-      final ar = Localizations.localeOf(context).languageCode == 'ar';
-      String n(int v) => ar ? arabicDigits(v) : '$v';
-      label = p2 > p1 ? t.pageRangeLabel(n(p1), n(p2)) : t.pageLabel(n(p1));
+      label = (p1, p2 > p1 ? p2 : p1);
     }
     if (label != _pageLabel) setState(() => _pageLabel = label);
   }
@@ -1404,7 +1401,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                           color: AppColors.navy.withValues(alpha: 0.92),
                           borderRadius: BorderRadius.circular(99),
                         ),
-                        child: Text(_pageLabel!, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                        child: _PagePill(pages: _pageLabel!),
                       ),
                     ),
                   ),
@@ -1597,7 +1594,7 @@ class _QuarterText extends StatelessWidget {
         final pg = pages.pageOf(a.surah, a.number);
         if (pg != prevPage) {
           flush();
-          blocks.add(_PageMark(label: AppLocalizations.of(context).pageLabel(ar ? arabicDigits(pg) : '$pg')));
+          blocks.add(_PageMark(page: pg, label: AppLocalizations.of(context).pageLabel(ar ? arabicDigits(pg) : '$pg')));
         }
         prevPage = pg;
       }
@@ -1672,9 +1669,84 @@ class _QuarterText extends StatelessWidget {
 String arabicDigits(int n) => n.toString().split('').map((d) => '٠١٢٣٤٥٦٧٨٩'[int.parse(d)]).join();
 
 /// علامة بداية صفحة مصحف المدينة جوه النص المتصل.
-class _PageMark extends StatelessWidget {
-  const _PageMark({required this.label});
+/// رسمة صغيرة لمصحف مفتوح، والنص المتلوّن هو مكان الصفحة: الفردي يمين والزوجي شمال (زي مصحف المدينة الورق).
+class PageSideIcon extends StatelessWidget {
+  const PageSideIcon({super.key, required this.page, required this.color});
 
+  final int page;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final right = page.isOdd;
+    return Semantics(
+      label: AppLocalizations.of(context).pageSide(right ? 'right' : 'left'),
+      child: CustomPaint(size: const Size(22, 15), painter: _PageSidePainter(right: right, color: color)),
+    );
+  }
+}
+
+class _PageSidePainter extends CustomPainter {
+  _PageSidePainter({required this.right, required this.color});
+
+  final bool right;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width / 2, h = size.height;
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4;
+    final fill = Paint()..color = color;
+    const r = Radius.circular(2);
+    // الصفحتين (رسم ثابت: الشمال شمال واليمين يمين في أي لغة).
+    final left = RRect.fromRectAndCorners(Rect.fromLTWH(0.7, 0.7, w - 1.2, h - 1.4), topLeft: r, bottomLeft: r);
+    final rightPage = RRect.fromRectAndCorners(Rect.fromLTWH(w + 0.5, 0.7, w - 1.2, h - 1.4), topRight: r, bottomRight: r);
+    canvas.drawRRect(right ? rightPage : left, fill);
+    canvas.drawRRect(left, stroke);
+    canvas.drawRRect(rightPage, stroke);
+  }
+
+  @override
+  bool shouldRepaint(_PageSidePainter old) => old.right != right || old.color != color;
+}
+
+/// الشريط الثابت: "صفحة ٥٦٢ [رسمة]" أو "صفحة ٥٦٢ [رسمة] – ٥٦٣ [رسمة]".
+class _PagePill extends StatelessWidget {
+  const _PagePill({required this.pages});
+
+  final (int, int) pages;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final ar = Localizations.localeOf(context).languageCode == 'ar';
+    String n(int v) => ar ? arabicDigits(v) : '$v';
+    const style = TextStyle(color: Colors.white, fontSize: 13);
+    final (a, b) = pages;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(t.pageLabel(n(a)), style: style),
+        const SizedBox(width: 6),
+        PageSideIcon(page: a, color: Colors.white),
+        if (b != a) ...[
+          const Text('  –  ', style: style),
+          Text(n(b), style: style),
+          const SizedBox(width: 6),
+          PageSideIcon(page: b, color: Colors.white),
+        ],
+      ],
+    );
+  }
+}
+
+class _PageMark extends StatelessWidget {
+  const _PageMark({required this.page, required this.label});
+
+  final int page;
   final String label;
 
   @override
@@ -1686,6 +1758,8 @@ class _PageMark extends StatelessWidget {
           Expanded(child: Divider(color: AppColors.paperLine)),
           const SizedBox(width: 10),
           Text(label, style: TextStyle(fontSize: 13, color: AppColors.paperLabel)),
+          const SizedBox(width: 6),
+          PageSideIcon(page: page, color: AppColors.paperLabel),
           const SizedBox(width: 10),
           Expanded(child: Divider(color: AppColors.paperLine)),
         ],

@@ -693,5 +693,6 @@
   "personalRemind": "ميعاد التذكير",
   "personalRemindOff": "شيل التذكير",
   "personalRemindAt": "تذكير {time}",
-  "personalRemindToggle": "فكرني في ميعاد معيّن"
+  "personalRemindToggle": "فكرني في ميعاد معيّن",
+  "pageSide": "{side, select, right{صفحة يمين} other{صفحة شمال}}"
 }
