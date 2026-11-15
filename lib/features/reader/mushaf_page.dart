@@ -181,9 +181,17 @@ class _PageBody extends StatelessWidget {
                 ),
               ),
             ),
+            // رقم الصفحة، وجنبه رسمة مكانها في المصحف المفتوح (الفردي يمين والزوجي شمال).
             SizedBox(
               height: 24,
-              child: Center(child: Text(_number(page, ar), style: labelStyle.copyWith(fontSize: 13))),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(_number(page, ar), style: labelStyle.copyWith(fontSize: 13)),
+                  const SizedBox(width: 6),
+                  PageSideIcon(page: page, color: AppColors.paperLabel),
+                ],
+              ),
             ),
           ],
         ),
@@ -486,4 +494,48 @@ class _MushafSampleState extends State<MushafSample> {
       ),
     ));
   }
+}
+
+/// رسمة صغيرة لمصحف مفتوح، والنص المتلوّن هو مكان الصفحة: الفردي يمين والزوجي شمال (زي مصحف المدينة الورق).
+class PageSideIcon extends StatelessWidget {
+  const PageSideIcon({super.key, required this.page, required this.color});
+
+  final int page;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final right = page.isOdd;
+    return Semantics(
+      label: AppLocalizations.of(context).pageSide(right ? 'right' : 'left'),
+      child: CustomPaint(size: const Size(22, 15), painter: _PageSidePainter(right: right, color: color)),
+    );
+  }
+}
+
+class _PageSidePainter extends CustomPainter {
+  _PageSidePainter({required this.right, required this.color});
+
+  final bool right;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width / 2, h = size.height;
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4;
+    final fill = Paint()..color = color;
+    const r = Radius.circular(2);
+    // الصفحتين (رسم ثابت: الشمال شمال واليمين يمين في أي لغة).
+    final left = RRect.fromRectAndCorners(Rect.fromLTWH(0.7, 0.7, w - 1.2, h - 1.4), topLeft: r, bottomLeft: r);
+    final rightPage = RRect.fromRectAndCorners(Rect.fromLTWH(w + 0.5, 0.7, w - 1.2, h - 1.4), topRight: r, bottomRight: r);
+    canvas.drawRRect(right ? rightPage : left, fill);
+    canvas.drawRRect(left, stroke);
+    canvas.drawRRect(rightPage, stroke);
+  }
+
+  @override
+  bool shouldRepaint(_PageSidePainter old) => old.right != right || old.color != color;
 }
