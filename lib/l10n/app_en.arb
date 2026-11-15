@@ -1220,5 +1220,11 @@
   "@personalRemindAt": {"placeholders": {"time": {"type": "String"}}},
   "personalRemindToggle": "Remind me at a set time",
   "pageSide": "{side, select, right{Right-hand page} other{Left-hand page}}",
-  "@pageSide": {"placeholders": {"side": {"type": "String"}}}
+  "@pageSide": {"placeholders": {"side": {"type": "String"}}},
+  "personalFinishSurah": "I finished the surah",
+  "personalSurahDone": "Surah finished today",
+  "finishAll": "Finished the whole portion",
+  "finishAllTitle": "Mark the whole portion?",
+  "finishAllBody": "This marks the remaining {n} quarters as read at once. Handy if you read from a printed mushaf.",
+  "@finishAllBody": {"placeholders": {"n": {"type": "int"}}}
 }

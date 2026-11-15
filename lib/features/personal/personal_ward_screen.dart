@@ -222,7 +222,7 @@ class _ItemTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           onTap: onOpen,
           child: Container(
-            padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+            padding: const EdgeInsets.fromLTRB(3, 1, 4, 1),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: done ? AppColors.doneBorder : AppColors.border),
@@ -231,19 +231,24 @@ class _ItemTile extends StatelessWidget {
               children: [
                 // الدايرة: دوس عليها تعلّم أو تشيل "تم" بإيدك (الأذكار بتتعلّم لوحدها لما العدّاد يخلص).
                 GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: dim || auto ? null : () => ward.setDone(item, !done),
-                  child: Container(
-                    width: 26,
-                    height: 26,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: done ? AppColors.statusDone : Colors.transparent,
-                      border: Border.all(color: done ? AppColors.statusDone : AppColors.mutedLine, width: 2),
+                  // مساحة لمس أكبر من الدايرة نفسها.
+                  child: Padding(
+                    padding: const EdgeInsets.all(9),
+                    child: Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: done ? AppColors.statusDone : Colors.transparent,
+                        border: Border.all(color: done ? AppColors.statusDone : AppColors.mutedLine, width: 2),
+                      ),
+                      child: done ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
                     ),
-                    child: done ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 3),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

@@ -694,5 +694,10 @@
   "personalRemindOff": "شيل التذكير",
   "personalRemindAt": "تذكير {time}",
   "personalRemindToggle": "فكرني في ميعاد معيّن",
-  "pageSide": "{side, select, right{صفحة يمين} other{صفحة شمال}}"
+  "pageSide": "{side, select, right{صفحة يمين} other{صفحة شمال}}",
+  "personalFinishSurah": "خلصت السورة",
+  "personalSurahDone": "خلصت السورة النهارده",
+  "finishAll": "خلصت الورد كله",
+  "finishAllTitle": "تسجيل الورد كله؟",
+  "finishAllBody": "هيتسجّل إنك قريت الـ {n} أرباع الباقيين مرة واحدة. ده مناسب لو قريت من مصحف ورق."
 }

@@ -778,6 +778,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       final p1 = layout.pageOf(a.surah, a.ayah);
       final p2 = b == null ? p1 : layout.pageOf(b.surah, b.ayah);
       label = (p1, p2 > p1 ? p2 : p1);
+      // المصحف الحر: الصفحات الظاهرة كلها بتتحسب (حتى لو السورة قصيرة ومفيش تمرير).
+      if (r.personal) _notePersonalPages(label.$1, label.$2);
     }
     if (label != _pageLabel) setState(() => _pageLabel = label);
   }
@@ -819,7 +821,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (layout == null || q == null) return;
     final page = _pages ? _page : (pos == null ? null : layout.pageOf(pos.surah, pos.ayah));
     if (page == null) return;
-    final done = PersonalWard.instance.notePage(page, layout, q);
+    _notePersonalPages(page, page);
+  }
+
+  /// صفحات اتشافت في المصحف الحر (في النص المتصل: من أول آية ظاهرة لآخر آية ظاهرة).
+  void _notePersonalPages(int from, int to) {
+    final layout = _layout ?? MushafLayout.cached;
+    final q = _pageQuran ?? _textQuran;
+    if (layout == null || q == null) return;
+    final done = <int>[];
+    for (var p = from; p <= to; p++) {
+      done.addAll(PersonalWard.instance.notePage(p, layout, q));
+    }
     if (done.isEmpty || !mounted || _closing) return;
     final t = AppLocalizations.of(context);
     final en = Localizations.localeOf(context).languageCode == 'en';
@@ -1130,6 +1143,48 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.earnedPoints(points))));
       context.pop();
     }
+  }
+
+  /// سورة من الورد الشخصي: "خلصت السورة" بإيدك (لو قريت من مصحف ورق مثلًا).
+  Future<void> _finishGoal() async {
+    final g = _goal;
+    if (g == null) return;
+    final ward = PersonalWard.instance;
+    for (final i in ward.items) {
+      if (i.isSurah && i.surah == g && !ward.isDone(i)) await ward.setDone(i, true);
+    }
+    if (_audio.active) unawaited(_audio.stop());
+    if (_auto.active) _auto.stop();
+    if (!mounted) return;
+    final q = _pageQuran ?? _textQuran;
+    final en = Localizations.localeOf(context).languageCode == 'en';
+    final name = q == null ? '' : (en ? q.surahNamesEn[g - 1] : q.surahNamesAr[g - 1]);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).personalDoneToast(name))));
+    context.pop();
+  }
+
+  bool get _goalDone {
+    final g = _goal;
+    if (g == null) return false;
+    final ward = PersonalWard.instance;
+    return ward.items.any((i) => i.isSurah && i.surah == g && ward.isDone(i));
+  }
+
+  /// خلّص الورد كله مرة واحدة (للي بيقرا من مصحف ورق)، بعد تأكيد.
+  Future<void> _finishAll() async {
+    final t = AppLocalizations.of(context);
+    final left = r.quarterCount - _read;
+    if (left <= 0) return;
+    if (!await confirmDialog(context, title: t.finishAllTitle, body: t.finishAllBody(left))) return;
+    if (!mounted) return;
+    final points = await _save(r.quarterCount);
+    if (points == null || !mounted) return;
+    if (_audio.active) unawaited(_audio.stop());
+    if (_auto.active) _auto.stop();
+    await ReadPositions.instance.clear(docId: _posDoc, key: _posKey);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.earnedPoints(points))));
+    context.pop();
   }
 
   /// تراجع عن آخر ربع اتسجّل. لو الورد كان خلص، النقاط بتتشال.
@@ -1449,6 +1504,31 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                     onRestart: _startRecitation,
                     reciterKey: _kReciter,
                     downloadKey: _kDownload,
+                  ),
+                ),
+              // سورة من الورد الشخصي: "خلصت السورة" (أو إنها خلصت).
+              if (_goal != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: _goalDone
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.check_circle, color: AppColors.statusDone),
+                            const SizedBox(width: 6),
+                            Text(t.personalSurahDone, style: TextStyle(color: AppColors.statusDone, fontWeight: FontWeight.w700)),
+                          ],
+                        )
+                      : FilledButton(onPressed: _finishGoal, child: Text(t.personalFinishSurah)),
+                ),
+              // خلّص الورد كله مرة واحدة (للي بيقرا من مصحف ورق).
+              if (!r.personal && _read < r.quarterCount - 1)
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    onPressed: _busy ? null : _finishAll,
+                    icon: const Icon(Icons.done_all, size: 18),
+                    label: Text(t.finishAll),
                   ),
                 ),
               if (!r.personal)
