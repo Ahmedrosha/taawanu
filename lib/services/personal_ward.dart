@@ -12,15 +12,21 @@ import 'quran_repository.dart';
 
 /// بند في الورد الشخصي: أذكار (قسم كامل) أو سورة كاملة.
 class PersonalItem {
-  const PersonalItem({required this.id, required this.type, required this.ref, this.days = const [], this.since, this.remindAt});
+  const PersonalItem({required this.id, required this.type, required this.ref, this.days = const [], this.since, this.remindAt, this.khatma});
 
   /// ميعاد تذكير خاص بالبند (دقايق من نص الليل)، أو null.
   final int? remindAt;
 
-  PersonalItem withRemind(int? minutes) =>
-      PersonalItem(id: id, type: type, ref: ref, days: days, since: since, remindAt: minutes);
+  /// حالة الختمة الشخصية (للنوع 'khatma' بس).
+  final KhatmaPlan? khatma;
 
-  /// 'adhkar' (ref = id القسم) | 'surah' (ref = رقم السورة).
+  PersonalItem withRemind(int? minutes) =>
+      PersonalItem(id: id, type: type, ref: ref, days: days, since: since, remindAt: minutes, khatma: khatma);
+
+  PersonalItem withKhatma(KhatmaPlan k) =>
+      PersonalItem(id: id, type: type, ref: ref, days: days, since: since, remindAt: remindAt, khatma: k);
+
+  /// 'adhkar' (ref = id القسم) | 'surah' (ref = رقم السورة) | 'khatma' (ختمة شخصية، ref = 'k').
   final String id;
   final String type;
   final String ref;
@@ -41,12 +47,27 @@ class PersonalItem {
   }
 
   bool get isSurah => type == 'surah';
+  bool get isAdhkar => type == 'adhkar';
+  bool get isKhatma => type == 'khatma';
   int get surah => int.tryParse(ref) ?? 1;
 
-  bool dueOn(DateTime d) => days.isEmpty || days.contains(d.weekday);
+  /// مطلوب في اليوم ده؟ (الختمة اللي خلصت مبتبقاش مطلوبة غير يوم ما ختمت).
+  bool dueOn(DateTime d) {
+    if (!(days.isEmpty || days.contains(d.weekday))) return false;
+    final k = khatma;
+    if (k != null && k.finished && k.curDay != personalDayKey(d)) return false;
+    return true;
+  }
 
-  Map<String, dynamic> toJson() =>
-      {'id': id, 'type': type, 'ref': ref, 'days': days, if (since != null) 'since': since, if (remindAt != null) 'remindAt': remindAt};
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'type': type,
+        'ref': ref,
+        'days': days,
+        if (since != null) 'since': since,
+        if (remindAt != null) 'remindAt': remindAt,
+        if (khatma != null) 'k': khatma!.toJson(),
+      };
 
   static PersonalItem? fromJson(Object? j) {
     if (j is! Map) return null;
@@ -59,6 +80,94 @@ class PersonalItem {
       days: [for (final d in (j['days'] as List? ?? const [])) if (d is int && d >= 1 && d <= 7) d],
       since: j['since'] is String ? j['since'] as String : null,
       remindAt: j['remindAt'] is int && (j['remindAt'] as int) >= 0 && (j['remindAt'] as int) < 1440 ? j['remindAt'] as int : null,
+      khatma: KhatmaPlan.fromJson(j['k']),
+    );
+  }
+}
+
+/// الختمة الشخصية: كل يوم ورد بالأرباع (١..٢٤٠)، ولما يخلص بكره يجي اللي بعده.
+class KhatmaPlan {
+  const KhatmaPlan({
+    required this.perDay,
+    required this.start,
+    required this.pos,
+    required this.startedAt,
+    this.strict = false,
+    this.count = 0,
+    this.curDay,
+    this.curFrom,
+    this.curTo,
+    this.finished = false,
+  });
+
+  /// أرباع كل يوم.
+  final int perDay;
+
+  /// أول ربع في الختمة دي (للنسبة)، واللي جاي يتقري.
+  final int start;
+  final int pos;
+
+  /// يوم بداية الختمة دي.
+  final String startedAt;
+
+  /// "ألتزم بالميعاد": اللي فات بيتضاف. غيره: الورد يستناك.
+  final bool strict;
+
+  /// الختمات اللي خلصت قبل كده.
+  final int count;
+
+  /// ورد اليوم اللي اتعلّم "تمت" (عشان يفضل باين بعد ما يخلص).
+  final String? curDay;
+  final int? curFrom;
+  final int? curTo;
+
+  /// ختم (لحد ما يبدأ ختمة جديدة).
+  final bool finished;
+
+  KhatmaPlan copy({int? pos, int? start, String? startedAt, int? count, String? curDay, int? curFrom, int? curTo, bool? finished, bool clearCur = false}) =>
+      KhatmaPlan(
+        perDay: perDay,
+        start: start ?? this.start,
+        pos: pos ?? this.pos,
+        startedAt: startedAt ?? this.startedAt,
+        strict: strict,
+        count: count ?? this.count,
+        curDay: clearCur ? null : (curDay ?? this.curDay),
+        curFrom: clearCur ? null : (curFrom ?? this.curFrom),
+        curTo: clearCur ? null : (curTo ?? this.curTo),
+        finished: finished ?? this.finished,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'perDay': perDay,
+        'start': start,
+        'pos': pos,
+        'startedAt': startedAt,
+        'strict': strict,
+        'count': count,
+        if (curDay != null) 'curDay': curDay,
+        if (curFrom != null) 'curFrom': curFrom,
+        if (curTo != null) 'curTo': curTo,
+        'finished': finished,
+      };
+
+  static KhatmaPlan? fromJson(Object? j) {
+    if (j is! Map) return null;
+    int? n(Object? v) => v is num ? v.toInt() : null;
+    final perDay = n(j['perDay']), start = n(j['start']), pos = n(j['pos']);
+    final startedAt = j['startedAt'];
+    if (perDay == null || start == null || pos == null || startedAt is! String) return null;
+    return KhatmaPlan(
+      perDay: perDay.clamp(1, 240),
+      start: start.clamp(1, 240),
+      pos: pos.clamp(1, 241),
+      startedAt: startedAt,
+      strict: j['strict'] == true,
+      count: n(j['count']) ?? 0,
+      curDay: j['curDay'] is String ? j['curDay'] as String : null,
+      curFrom: n(j['curFrom']),
+      curTo: n(j['curTo']),
+      finished: j['finished'] == true,
     );
   }
 }
@@ -215,10 +324,10 @@ class PersonalWard extends ChangeNotifier {
   bool manuallyDone(PersonalItem i, [String? day]) => _doneMap[day ?? personalDayKey()]?.contains(i.id) ?? false;
 
   /// خلص النهارده: تلقائي (أذكار أو سورة اتقرت) أو بإيدك.
-  bool isDone(PersonalItem i) => manuallyDone(i) || (!i.isSurah && _adhkarComplete(i.ref));
+  bool isDone(PersonalItem i) => manuallyDone(i) || (i.isAdhkar && _adhkarComplete(i.ref));
 
   /// ده اتعلّم تلقائي (الأذكار لما العدّاد يخلص)؟
-  bool autoDone(PersonalItem i) => !i.isSurah && _adhkarComplete(i.ref);
+  bool autoDone(PersonalItem i) => i.isAdhkar && _adhkarComplete(i.ref);
 
   /// الأذكار اللي خلصت النهارده بتتسجّل في السجل (عشان تبان في التقرير).
   void _recordAuto() {
@@ -226,7 +335,7 @@ class PersonalWard extends ChangeNotifier {
     final day = personalDayKey();
     var changed = false;
     for (final i in today()) {
-      if (i.isSurah || !_adhkarComplete(i.ref)) continue;
+      if (!i.isAdhkar || !_adhkarComplete(i.ref)) continue;
       final list = _doneMap.putIfAbsent(day, () => []);
       if (!list.contains(i.id)) {
         list.add(i.id);
@@ -247,6 +356,7 @@ class PersonalWard extends ChangeNotifier {
 
   Future<void> setDone(PersonalItem i, bool done) async {
     final day = personalDayKey();
+    if (i.isKhatma) _khatmaDone(i, done, day);
     final list = _doneMap.putIfAbsent(day, () => []);
     if (done) {
       if (!list.contains(i.id)) list.add(i.id);
@@ -264,6 +374,118 @@ class PersonalWard extends ChangeNotifier {
   /// أقسام الأذكار من غير إشعار (للتذكيرات).
   Future<void> ensureAdhkar() async {
     if (_adhkar.isEmpty) _adhkar = await AdhkarRepository.instance.daily();
+  }
+
+  // ---------- الختمة الشخصية ----------
+
+  PersonalItem? get khatmaItem => items.where((i) => i.isKhatma && i.khatma != null).firstOrNull;
+
+  /// عدد الأيام المطلوبة من يوم البداية لحد [d] (بما فيهم).
+  int _dueDaysBetween(PersonalItem i, DateTime from, DateTime to) {
+    var n = 0;
+    for (var d = DateTime(from.year, from.month, from.day); !d.isAfter(to); d = DateTime(d.year, d.month, d.day + 1)) {
+      if (i.days.isEmpty || i.days.contains(d.weekday)) n++;
+      if (n > 4000) break;
+    }
+    return n;
+  }
+
+  /// ورد النهارده في الختمة (من ربع لربع)، أو null لو ختم.
+  (int, int)? khatmaToday(PersonalItem i) {
+    final k = i.khatma;
+    if (k == null) return null;
+    final day = personalDayKey();
+    if (k.curDay == day && k.curFrom != null && k.curTo != null) return (k.curFrom!, k.curTo!);
+    if (k.pos > 240) return null;
+    var to = k.pos + k.perDay - 1;
+    if (k.strict) {
+      // ألتزم بالميعاد: لحد المفروض أكون وصلته النهارده.
+      final start = parseDayKey(k.startedAt) ?? DateTime.now();
+      final expected = k.start - 1 + k.perDay * _dueDaysBetween(i, start, DateTime.now());
+      if (expected > to) to = expected;
+    }
+    return (k.pos, to > 240 ? 240 : to);
+  }
+
+  /// الورد اللي بعده (لـ"اقرأ ورد بكره") بعد ما ورد النهارده يخلص.
+  (int, int)? khatmaNext(PersonalItem i) {
+    final k = i.khatma;
+    if (k == null || k.pos > 240 || !isDone(i)) return null;
+    final to = k.pos + k.perDay - 1;
+    return (k.pos, to > 240 ? 240 : to);
+  }
+
+  /// نسبة الختمة (من أول الختمة دي).
+  double khatmaProgress(PersonalItem i) {
+    final k = i.khatma;
+    if (k == null) return 0;
+    final total = 241 - k.start;
+    return total <= 0 ? 1 : ((k.pos - k.start) / total).clamp(0.0, 1.0);
+  }
+
+  /// التاريخ المتوقع للختم (على الأيام المطلوبة).
+  DateTime? khatmaEta(PersonalItem i) {
+    final k = i.khatma;
+    if (k == null || k.pos > 240) return null;
+    var left = ((241 - k.pos) / k.perDay).ceil();
+    final now = DateTime.now();
+    var d = DateTime(now.year, now.month, now.day);
+    if (isDone(i)) d = DateTime(d.year, d.month, d.day + 1);
+    for (var guard = 0; guard < 4000; guard++) {
+      if (i.days.isEmpty || i.days.contains(d.weekday)) {
+        left--;
+        if (left <= 0) return d;
+      }
+      d = DateTime(d.year, d.month, d.day + 1);
+    }
+    return null;
+  }
+
+  void _replace(PersonalItem i, KhatmaPlan k) {
+    final idx = items.indexWhere((x) => x.id == i.id);
+    if (idx < 0) return;
+    items[idx] = i.withKhatma(k);
+    _itemsChanged();
+    _saveItems();
+  }
+
+  /// تعليم ورد النهارده: المكان بيتقدّم (أو يرجع لو اتشال التعليم).
+  void _khatmaDone(PersonalItem i, bool done, String day) {
+    final cur = items.where((x) => x.id == i.id).firstOrNull ?? i;
+    final k = cur.khatma;
+    if (k == null) return;
+    if (done) {
+      if (k.curDay == day) return; // متعلّم قبل كده
+      final r = khatmaToday(cur);
+      if (r == null) return;
+      final next = r.$2 + 1;
+      final fin = next > 240;
+      _replace(cur, k.copy(curDay: day, curFrom: r.$1, curTo: r.$2, pos: next, finished: fin, count: fin ? k.count + 1 : k.count));
+    } else if (k.curDay == day && k.curFrom != null) {
+      _replace(cur, k.copy(pos: k.curFrom, finished: false, count: k.finished ? k.count - 1 : k.count, clearCur: true));
+    }
+  }
+
+  /// ورد زيادة ("اقرأ ورد بكره") اتقرا: المكان يتقدّم من غير ما يعلّم بكره.
+  Future<void> khatmaAdvance(PersonalItem i, int from, int to) async {
+    final cur = items.where((x) => x.id == i.id).firstOrNull;
+    final k = cur?.khatma;
+    if (cur == null || k == null || k.pos != from) return;
+    final next = to + 1;
+    final fin = next > 240;
+    _replace(cur, k.copy(pos: next, finished: fin, count: fin ? k.count + 1 : k.count));
+    notifyListeners();
+    _schedulePush();
+  }
+
+  /// ختمة جديدة بنفس النظام (من الفاتحة).
+  Future<void> khatmaRestart(PersonalItem i) async {
+    final cur = items.where((x) => x.id == i.id).firstOrNull;
+    final k = cur?.khatma;
+    if (cur == null || k == null) return;
+    _replace(cur, k.copy(start: 1, pos: 1, startedAt: personalDayKey(), finished: false, clearCur: true));
+    notifyListeners();
+    _schedulePush();
   }
 
   /// عدد التذكيرات اللي الورد الشخصي محتاجها (عشان حد الآيفون: ٦٤ إشعار مجدول).
@@ -431,6 +653,24 @@ class PersonalWard extends ChangeNotifier {
     Prefs.instance.setPersonalWardSeen(jsonEncode({'day': _seenDay, 'pages': _seen.toList()}));
     final finished = <int>[];
     for (final i in today()) {
+      if (i.isKhatma && !isDone(i)) {
+        // ورد الختمة النهارده: لو صفحاته كلها اتفتحت.
+        final r = khatmaToday(i);
+        if (r == null) continue;
+        final (s1, a1) = quran.quarterStart(r.$1), (s2, a2) = quran.quarterEnd(r.$2);
+        var all = true;
+        for (var p = layout.pageOf(s1, a1); p <= layout.endPageOf(s2, a2); p++) {
+          if (!_seen.contains(p)) {
+            all = false;
+            break;
+          }
+        }
+        if (all) {
+          finished.add(0); // ٠ = ورد الختمة
+          setDone(i, true);
+        }
+        continue;
+      }
       if (!i.isSurah || isDone(i)) continue;
       final s = i.surah;
       final from = layout.pageOf(s, 1), to = layout.endPageOf(s, quran.ayahCount(s));

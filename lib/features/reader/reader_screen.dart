@@ -99,7 +99,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   ReadRequest get r => widget.request;
 
   /// سورة من الورد الشخصي: القارئ بيتعامل معاها بس (من أول آية لآخر آية).
-  int? get _goal => r.personal && r.portionId != null ? r.startSurah : null;
+  int? get _goal => r.personal && (r.portionId?.startsWith('s') ?? false) ? r.startSurah : null;
+
+  /// ورد من الختمة الشخصية (من ربع لربع).
+  bool get _khatma => r.personal && (r.portionId?.startsWith('k') ?? false);
+
+  /// المصحف الحر كله (مش سورة ولا ورد ختمة).
+  bool get _fullMushaf => r.personal && _goal == null && !_khatma;
   (int, int) _from(QuranData q) => _goal == null ? q.quarterStart(r.fromQuarter) : (_goal!, 1);
   (int, int) _to(QuranData q) => _goal == null ? q.quarterEnd(r.toQuarter) : (_goal!, q.ayahCount(_goal!));
 
@@ -478,7 +484,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (_cmp(s, a, s1, a1) < 0) (s, a) = (s1, a1);
     if (_cmp(s, a, s2, a2) > 0) (s, a) = (s1, a1);
     // المصحف الحر: التلاوة والقراءة التلقائية جزء واحد (٨ أرباع) من مكانك، مش لآخر المصحف.
-    if (r.personal && _goal == null) (s2, a2) = q.quarterEnd((q.quarterOf(s, a) + 7).clamp(1, 240));
+    if (_fullMushaf) (s2, a2) = q.quarterEnd((q.quarterOf(s, a) + 7).clamp(1, 240));
     final out = <(int, int)>[];
     while (_cmp(s, a, s2, a2) <= 0) {
       out.add((s, a));
@@ -573,6 +579,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _scroll.addListener(_onScrollPages);
     if (r.personal) {
       PersonalWard.instance.resetCursor();
+      PersonalWard.instance.addListener(_wardChanged);
     }
     _loadRemotePosition();
     WidgetsBinding.instance.addObserver(this);
@@ -622,6 +629,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (_audio.active) _audio.stop();
     if (_auto.active) _auto.stop();
     _pageTimer?.cancel();
+    PersonalWard.instance.removeListener(_wardChanged);
     _scroll.dispose();
     _pager?.dispose();
     super.dispose();
@@ -654,9 +662,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   int _windowStart(int quarter) => ((quarter.clamp(1, 240) - 1) ~/ 8) * 8 + 1;
 
   /// أول وآخر ربع في قايمة النص (بالترتيب من صفر): السورة بس، أو الجزء المعروض، أو الورد كله.
-  int _listStart(QuranData q) => _goal != null ? q.quarterOf(_goal!, 1) - 1 : (r.personal ? _winFrom - 1 : 0);
+  int _listStart(QuranData q) => _goal != null ? q.quarterOf(_goal!, 1) - 1 : (_fullMushaf ? _winFrom - 1 : 0);
   int _listEnd(QuranData q) =>
-      _goal != null ? q.quarterOf(_goal!, q.ayahCount(_goal!)) - 1 : (r.personal ? _winFrom + 6 : r.quarterCount - 1);
+      _goal != null ? q.quarterOf(_goal!, q.ayahCount(_goal!)) - 1 : (_fullMushaf ? _winFrom + 6 : r.quarterCount - 1);
 
   void _shiftWindow(int from, {bool toEnd = false}) {
     setState(() => _winFrom = _windowStart(from));
@@ -836,7 +844,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (done.isEmpty || !mounted || _closing) return;
     final t = AppLocalizations.of(context);
     final en = Localizations.localeOf(context).languageCode == 'en';
-    final names = [for (final s in done) en ? q.surahNamesEn[s - 1] : q.surahNamesAr[s - 1]];
+    final names = [for (final s in done) s == 0 ? t.personalKhatmaToday : (en ? q.surahNamesEn[s - 1] : q.surahNamesAr[s - 1])];
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.personalDoneToast(names.join(', ')))));
   }
 
@@ -1060,7 +1068,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   /// بيوصل لربع حتى لو لسه مش متبني في القايمة (بيقرّب بالتقدير وبعدين بيظبط).
   void _revealQuarter(int quarter, {required VoidCallback then, int tries = 0}) {
-    if (r.personal && _goal == null && (quarter < _winFrom || quarter > _winFrom + 7)) {
+    if (_fullMushaf && (quarter < _winFrom || quarter > _winFrom + 7)) {
       // برا الجزء المعروض: نعرض جزءه الأول وبعدين نروح له.
       if (tries > 6 || !mounted) return;
       setState(() => _winFrom = _windowStart(quarter));
@@ -1147,6 +1155,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   /// سورة من الورد الشخصي: "خلصت السورة" بإيدك (لو قريت من مصحف ورق مثلًا).
   Future<void> _finishGoal() async {
+    if (_khatma) return _finishKhatma();
     final g = _goal;
     if (g == null) return;
     final ward = PersonalWard.instance;
@@ -1163,7 +1172,35 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     context.pop();
   }
 
+  /// ورد الختمة: لو ده ورد النهارده بيتعلّم، ولو ورد زيادة ("بكره") المكان بيتقدّم.
+  Future<void> _finishKhatma() async {
+    final ward = PersonalWard.instance;
+    final item = ward.khatmaItem;
+    if (item == null) return;
+    final today = ward.khatmaToday(item);
+    if (today != null && today.$1 == r.fromQuarter && today.$2 == r.toQuarter && !ward.isDone(item)) {
+      await ward.setDone(item, true);
+    } else {
+      await ward.khatmaAdvance(item, r.fromQuarter, r.toQuarter);
+    }
+    if (_audio.active) unawaited(_audio.stop());
+    if (_auto.active) _auto.stop();
+    if (!mounted) return;
+    final t = AppLocalizations.of(context);
+    final fin = ward.khatmaItem?.khatma?.finished ?? false;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(fin ? t.khatmaFinishedTitle : t.personalDoneToast(t.personalKhatmaToday))));
+    context.pop();
+  }
+
+  void _wardChanged() {
+    if (mounted && (_goal != null || _khatma) && !_closing) setState(() {});
+  }
+
   bool get _goalDone {
+    if (_khatma) {
+      final k = PersonalWard.instance.khatmaItem?.khatma;
+      return k == null || k.pos > r.toQuarter;
+    }
     final g = _goal;
     if (g == null) return false;
     final ward = PersonalWard.instance;
@@ -1389,7 +1426,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               // القراءة الصامتة: مسافة فوق وتحت، عشان أول آية وآخر آية يقدروا يوصلوا لمكان القراية.
               SliverToBoxAdapter(child: SizedBox(height: _autoPadTop)),
               // الأرباع اللي بعد الربع الحالي مبتظهرش غير لما يسجّله.
-              if (r.personal && _goal == null && _winFrom > 1)
+              if (_fullMushaf && _winFrom > 1)
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
@@ -1429,7 +1466,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                     ),
                   ),
               ],
-              if (r.personal && _goal == null && _winFrom + 8 <= 240)
+              if (_fullMushaf && _winFrom + 8 <= 240)
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -1507,7 +1544,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               // سورة من الورد الشخصي: "خلصت السورة" (أو إنها خلصت).
-              if (_goal != null)
+              if (_goal != null || _khatma)
                 Padding(
                   padding: const EdgeInsets.only(left: 8),
                   child: _goalDone
@@ -1516,10 +1553,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                           children: [
                             Icon(Icons.check_circle, color: AppColors.statusDone),
                             const SizedBox(width: 6),
-                            Text(t.personalSurahDone, style: TextStyle(color: AppColors.statusDone, fontWeight: FontWeight.w700)),
+                            Text(_khatma ? t.personalKhatmaDone : t.personalSurahDone,
+                                style: TextStyle(color: AppColors.statusDone, fontWeight: FontWeight.w700)),
                           ],
                         )
-                      : FilledButton(onPressed: _finishGoal, child: Text(t.personalFinishSurah)),
+                      : FilledButton(onPressed: _finishGoal, child: Text(_khatma ? t.personalFinishKhatma : t.personalFinishSurah)),
                 ),
               // خلّص الورد كله مرة واحدة (للي بيقرا من مصحف ورق).
               if (!r.personal && _read < r.quarterCount - 1)

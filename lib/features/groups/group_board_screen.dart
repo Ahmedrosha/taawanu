@@ -416,6 +416,17 @@ class ReadRequest {
   final int quartersRead;
   final String? portionId;
 
+  /// ورد من الختمة الشخصية (من ربع لربع)، من غير تسجيل لمجموعة.
+  factory ReadRequest.khatma({required String label, required int from, required int to}) => ReadRequest(
+        groupId: '_personal',
+        groupName: label,
+        fromQuarter: from,
+        toQuarter: to,
+        quartersRead: to - from + 1,
+        portionId: 'k$from-$to',
+        personal: true,
+      );
+
   /// قراءة حرة (مش ورد في مجموعة).
   final bool personal;
   final int? startSurah;
