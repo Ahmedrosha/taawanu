@@ -80,6 +80,10 @@ class Prefs {
     }
   }
 
+  /// رقم آخر ختمة شخصية اتعرضت تهنئتها (عشان متتكررش كل مرة).
+  int? get khatmaCelebrated => _p.getInt('khatmaCelebrated');
+  Future<void> setKhatmaCelebrated(int v) => _p.setInt('khatmaCelebrated', v);
+
   String? get personalWardDue => _p.getString('personalWardDue');
   Future<void> setPersonalWardDue(String v) => _p.setString('personalWardDue', v);
   int? get personalWardItemsAt => _p.getInt('personalWardItemsAt');

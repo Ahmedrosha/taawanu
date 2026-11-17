@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../l10n/gen/app_localizations.dart';
 import '../../services/personal_ward.dart';
+import '../../services/prefs.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/ui.dart';
@@ -117,15 +118,13 @@ class _PersonalWardScreenState extends State<PersonalWardScreen> {
     if (mounted) setState(() {});
   }
 
-  /// رقم الختمة اللي اتعرضت تهنئتها (عشان متتكررش).
-  int? _celebrated;
 
   /// ختم: تهنئة، وبعدها يختار يبدأ ختمة جديدة بنفس النظام، أو يغيّر، أو بعدين.
   void _maybeCelebrate(QuranData? q) {
     final item = _ward.khatmaItem;
     final k = item?.khatma;
-    if (item == null || k == null || !k.finished || _celebrated == k.count) return;
-    _celebrated = k.count;
+    if (item == null || k == null || !k.finished || Prefs.instance.khatmaCelebrated == k.count) return;
+    Prefs.instance.setKhatmaCelebrated(k.count);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final t = AppLocalizations.of(context);
