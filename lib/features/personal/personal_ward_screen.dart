@@ -391,7 +391,8 @@ class _KhatmaTile extends StatelessWidget {
     String where(int surah, int ayah) => '${q == null ? surah : (en ? q.surahNamesEn[surah - 1] : q.surahNamesAr[surah - 1].replaceFirst(RegExp(r'^سُوْرَةُ\s*'), ''))} $ayah';
     String? span;
     if (today != null && q != null) {
-      final (s1, a1) = q.quarterStart(today.$1), (s2, a2) = q.quarterEnd(today.$2);
+      final (s1, a1) = q.quarterStart(today.$1);
+      final (s2, a2) = q.quarterEnd(today.$2);
       span = t.khatmaRangeSub(where(s1, a1), where(s2, a2));
     }
     final pct = (ward.khatmaProgress(item) * 100).round();

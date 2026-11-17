@@ -657,7 +657,8 @@ class PersonalWard extends ChangeNotifier {
         // ورد الختمة النهارده: لو صفحاته كلها اتفتحت.
         final r = khatmaToday(i);
         if (r == null) continue;
-        final (s1, a1) = quran.quarterStart(r.$1), (s2, a2) = quran.quarterEnd(r.$2);
+        final (s1, a1) = quran.quarterStart(r.$1);
+        final (s2, a2) = quran.quarterEnd(r.$2);
         var all = true;
         for (var p = layout.pageOf(s1, a1); p <= layout.endPageOf(s2, a2); p++) {
           if (!_seen.contains(p)) {
