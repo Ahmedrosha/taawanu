@@ -281,8 +281,8 @@ class PersonalWard extends ChangeNotifier {
 
   /// ترتيب جديد للبنود (من وضع "ترتيب").
   Future<void> reorder(int oldIndex, int newIndex) async {
+    // newIndex جاي مظبوط بعد شيل البند من مكانه (onReorderItem).
     if (oldIndex < 0 || oldIndex >= items.length) return;
-    if (newIndex > oldIndex) newIndex--;
     final it = items.removeAt(oldIndex);
     items.insert(newIndex.clamp(0, items.length), it);
     _itemsChanged();

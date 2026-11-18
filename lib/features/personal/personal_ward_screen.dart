@@ -460,7 +460,7 @@ class _ReorderList extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       buildDefaultDragHandles: false,
       itemCount: items.length,
-      onReorder: ward.reorder,
+      onReorderItem: ward.reorder,
       proxyDecorator: (child, index, animation) => Material(color: Colors.transparent, elevation: 6, borderRadius: BorderRadius.circular(16), child: child),
       itemBuilder: (context, k) {
         final i = items[k];
