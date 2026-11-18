@@ -733,5 +733,12 @@
   "khatmaRestart": "ابدأ ختمة جديدة بنفس النظام",
   "khatmaChange": "غيّر النظام",
   "khatmaLater": "مش دلوقتي",
-  "khatmaDoneTile": "ختمت القرآن 🎉"
+  "khatmaDoneTile": "ختمت القرآن 🎉",
+  "personalReorder": "ترتيب",
+  "personalReorderDone": "تم",
+  "personalReorderTitle": "رتّب وردك (اسحب من ≡)",
+  "personalTick": "تمت",
+  "personalUntick": "شيل \"تمت\"",
+  "personalDelete": "حذف",
+  "personalDeleted": "اتحذف من الورد"
 }

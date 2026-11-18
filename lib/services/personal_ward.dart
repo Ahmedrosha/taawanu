@@ -268,12 +268,26 @@ class PersonalWard extends ChangeNotifier {
     _dirtyDays.add(day);
   }
 
-  Future<void> add(PersonalItem item) async {
-    items.add(item);
+  Future<void> add(PersonalItem item, {int? at}) async {
+    // الختمة بتتحط فوق أول حاجة (القرآن الأول)، والباقي تحت، إلا لو اتحدد مكان.
+    final idx = at ?? (item.isKhatma ? 0 : items.length);
+    items.insert(idx.clamp(0, items.length), item);
     _itemsChanged();
     notifyListeners();
     await _saveItems();
     await _saveDone();
+    _schedulePush();
+  }
+
+  /// ترتيب جديد للبنود (من وضع "ترتيب").
+  Future<void> reorder(int oldIndex, int newIndex) async {
+    if (oldIndex < 0 || oldIndex >= items.length) return;
+    if (newIndex > oldIndex) newIndex--;
+    final it = items.removeAt(oldIndex);
+    items.insert(newIndex.clamp(0, items.length), it);
+    _itemsChanged();
+    notifyListeners();
+    await _saveItems();
     _schedulePush();
   }
 

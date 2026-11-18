@@ -1268,5 +1268,12 @@
   "khatmaRestart": "Start a new khatma, same plan",
   "khatmaChange": "Change the plan",
   "khatmaLater": "Not now",
-  "khatmaDoneTile": "Quran completed 🎉"
+  "khatmaDoneTile": "Quran completed 🎉",
+  "personalReorder": "Reorder",
+  "personalReorderDone": "Done",
+  "personalReorderTitle": "Reorder (drag ≡)",
+  "personalTick": "Done",
+  "personalUntick": "Undo done",
+  "personalDelete": "Delete",
+  "personalDeleted": "Removed from ward"
 }

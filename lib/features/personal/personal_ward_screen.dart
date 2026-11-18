@@ -112,6 +112,9 @@ class _PersonalWardScreenState extends State<PersonalWardScreen> {
     if (mounted) setState(() {});
   }
 
+  /// وضع الترتيب (≡ للسحب وزرار حذف).
+  bool _editing = false;
+
   Future<void> _openKhatma(int from, int to) async {
     final t = AppLocalizations.of(context);
     await context.push('/read', extra: ReadRequest.khatma(label: t.personalKhatmaTitle(rangeLabel(t, from, to)), from: from, to: to));
@@ -219,13 +222,34 @@ class _PersonalWardScreenState extends State<PersonalWardScreen> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Text(t.personalToday, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
+                  Text(_editing ? t.personalReorderTitle : t.personalToday,
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
+                  if (!_editing && today.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Text(t.personalProgress(_ward.doneCount, today.length),
+                        style: TextStyle(fontSize: 12, color: AppColors.statusDone, fontWeight: FontWeight.w700)),
+                  ],
                   const Spacer(),
-                  if (today.isNotEmpty)
-                    Text(t.personalProgress(_ward.doneCount, today.length), style: TextStyle(fontSize: 12, color: AppColors.statusDone, fontWeight: FontWeight.w700)),
+                  // زرار الترتيب ظاهر على طول، وفي وضع الترتيب بيبقى "تم".
+                  if (_ward.items.length > 1 || _editing)
+                    _editing
+                        ? FilledButton(
+                            style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+                            onPressed: () => setState(() => _editing = false),
+                            child: Text(t.personalReorderDone),
+                          )
+                        : OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, minimumSize: const Size(0, 34)),
+                            onPressed: () => setState(() => _editing = true),
+                            icon: const Icon(Icons.swap_vert, size: 18),
+                            label: Text(t.personalReorder),
+                          ),
                 ],
               ),
               const SizedBox(height: 8),
+              if (_editing)
+                _ReorderList(quran: q, en: en)
+              else ...[
               if (_ward.items.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -237,17 +261,27 @@ class _PersonalWardScreenState extends State<PersonalWardScreen> {
                   child: Text(t.personalNoneToday, style: TextStyle(color: AppColors.textMuted)),
                 ),
               for (final i in today)
-                i.isKhatma
-                    ? _KhatmaTile(item: i, quran: q, locale: locale, onOpen: () => _openItem(i), onOpenRange: _openKhatma)
-                    : _ItemTile(item: i, title: personalItemTitle(t, i, q, _ward.adhkarCategories, en), locale: locale, onOpen: () => _openItem(i)),
+                _Swipe(
+                  key: ValueKey(i.id),
+                  item: i,
+                  child: i.isKhatma
+                      ? _KhatmaTile(item: i, quran: q, locale: locale, onOpen: () => _openItem(i), onOpenRange: _openKhatma)
+                      : _ItemTile(item: i, title: personalItemTitle(t, i, q, _ward.adhkarCategories, en), locale: locale, onOpen: () => _openItem(i)),
+                ),
               if (later.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text(t.personalOffToday, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
                 const SizedBox(height: 8),
                 for (final i in later)
-                  i.isKhatma
-                      ? _KhatmaTile(item: i, quran: q, locale: locale, onOpen: () => _openItem(i), onOpenRange: _openKhatma, dim: true)
-                      : _ItemTile(item: i, title: personalItemTitle(t, i, q, _ward.adhkarCategories, en), locale: locale, onOpen: () => _openItem(i), dim: true),
+                  _Swipe(
+                    key: ValueKey(i.id),
+                    item: i,
+                    canTick: false,
+                    child: i.isKhatma
+                        ? _KhatmaTile(item: i, quran: q, locale: locale, onOpen: () => _openItem(i), onOpenRange: _openKhatma, dim: true)
+                        : _ItemTile(item: i, title: personalItemTitle(t, i, q, _ward.adhkarCategories, en), locale: locale, onOpen: () => _openItem(i), dim: true),
+                  ),
+              ],
               ],
               const SizedBox(height: 8),
               FilledButton.icon(
@@ -358,6 +392,118 @@ class _ItemTile extends StatelessWidget {
 }
 
 /// "انتقل إلى": سورة (من أولها)، أو جزء، أو سورة وآية. بيرجّع (سورة، آية).
+/// السحب للجنب: ناحية النهاية "تمت" (أو تشيلها)، وناحية البداية حذف مع "تراجع".
+class _Swipe extends StatelessWidget {
+  const _Swipe({super.key, required this.item, required this.child, this.canTick = true});
+
+  final PersonalItem item;
+  final Widget child;
+  final bool canTick;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final ward = PersonalWard.instance;
+    // الأذكار اللي اتعلّمت من العدّاد والختمة اللي خلصت مبيتشالش تعليمها بالسحب.
+    final tickable = canTick && !ward.autoDone(item) && !(item.khatma?.finished ?? false) && (!item.isKhatma || ward.khatmaToday(item) != null);
+    Widget bg(Color c, IconData icon, String text, AlignmentDirectional a) => Container(
+          margin: const EdgeInsets.only(bottom: 9),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          alignment: a,
+          decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(16)),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [Icon(icon, color: Colors.white), const SizedBox(width: 6), Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))],
+          ),
+        );
+    final done = ward.isDone(item);
+    return Dismissible(
+      key: ValueKey('swipe-${item.id}'),
+      direction: tickable ? DismissDirection.horizontal : DismissDirection.endToStart,
+      background: bg(AppColors.statusDone, done ? Icons.undo : Icons.check, done ? t.personalUntick : t.personalTick, AlignmentDirectional.centerStart),
+      secondaryBackground: bg(AppColors.statusLate, Icons.delete_outline, t.personalDelete, AlignmentDirectional.centerEnd),
+      confirmDismiss: (dir) async {
+        if (dir == DismissDirection.startToEnd) {
+          await ward.setDone(item, !done);
+          return false; // البند يفضل مكانه.
+        }
+        return true;
+      },
+      onDismissed: (_) async {
+        final at = ward.items.indexWhere((x) => x.id == item.id);
+        await ward.remove(item.id);
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(t.personalDeleted),
+          action: SnackBarAction(label: t.undo, onPressed: () => ward.add(item, at: at)),
+        ));
+      },
+      child: child,
+    );
+  }
+}
+
+/// وضع الترتيب: كل البنود، تسحب من ≡ اللي في الأول، وزرار حذف في الآخر.
+class _ReorderList extends StatelessWidget {
+  const _ReorderList({required this.quran, required this.en});
+
+  final QuranData? quran;
+  final bool en;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final ward = PersonalWard.instance;
+    final items = ward.items;
+    return ReorderableListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      buildDefaultDragHandles: false,
+      itemCount: items.length,
+      onReorder: ward.reorder,
+      proxyDecorator: (child, index, animation) => Material(color: Colors.transparent, elevation: 6, borderRadius: BorderRadius.circular(16), child: child),
+      itemBuilder: (context, k) {
+        final i = items[k];
+        return Padding(
+          key: ValueKey('ro-${i.id}'),
+          padding: const EdgeInsets.only(bottom: 9),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: i.isKhatma ? AppColors.navy.withValues(alpha: 0.35) : AppColors.border),
+            ),
+            child: Row(
+              children: [
+                ReorderableDragStartListener(
+                  index: k,
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Icon(Icons.drag_handle, color: AppColors.textMuted),
+                  ),
+                ),
+                Expanded(child: Text(personalItemTitle(t, i, quran, ward.adhkarCategories, en), style: const TextStyle(fontWeight: FontWeight.w700))),
+                IconButton(
+                  tooltip: t.personalDelete,
+                  icon: Icon(Icons.delete_outline, color: AppColors.statusLate),
+                  onPressed: () async {
+                    await ward.remove(i.id);
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(t.personalDeleted),
+                      action: SnackBarAction(label: t.undo, onPressed: () => ward.add(i, at: k)),
+                    ));
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 /// بند الختمة: ورد النهارده وحدوده، وتقدّم الختمة، وتاريخ الختم، و"اقرأ ورد بكره".
 class _KhatmaTile extends StatelessWidget {
   const _KhatmaTile({
@@ -654,7 +800,8 @@ class _AddSheet extends StatefulWidget {
 }
 
 class _AddSheetState extends State<_AddSheet> {
-  late String _type = widget.khatma ? 'khatma' : 'adhkar';
+  // القرآن الأول: الختمة (لو مفيش ختمة شغالة)، وإلا السورة.
+  late String _type = widget.khatma || PersonalWard.instance.khatmaItem == null ? 'khatma' : 'surah';
 
   // الختمة: المدة بالأيام أو ورد اليوم بالأرباع (واحدة بس)، والبداية، ولو فوّت يوم.
   int? _dur = 30;
@@ -859,9 +1006,9 @@ class _AddSheetState extends State<_AddSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: SegmentedButton<String>(
                 segments: [
-                  ButtonSegment(value: 'adhkar', label: Text(t.personalTypeAdhkar)),
-                  ButtonSegment(value: 'surah', label: Text(t.personalTypeSurah)),
                   ButtonSegment(value: 'khatma', label: Text(t.personalTypeKhatma)),
+                  ButtonSegment(value: 'surah', label: Text(t.personalTypeSurah)),
+                  ButtonSegment(value: 'adhkar', label: Text(t.personalTypeAdhkar)),
                 ],
                 selected: {_type},
                 onSelectionChanged: (v) => setState(() {
