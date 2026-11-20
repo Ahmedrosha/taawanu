@@ -1,0 +1,78 @@
+name: iPhone launch test
+
+# يدوي: بيبني التطبيق للمحاكي (من غير توقيع)، ويفتحه على آيفون وآيباد بـ iOS 27، ويتأكد إنه فتح ومقفلش،
+# وبياخد صورة للشاشة من كل جهاز (بتتحفظ مع التشغيل). مفيش رفع لأي حاجة.
+on:
+  workflow_dispatch:
+
+jobs:
+  launch:
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode
+        run: |
+          X=$(ls -d /Applications/Xcode_27*.app /Applications/Xcode-27*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$X" ]; then sudo xcode-select -s "$X/Contents/Developer"; fi
+          xcodebuild -version
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.9"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter gen-l10n
+      - name: Build for simulator
+        run: flutter build ios --simulator --debug > build.log 2>&1 || (tail -60 build.log; exit 1)
+      - name: Launch on iPhone and iPad
+        run: |
+          set -e
+          APP=build/ios/iphonesimulator/Runner.app
+          BID=com.taawanu.taawanu
+          mkdir -p shots
+          pick() {
+            xcrun simctl list devices available -j | python3 -c "
+          import json,sys
+          kind=sys.argv[1]
+          d=json.load(sys.stdin)['devices']
+          best=None
+          for rt,devs in d.items():
+              if 'iOS' not in rt: continue
+              v=rt.split('iOS-')[-1].replace('-','.')
+              for x in devs:
+                  if x['name'].startswith(kind):
+                      key=tuple(int(p) for p in v.split('.') if p.isdigit())
+                      if best is None or key>best[0]: best=(key,x['udid'],x['name'],v)
+          print(best[1], best[3], best[2], sep='|')
+          " "$1"
+          }
+          fail=0
+          for KIND in iPhone iPad; do
+            IFS='|' read -r DEV VER NAME <<< "$(pick $KIND)"
+            echo "::notice title=$KIND::$NAME · iOS $VER"
+            xcrun simctl boot "$DEV" || true
+            xcrun simctl bootstatus "$DEV" -b > /dev/null
+            xcrun simctl install "$DEV" "$APP"
+            xcrun simctl launch "$DEV" "$BID"
+            sleep 30
+            if xcrun simctl spawn "$DEV" launchctl list | grep -q "UIKitApplication:$BID"; then
+              echo "::notice title=$KIND OK::The app is still running after 30 seconds"
+            else
+              echo "::error title=$KIND crash::The app is not running after 30 seconds"
+              fail=1
+            fi
+            xcrun simctl io "$DEV" screenshot "shots/$KIND.png" || true
+            # iPad: تغيير حجم النافذة مش متاح من الأوامر، فبنكتفي بالتدوير (أفقي) وصورة تانية.
+            if [ "$KIND" = iPad ]; then
+              xcrun simctl spawn "$DEV" defaults write com.apple.springboard SBRotationLock -bool false || true
+            fi
+            xcrun simctl shutdown "$DEV" || true
+          done
+          ls ~/Library/Logs/DiagnosticReports/ 2>/dev/null | grep -i runner && { echo "::error title=Crash report::Found a crash report for Runner"; fail=1; } || true
+          exit $fail
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: launch-shots
+          path: shots/
+          retention-days: 7
