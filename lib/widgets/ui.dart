@@ -227,7 +227,7 @@ Future<bool> runAction(BuildContext context, Future<void> Function() action, {St
     return true;
   } on FirebaseFunctionsException catch (e) {
     debugPrint('Action failed: ${e.code} ${e.message}');
-    messenger.showSnackBar(SnackBar(content: Text(_friendly(t, e.code, e.message))));
+    messenger.showSnackBar(SnackBar(content: Text(_friendly(t, e.code, e.message, e.details, context))));
   } catch (e) {
     debugPrint('Action failed: $e');
     messenger.showSnackBar(SnackBar(content: Text(t.actionFailed)));
@@ -235,9 +235,28 @@ Future<bool> runAction(BuildContext context, Future<void> Function() action, {St
   return false;
 }
 
-String _friendly(AppLocalizations t, String code, [String? message]) => switch (code) {
-      'failed-precondition' when (message ?? '').contains('Khatma already complete') => t.khatmaClosedNoUndo,
-      'not-found' || 'deadline-exceeded' => t.inviteInvalid,
-      'resource-exhausted' => t.groupFull,
-      _ => t.actionFailed,
-    };
+/// رسالة الخطأ بالكلام: "وصلت للحد" (resource-exhausted) ليه أسباب كتير، وكل سبب برسالته.
+String _friendly(AppLocalizations t, String code, [String? message, Object? details, BuildContext? context]) {
+  final m = message ?? '';
+  switch (code) {
+    case 'failed-precondition' when m.contains('Khatma already complete'):
+      return t.khatmaClosedNoUndo;
+    case 'not-found' || 'deadline-exceeded':
+      return t.inviteInvalid;
+    case 'resource-exhausted':
+      if (m.contains('reminder')) {
+        final next = details is Map ? details['nextAt'] : null;
+        if (next is num && context != null && context.mounted) {
+          final at = DateTime.fromMillisecondsSinceEpoch(next.toInt());
+          return t.reminderTooSoon(TimeOfDay.fromDateTime(at).format(context));
+        }
+        return t.reminderTooSoonNoTime;
+      }
+      if (m.contains('messages')) return t.tooManyMessages;
+      if (m.contains('groups')) return t.tooManyGroups;
+      if (m.contains('Invite used up')) return t.inviteUsedUp;
+      return t.groupFull;
+    default:
+      return t.actionFailed;
+  }
+}

@@ -7,7 +7,7 @@ import { notifyUsers } from './notify';
 
 const MAX_TEXT = 300;
 const PER_HOUR = 40;
-const REMINDER_EVERY_MS = 6 * 3600 * 1000;
+const REMINDER_EVERY_MS = 3 * 3600 * 1000;
 
 const isManager = (m: MemberDoc) => isManagerRole(m.role);
 
@@ -81,7 +81,7 @@ async function saveToMessages(
 
 /**
  * رسالة جوه المجموعة:
- * - الأدمن والمساعد: لأي عضو أو أعضاء، أو "تذكير المتأخرين" (to = 'late'، مرة كل ٦ ساعات للمجموعة).
+ * - الأدمن والمساعد: لأي عضو أو أعضاء، أو "تذكير المتأخرين" (to = 'late'، مرة كل ٣ ساعات للمجموعة).
  * - العضو العادي: للأدمن أو المساعدين بس.
  * الرسالة بتوصل إشعار وبتتحفظ في الجرس باسم اللي بعتها، وعليها رد.
  */

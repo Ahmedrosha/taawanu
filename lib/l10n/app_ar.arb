@@ -740,5 +740,10 @@
   "personalTick": "تمت",
   "personalUntick": "شيل \"تمت\"",
   "personalDelete": "حذف",
-  "personalDeleted": "اتحذف من الورد"
+  "personalDeleted": "اتحذف من الورد",
+  "reminderTooSoon": "اتبعت تذكير للمجموعة من شوية. تقدر تبعت تاني الساعة {time}",
+  "reminderTooSoonNoTime": "اتبعت تذكير للمجموعة من شوية. تقدر تبعت تاني بعد ٣ ساعات من آخر تذكير.",
+  "tooManyMessages": "بعت رسايل كتير في الساعة دي، استنى شوية وجرّب تاني.",
+  "tooManyGroups": "عملت مجموعات كتير، استنى شوية وجرّب تاني.",
+  "inviteUsedUp": "اللينك ده خلص عدد مرات استخدامه، اطلب لينك جديد."
 }
