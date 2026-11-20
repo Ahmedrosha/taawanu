@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">تعاونوا - ختمة جماعية</string>
+    <string name="app_name">تعاونوا - Taawanu</string>
     <string name="widget_prayer_label">الصلاة الجاية</string>
     <string name="widget_prayer_desc">الصلاة الجاية ووقتها والوقت الباقي عليها.</string>
     <string name="widget_ward_label">وردي</string>
