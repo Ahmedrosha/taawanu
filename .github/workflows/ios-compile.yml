@@ -1,18 +1,28 @@
 name: iOS compile check
 
 # يدوي: بيبني الأيفون من غير توقيع ولا رفع، عشان نتأكد إن كود الأيفون (زي الويدجتس) بيتبني قبل بناء النسخة.
-on: workflow_dispatch
+# xcode: 26 (الجهاز الحالي Intel) أو 27 (جهاز xcode-27، Apple Silicon على macOS 27) عشان نجرّب متطلب أبريل 2027.
+on:
+  workflow_dispatch:
+    inputs:
+      xcode:
+        description: "Xcode major (26 or 27)"
+        required: false
+        default: "26"
 
 jobs:
   compile:
-    runs-on: macos-15-intel
+    runs-on: ${{ inputs.xcode == '27' && 'xcode-27' || 'macos-15-intel' }}
     steps:
       - uses: actions/checkout@v4
-      - name: Select Xcode 26
+      - name: Select Xcode ${{ inputs.xcode }}
         run: |
-          X=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
-          if [ -z "$X" ]; then echo "::error title=No Xcode 26::This runner has no Xcode 26"; exit 1; fi
-          sudo xcode-select -s "$X/Contents/Developer"
+          ls -d /Applications/Xcode*.app || true
+          X=$(ls -d /Applications/Xcode_${{ inputs.xcode }}*.app /Applications/Xcode-${{ inputs.xcode }}*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$X" ]; then sudo xcode-select -s "$X/Contents/Developer"; fi
+          xcodebuild -version
+          xcodebuild -version | grep -q "Xcode ${{ inputs.xcode }}" || { echo "::error title=Wrong Xcode::Expected Xcode ${{ inputs.xcode }}"; exit 1; }
+          xcrun --sdk iphoneos --show-sdk-version
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.47.9"
