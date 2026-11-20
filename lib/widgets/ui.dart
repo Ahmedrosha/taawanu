@@ -221,13 +221,16 @@ Future<bool> confirmDialog(
 Future<bool> runAction(BuildContext context, Future<void> Function() action, {String? success}) async {
   final t = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
+  final loc = MaterialLocalizations.of(context);
+  final use24 = MediaQuery.alwaysUse24HourFormatOf(context);
+  String fmtTime(DateTime d) => loc.formatTimeOfDay(TimeOfDay.fromDateTime(d), alwaysUse24HourFormat: use24);
   try {
     await action();
     if (success != null) messenger.showSnackBar(SnackBar(content: Text(success)));
     return true;
   } on FirebaseFunctionsException catch (e) {
     debugPrint('Action failed: ${e.code} ${e.message}');
-    messenger.showSnackBar(SnackBar(content: Text(_friendly(t, e.code, e.message, e.details, context))));
+    messenger.showSnackBar(SnackBar(content: Text(_friendly(t, e.code, e.message, e.details, fmtTime))));
   } catch (e) {
     debugPrint('Action failed: $e');
     messenger.showSnackBar(SnackBar(content: Text(t.actionFailed)));
@@ -236,7 +239,7 @@ Future<bool> runAction(BuildContext context, Future<void> Function() action, {St
 }
 
 /// رسالة الخطأ بالكلام: "وصلت للحد" (resource-exhausted) ليه أسباب كتير، وكل سبب برسالته.
-String _friendly(AppLocalizations t, String code, [String? message, Object? details, BuildContext? context]) {
+String _friendly(AppLocalizations t, String code, [String? message, Object? details, String Function(DateTime)? fmtTime]) {
   final m = message ?? '';
   switch (code) {
     case 'failed-precondition' when m.contains('Khatma already complete'):
@@ -246,10 +249,7 @@ String _friendly(AppLocalizations t, String code, [String? message, Object? deta
     case 'resource-exhausted':
       if (m.contains('reminder')) {
         final next = details is Map ? details['nextAt'] : null;
-        if (next is num && context != null && context.mounted) {
-          final at = DateTime.fromMillisecondsSinceEpoch(next.toInt());
-          return t.reminderTooSoon(TimeOfDay.fromDateTime(at).format(context));
-        }
+        if (next is num && fmtTime != null) return t.reminderTooSoon(fmtTime(DateTime.fromMillisecondsSinceEpoch(next.toInt())));
         return t.reminderTooSoonNoTime;
       }
       if (m.contains('messages')) return t.tooManyMessages;
