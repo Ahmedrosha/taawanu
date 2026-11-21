@@ -17,6 +17,7 @@ import 'assign_portions_screen.dart';
 import 'record_progress_sheet.dart';
 import 'group_messages.dart';
 import 'group_report.dart';
+import 'group_not_read.dart';
 import 'group_summary_report.dart';
 import '../../widgets/tour.dart';
 import '../../widgets/tour_texts.dart';
@@ -678,6 +679,14 @@ class _KhatmaMapState extends State<_KhatmaMap> {
                   onPressed: () => shareGroupReport(context, group, cycle: c),
                   icon: const Icon(Icons.description_outlined, size: 18),
                   label: Text(t.cycleReport),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => shareNotRead(context, group, c),
+                  icon: const Icon(Icons.checklist_rtl, size: 18),
+                  label: Text(t.notReadButton),
                 ),
               ),
             ]),

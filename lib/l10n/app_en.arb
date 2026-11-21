@@ -1332,5 +1332,22 @@
   "sumColVol": "Volunteered",
   "sumColCommit": "Commitment",
   "sumNote": "Commitment = portions finished on time out of portions in ended cycles. Volunteering = late portions of others a member took.",
-  "sumPointsNote": "Points are totals since each member joined, not just this period."
+  "sumPointsNote": "Points are totals since each member joined, not just this period.",
+  "notReadButton": "Not read yet",
+  "notReadTitle": "Not read yet",
+  "notReadBody": "A list of members who haven't finished their portion in this cycle, to send to the WhatsApp group as a message or image.",
+  "notReadAsText": "Text message",
+  "notReadCopy": "Copy message",
+  "notReadCopied": "Message copied",
+  "notReadHeader": "{group} · Cycle {n}",
+  "@notReadHeader": {"placeholders": {"group": {"type": "String"}, "n": {"type": "int"}}},
+  "notReadCount": "Haven't finished yet: {n} of {total}",
+  "@notReadCount": {"placeholders": {"n": {"type": "int"}, "total": {"type": "int"}}},
+  "notReadCountPast": "Didn't finish in this cycle: {n} of {total}",
+  "@notReadCountPast": {"placeholders": {"n": {"type": "int"}, "total": {"type": "int"}}},
+  "notReadClosing": "May Allah help you and accept from us all 🤍",
+  "notReadClosingPast": "May Allah accept from us all 🤍",
+  "notReadNone": "Everyone finished their portion in this cycle 🎉",
+  "notReadShare": "Not read yet: {name}",
+  "@notReadShare": {"placeholders": {"name": {"type": "String"}}}
 }
