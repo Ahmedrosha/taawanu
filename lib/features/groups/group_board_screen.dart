@@ -741,7 +741,8 @@ class _KhatmaMapState extends State<_KhatmaMap> {
               final s = bySeg[seg];
               final st = s == null ? 'open' : _shownStatus(s, warn);
               final left = s != null && s.status == 'late' && _n != _current ? _leftoverOf(s) : null;
-              if (left?.assignee != null) taken = true;
+              // صاحب الورد لو خده هو بعدين مش تطوع.
+              if (left != null && left.assignee != null && left.assignee != s?.uid) taken = true;
               // الجزء ده من الورد: الأرباع اللي اتقرت منه (الورد بيتقري بالترتيب، والمتطوع بيكمّل من مكان ما وقف).
               final offset = q - seg * group.wardQuarters;
               q += len;
@@ -835,7 +836,7 @@ class _KhatmaMapState extends State<_KhatmaMap> {
                       if (s.uid != null) names[s.uid] ?? t.formerMember,
                       segmentStatusLabel(t, st),
                       if (s.read != null && s.status == 'late') t.quartersProgress(s.read!, group.wardQuarters),
-                      if (left != null && left.assignee != null) t.volunteeredBy(names[left.assignee] ?? t.formerMember),
+                      if (left != null && left.assignee != null && left.assignee != s.uid) t.volunteeredBy(names[left.assignee] ?? t.formerMember),
                       if (left != null && left.assignee != null) t.quartersProgress(left.quartersRead, left.quarterCount),
                       if (left != null && left.assignee == null) t.noneTookIt,
                     ].join(' · ')),

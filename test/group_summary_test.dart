@@ -37,11 +37,11 @@ Cycle _c(int n, DateTime start, Map<String, String> statuses, {bool complete = f
   );
 }
 
-Portion _p(int cycle, String? assignee, String origin) => Portion(
+Portion _p(int cycle, String? assignee, String origin, {int from = 1}) => Portion(
       id: '$cycle$assignee$origin',
       cycle: cycle,
-      fromQuarter: 1,
-      toQuarter: 8,
+      fromQuarter: from,
+      toQuarter: from + 7,
       quarterCount: 8,
       assignee: assignee,
       status: 'done',
@@ -57,7 +57,12 @@ void main() {
     _c(3, DateTime(2026, 11, 8), {'a': 'done', 'b': 'done', 'c': 'done'}, complete: true),
     _c(4, DateTime(2026, 11, 15), {'a': 'pending', 'b': 'pending', 'c': 'pending'}, remaining: 200),
   ];
-  final portions = [_p(2, 'a', 'volunteer'), _p(2, 'c', 'carry'), _p(1, 'b', 'distribute')];
+  final portions = [
+    _p(2, 'a', 'volunteer', from: 9), // ورد b المتأخر
+    _p(2, 'c', 'carry', from: 17),
+    _p(2, 'c', 'volunteer', from: 17), // c خد ورده هو: مش تطوع
+    _p(1, 'b', 'distribute', from: 17),
+  ];
   final khatmas = {1: DateTime(2026, 6, 6), 3: DateTime(2026, 11, 12)};
 
   GroupSummary run(DateTime? from) => GroupSummary.compute(

@@ -136,8 +136,14 @@ class GroupSummary {
     if (r.perCycle.length > 12) r.perCycle.removeRange(0, r.perCycle.length - 12);
 
     // التطوع: ورد إضافي من دورة في المدة، خده حد غير صاحبه الأصلي (الترحيل لصاحبه مش تطوع).
+    // صاحب الورد الأصلي في دورته: لو هو اللي خد ورده المتأخر، ده مش تطوع (وهو محسوب عليه تأخير).
+    final ownerOf = <int, Map<int, String?>>{
+      for (final c in inPeriod) c.number: {for (final s in c.segments) s.seg: s.uid},
+    };
     for (final p in portions) {
       if (!numbers.contains(p.cycle) || p.assignee == null || p.origin == 'carry') continue;
+      final owner = ownerOf[p.cycle]?[(p.fromQuarter - 1) ~/ group.wardQuarters];
+      if (owner != null && owner == p.assignee) continue;
       final m = r.members[p.assignee];
       if (m == null) continue;
       m.volunteered++;
@@ -326,7 +332,7 @@ Future<Uint8List> buildGroupSummary(
   pw.Widget txt(String s, {double size = 11, PdfColor color = PdfColors.black, pw.TextAlign? align, bool ltr = false}) {
     final d = ltr || !arabic.hasMatch(s) ? pw.TextDirection.ltr : dir;
     final a = align ?? (rtl && d == pw.TextDirection.ltr ? pw.TextAlign.right : null);
-    return pw.Text(s, style: pw.TextStyle(fontSize: size, color: color), textDirection: d, textAlign: a);
+    return pw.Text(d == pw.TextDirection.rtl ? _mirrorBrackets(s) : s, style: pw.TextStyle(fontSize: size, color: color), textDirection: d, textAlign: a);
   }
 
   List<pw.Widget> ordered(List<pw.Widget> cells) => rtl ? cells.reversed.toList() : cells;
@@ -529,3 +535,6 @@ Future<Uint8List> buildGroupSummary(
   ));
   return doc.save();
 }
+
+/// مكتبة الـ PDF مش بتقلب الأقواس في النص العربي، فبنقلبها إحنا.
+String _mirrorBrackets(String s) => s.replaceAllMapped(RegExp(r'[()\[\]]'), (m) => const {'(': ')', ')': '(', '[': ']', ']': '['}[m[0]]!);

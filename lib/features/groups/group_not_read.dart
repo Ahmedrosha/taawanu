@@ -211,7 +211,7 @@ Future<Uint8List> buildNotReadImage(AppLocalizations t, String locale, bool rtl,
   final arabic = RegExp(r'[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]');
   pw.Widget txt(String s, {double size = 11, PdfColor color = PdfColors.black, bool ltr = false}) {
     final d = ltr || !arabic.hasMatch(s) ? pw.TextDirection.ltr : dir;
-    return pw.Text(s, style: pw.TextStyle(fontSize: size, color: color), textDirection: d, textAlign: rtl && d == pw.TextDirection.ltr ? pw.TextAlign.right : null);
+    return pw.Text(d == pw.TextDirection.rtl ? _mirrorBrackets(s) : s, style: pw.TextStyle(fontSize: size, color: color), textDirection: d, textAlign: rtl && d == pw.TextDirection.ltr ? pw.TextAlign.right : null);
   }
 
   List<pw.Widget> ordered(List<pw.Widget> cells) => rtl ? cells.reversed.toList() : cells;
@@ -279,3 +279,6 @@ Future<Uint8List> buildNotReadImage(AppLocalizations t, String locale, bool rtl,
   ));
   return doc.save();
 }
+
+/// مكتبة الـ PDF مش بتقلب الأقواس في النص العربي، فبنقلبها إحنا.
+String _mirrorBrackets(String s) => s.replaceAllMapped(RegExp(r'[()\[\]]'), (m) => const {'(': ')', ')': '(', '[': ']', ']': '['}[m[0]]!);

@@ -260,7 +260,7 @@ Future<Uint8List> buildGroupReport(
     final d = ltr || !arabic.hasMatch(s) ? pw.TextDirection.ltr : dir;
     // في العربي النص الإنجليزي بيفضل على يمين خانته.
     final a = align ?? (rtl && d == pw.TextDirection.ltr ? pw.TextAlign.right : null);
-    return pw.Text(s, style: pw.TextStyle(fontSize: size, color: color), textDirection: d, textAlign: a);
+    return pw.Text(d == pw.TextDirection.rtl ? _mirrorBrackets(s) : s, style: pw.TextStyle(fontSize: size, color: color), textDirection: d, textAlign: a);
   }
 
   List<pw.Widget> ordered(List<pw.Widget> cells) => rtl ? cells.reversed.toList() : cells;
@@ -471,3 +471,6 @@ Future<Uint8List> buildGroupReport(
   ));
   return doc.save();
 }
+
+/// مكتبة الـ PDF مش بتقلب الأقواس في النص العربي، فبنقلبها إحنا.
+String _mirrorBrackets(String s) => s.replaceAllMapped(RegExp(r'[()\[\]]'), (m) => const {'(': ')', ')': '(', '[': ']', ']': '['}[m[0]]!);
