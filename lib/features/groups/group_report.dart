@@ -95,7 +95,7 @@ Future<void> shareGroupReport(BuildContext context, Group group, {Cycle? cycle})
     final members = await svc.members(group.id).first;
     final past = cycle != null && cycle.number < group.currentCycle;
     final c = past ? cycle : (group.isActive ? await svc.cycle(group.id, group.currentCycle).first : null);
-    final portions = past ? await svc.cyclePortions(group.id, cycle!.number) : await svc.activePortions(group.id).first;
+    final portions = past ? await svc.cyclePortions(group.id, cycle.number) : await svc.activePortions(group.id).first;
     final photos = names ? await loadMemberPhotos(members) : const <String, Uint8List>{};
     final pdf = await buildGroupReport(t, locale, rtl, group, c, members, portions, names, photos: photos);
     final dir = await getTemporaryDirectory();
@@ -191,7 +191,7 @@ Future<Uint8List> buildGroupReport(
   // الدورة الحالية: كل عضو وورده. دورة فاتت: الأوراد اللي كان ليها صاحب ساعتها (حتى لو ساب المجموعة).
   final entries = <(String, int)>[];
   if (past) {
-    for (final s in [...c!.segments]..sort((a, b) => a.seg.compareTo(b.seg))) {
+    for (final s in [...c.segments]..sort((a, b) => a.seg.compareTo(b.seg))) {
       if (s.uid != null) entries.add((s.uid!, s.seg));
     }
   } else {
@@ -212,7 +212,7 @@ Future<Uint8List> buildGroupReport(
     if (!past || s.status != 'late') return null;
     final from = s.seg * g.wardQuarters + 1, to = (s.seg + 1) * g.wardQuarters;
     for (final p in portions) {
-      if (p.cycle == c!.number && p.fromQuarter >= from && p.fromQuarter <= to && p.assignee != null && p.assignee != s.uid) {
+      if (p.cycle == c.number && p.fromQuarter >= from && p.fromQuarter <= to && p.assignee != null && p.assignee != s.uid) {
         return nameOf(p.assignee!);
       }
     }
