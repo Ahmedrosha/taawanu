@@ -35,7 +35,8 @@ PdfColor _color(String st) => switch (st) {
     };
 
 /// الأدمن أو المساعد: يختار بأسماء ولا من غير، وPDF ولا صورة، ويشارك (واتس اب أو غيره).
-Future<void> shareGroupReport(BuildContext context, Group group) async {
+/// [cycle]: الدورة اللي قدامه في الخريطة (الحالية لو مبعتهاش).
+Future<void> shareGroupReport(BuildContext context, Group group, {Cycle? cycle}) async {
   final t = AppLocalizations.of(context);
   var names = true;
   final kind = await showModalBottomSheet<String>(
@@ -92,13 +93,14 @@ Future<void> shareGroupReport(BuildContext context, Group group) async {
   await runAction(context, () async {
     final svc = GroupsService.instance;
     final members = await svc.members(group.id).first;
-    final cycle = group.isActive ? await svc.cycle(group.id, group.currentCycle).first : null;
-    final portions = await svc.activePortions(group.id).first;
-    final photos = names ? await _loadPhotos(members) : const <String, Uint8List>{};
-    final pdf = await buildGroupReport(t, locale, rtl, group, cycle, members, portions, names, photos: photos);
+    final past = cycle != null && cycle.number < group.currentCycle;
+    final c = past ? cycle : (group.isActive ? await svc.cycle(group.id, group.currentCycle).first : null);
+    final portions = past ? await svc.cyclePortions(group.id, cycle!.number) : await svc.activePortions(group.id).first;
+    final photos = names ? await loadMemberPhotos(members) : const <String, Uint8List>{};
+    final pdf = await buildGroupReport(t, locale, rtl, group, c, members, portions, names, photos: photos);
     final dir = await getTemporaryDirectory();
     final stamp = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final base = 'taawanu-${group.currentCycle}-$stamp';
+    final base = 'taawanu-${c?.number ?? group.currentCycle}-$stamp';
     final files = <XFile>[];
     if (kind == 'pdf') {
       final f = File('${dir.path}/$base.pdf');
@@ -118,7 +120,7 @@ Future<void> shareGroupReport(BuildContext context, Group group) async {
 }
 
 /// صور الأعضاء من النت (اللي متتحملش في ٦ ثواني أو كبيرة بتتساب، وبيظهر مكانها أول حرف).
-Future<Map<String, Uint8List>> _loadPhotos(List<Member> members) async {
+Future<Map<String, Uint8List>> loadMemberPhotos(List<Member> members) async {
   final out = <String, Uint8List>{};
   final client = HttpClient()..connectionTimeout = const Duration(seconds: 4);
   Future<void> one(Member m) async {
@@ -163,8 +165,10 @@ Future<Uint8List> buildGroupReport(
   final now = DateTime.now();
 
   // فاضل أقل من ربع الدورة: اللي لسه مخلصش بيبان متأخر (زي الخريطة).
+  // دورة فاتت: الحالات زي ما اتقفلت عليها، وأصحاب الأوراد من الدورة نفسها.
+  final past = c != null && c.number < g.currentCycle;
   var warn = false;
-  if (c?.startedAt != null && c?.endsAt != null) {
+  if (!past && c?.startedAt != null && c?.endsAt != null) {
     final total = c!.endsAt!.difference(c.startedAt!);
     warn = now.isAfter(c.endsAt!.subtract(total ~/ 4));
   }
@@ -179,26 +183,56 @@ Future<Uint8List> buildGroupReport(
     final st = shown(s);
     counts[st] = (counts[st] ?? 0) + 1;
   }
-  final daysLeft = c?.endsAt == null ? null : c!.endsAt!.difference(now).inDays.clamp(0, 9999);
+  final daysLeft = past || c?.endsAt == null ? null : c!.endsAt!.difference(now).inDays.clamp(0, 9999);
 
   // الأعضاء بترتيب الورد (الجزء ١ الأول).
   final rows = <(String, String, String, String, String)>[];
-  final segOf = {for (final m in members) m.uid: currentSegment(g, m)};
-  final sorted = [...members]..sort((a, b) => segOf[a.uid]!.compareTo(segOf[b.uid]!));
+  final byUid = {for (final m in members) m.uid: m};
+  // الدورة الحالية: كل عضو وورده. دورة فاتت: الأوراد اللي كان ليها صاحب ساعتها (حتى لو ساب المجموعة).
+  final entries = <(String, int)>[];
+  if (past) {
+    for (final s in [...c!.segments]..sort((a, b) => a.seg.compareTo(b.seg))) {
+      if (s.uid != null) entries.add((s.uid!, s.seg));
+    }
+  } else {
+    for (final m in members) {
+      entries.add((m.uid, currentSegment(g, m)));
+    }
+    entries.sort((a, b) => a.$2.compareTo(b.$2));
+  }
+  String nameOf(String uid) {
+    final m = byUid[uid];
+    if (m != null) return m.hasNoName ? t.noName : m.name;
+    final f = g.formerNames[uid];
+    return f == null ? t.noName : t.formerName(f);
+  }
+
+  // الورد المتأخر في دورة فاتت: لو حد اتطوع بيه، اسمه بيظهر جنب الحالة.
+  String? volunteerOf(Segment s) {
+    if (!past || s.status != 'late') return null;
+    final from = s.seg * g.wardQuarters + 1, to = (s.seg + 1) * g.wardQuarters;
+    for (final p in portions) {
+      if (p.cycle == c!.number && p.fromQuarter >= from && p.fromQuarter <= to && p.assignee != null && p.assignee != s.uid) {
+        return nameOf(p.assignee!);
+      }
+    }
+    return null;
+  }
   // اسم صاحب كل ورد على الخريطة: أول اسم، أو رقم العضو لو التقرير من غير أسماء.
   final segLabel = <int, String>{};
   // صورة العضو (لو اتحملت واتقرت)، وإلا دايرة بأول حرف.
   final avatars = <pw.ImageProvider?>[];
-  for (var i = 0; i < sorted.length; i++) {
-    final m = sorted[i];
-    final seg = segOf[m.uid]!;
+  for (var i = 0; i < entries.length; i++) {
+    final (uid, seg) = entries[i];
     final s = bySeg[seg];
     final st = s == null ? 'pending' : shown(s);
     final from = seg * g.wardQuarters + 1;
-    final name = names ? (m.hasNoName ? t.noName : m.name) : t.reportMemberN(i + 1);
-    segLabel[seg] = names ? (m.hasNoName ? '—' : m.name.trim().split(RegExp(r'\s+')).first) : '${i + 1}';
+    final full = nameOf(uid);
+    final name = names ? full : t.reportMemberN(i + 1);
+    final known = byUid[uid] != null && !byUid[uid]!.hasNoName;
+    segLabel[seg] = names ? (known ? full.trim().split(RegExp(r'\s+')).first : '—') : '${i + 1}';
     pw.ImageProvider? img;
-    final bytes = names ? photos[m.uid] : null;
+    final bytes = names ? photos[uid] : null;
     if (bytes != null) {
       try {
         img = pw.MemoryImage(bytes);
@@ -210,12 +244,15 @@ Future<Uint8List> buildGroupReport(
     rows.add((
       name,
       rangeLabel(t, from, from + g.wardQuarters - 1),
-      segmentStatusLabel(t, st),
+      [
+        segmentStatusLabel(t, st),
+        if (s != null && volunteerOf(s) != null) names ? t.volunteeredBy(volunteerOf(s)!) : t.legendVolunteered,
+      ].join(' · '),
       '${s?.read ?? (st == 'done' || st == 'late_done' ? g.wardQuarters : 0)} / ${g.wardQuarters}',
       st,
     ));
   }
-  final open = portions.where((p) => p.status == 'open').toList()..sort((a, b) => a.fromQuarter.compareTo(b.fromQuarter));
+  final open = past ? <Portion>[] : portions.where((p) => p.status == 'open').toList()..sort((a, b) => a.fromQuarter.compareTo(b.fromQuarter));
 
   // نص من غير حروف عربي (زي اسم إنجليزي) بيتكتب شمال ليمين، وإلا بيطلع معكوس.
   final arabic = RegExp(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]');
@@ -412,7 +449,7 @@ Future<Uint8List> buildGroupReport(
       pw.SizedBox(height: 2),
       pw.Wrap(spacing: 10, runSpacing: 4, children: [for (final st in ['done', 'in_progress', 'pending', 'late', 'late_done', 'open']) legend(st)]),
       pw.SizedBox(height: 6),
-      txt(t.reportMembers(members.length), size: 11),
+      txt(t.reportMembers(rows.length), size: 11),
       pw.SizedBox(height: 3),
       // مجموعة كبيرة: الجدول بيتقسم عمودين جنب بعض عشان التقرير يفضل صفحة واحدة.
       if (rows.length <= 22)

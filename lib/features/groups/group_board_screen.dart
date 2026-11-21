@@ -17,6 +17,7 @@ import 'assign_portions_screen.dart';
 import 'record_progress_sheet.dart';
 import 'group_messages.dart';
 import 'group_report.dart';
+import 'group_summary_report.dart';
 import '../../widgets/tour.dart';
 import '../../widgets/tour_texts.dart';
 import '../../widgets/ui.dart';
@@ -668,6 +669,19 @@ class _KhatmaMapState extends State<_KhatmaMap> {
                 ),
             ],
           ),
+          // تقرير الدورة اللي قدامه في الخريطة (للأدمن والمساعد).
+          if (widget.me?.isManager ?? false) ...[
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => shareGroupReport(context, group, cycle: c),
+                  icon: const Icon(Icons.description_outlined, size: 18),
+                  label: Text(t.cycleReport),
+                ),
+              ),
+            ]),
+          ],
                 ],
               ),
             ),
@@ -1520,7 +1534,7 @@ class _BoardMenu extends StatelessWidget {
           case 'settings':
             context.push('/group/${group.id}/settings', extra: group);
           case 'report':
-            await shareGroupReport(context, group);
+            await shareGroupSummary(context, group);
           case 'leave':
             if (await confirmDialog(context, title: t.leaveGroup, body: t.leaveConfirm, destructive: true) && context.mounted) {
               final ok = await runAction(context, () => svc.leave(group.id));
@@ -1535,7 +1549,7 @@ class _BoardMenu extends StatelessWidget {
       },
       itemBuilder: (context) => [
         if (me?.isManager ?? false) PopupMenuItem(value: 'assign', child: Text(t.assignPortions)),
-        if (me?.isManager ?? false) PopupMenuItem(value: 'report', child: Text(t.shareReport)),
+        if (me?.isManager ?? false) PopupMenuItem(value: 'report', child: Text(t.groupSummaryMenu)),
         if (me?.isManager ?? false) PopupMenuItem(value: 'settings', child: Text(t.groupSettings)),
         if (me != null && !me!.isAdmin) PopupMenuItem(value: 'leave', child: Text(t.leaveGroup)),
         if (me?.isAdmin ?? false)

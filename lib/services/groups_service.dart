@@ -119,6 +119,34 @@ class GroupsService {
       .snapshots()
       .map((s) => s.docs.map(Portion.fromDoc).toList());
 
+  /// الأوراد الإضافية اللي اتعملت من دورة معينة (لتقرير دورة فاتت).
+  Future<List<Portion>> cyclePortions(String groupId, int cycle) async {
+    final s = await _group(groupId).collection('portions').where('cycle', isEqualTo: cycle).get();
+    return s.docs.map(Portion.fromDoc).toList();
+  }
+
+  /// كل الدورات (للتقرير الشامل).
+  Future<List<Cycle>> allCycles(String groupId) async {
+    final s = await _group(groupId).collection('cycles').get();
+    return s.docs.map(Cycle.fromDoc).toList()..sort((a, b) => a.number.compareTo(b.number));
+  }
+
+  /// كل الأوراد الإضافية (للتقرير الشامل).
+  Future<List<Portion>> allPortions(String groupId) async {
+    final s = await _group(groupId).collection('portions').get();
+    return s.docs.map(Portion.fromDoc).toList();
+  }
+
+  /// الختمات اللي خلصت: رقم الدورة ← وقت ما خلصت.
+  Future<Map<int, DateTime>> completedKhatmas(String groupId) async {
+    final s = await _group(groupId).collection('khatmas').get();
+    return {
+      for (final d in s.docs)
+        if (d.data()['completedAt'] is Timestamp)
+          ((d.data()['cycle'] as num?)?.toInt() ?? int.tryParse(d.id) ?? 0): (d.data()['completedAt'] as Timestamp).toDate(),
+    };
+  }
+
   /// المجموعات العامة اللي فيها خانات فاضية.
   Future<List<Group>> explorePublic() async {
     final s = await _db
