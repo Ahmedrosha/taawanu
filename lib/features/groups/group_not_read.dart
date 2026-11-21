@@ -15,6 +15,7 @@ import '../../services/groups_service.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/ui.dart';
+import 'report_text.dart';
 
 /// عضو لسه مخلصش ورده في الدورة.
 class NotReadEntry {
@@ -87,7 +88,8 @@ String notReadText(AppLocalizations t, String locale, Group g, Cycle c, List<Not
   b.writeln();
   if (!past && c.endsAt != null) b.writeln('⏳ ${_when(t, c.endsAt)}');
   b.write(past ? t.notReadClosingPast : t.notReadClosing);
-  return b.toString();
+  // بالعربي: أرقام عربي وكل سطر يمين لشمال.
+  return locale.startsWith('ar') ? rtlLines(arDigits(b.toString())) : b.toString();
 }
 
 /// الأدمن أو المساعد: قايمة اللي ما قرؤش في الدورة اللي قدامه، نص أو صورة.
@@ -211,7 +213,7 @@ Future<Uint8List> buildNotReadImage(AppLocalizations t, String locale, bool rtl,
   final arabic = RegExp(r'[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]');
   pw.Widget txt(String s, {double size = 11, PdfColor color = PdfColors.black, bool ltr = false}) {
     final d = ltr || !arabic.hasMatch(s) ? pw.TextDirection.ltr : dir;
-    return pw.Text(d == pw.TextDirection.rtl ? _mirrorBrackets(s) : s, style: pw.TextStyle(fontSize: size, color: color), textDirection: d, textAlign: rtl && d == pw.TextDirection.ltr ? pw.TextAlign.right : null);
+    return pw.Text(rtl ? arDigits(d == pw.TextDirection.rtl ? _mirrorBrackets(s) : s) : s, style: pw.TextStyle(fontSize: size, color: color), textDirection: d, textAlign: rtl && d == pw.TextDirection.ltr ? pw.TextAlign.right : null);
   }
 
   List<pw.Widget> ordered(List<pw.Widget> cells) => rtl ? cells.reversed.toList() : cells;

@@ -15,6 +15,7 @@ import '../../models/group_models.dart';
 import '../../services/groups_service.dart';
 import '../../services/quran_repository.dart';
 import '../../widgets/ui.dart';
+import 'report_text.dart';
 import 'group_board_screen.dart' show currentSegment, segmentStatusLabel;
 
 const _green = PdfColor.fromInt(0xFF22A35A);
@@ -260,7 +261,7 @@ Future<Uint8List> buildGroupReport(
     final d = ltr || !arabic.hasMatch(s) ? pw.TextDirection.ltr : dir;
     // في العربي النص الإنجليزي بيفضل على يمين خانته.
     final a = align ?? (rtl && d == pw.TextDirection.ltr ? pw.TextAlign.right : null);
-    return pw.Text(d == pw.TextDirection.rtl ? _mirrorBrackets(s) : s, style: pw.TextStyle(fontSize: size, color: color), textDirection: d, textAlign: a);
+    return pw.Text(rtl ? arDigits(d == pw.TextDirection.rtl ? _mirrorBrackets(s) : s) : s, style: pw.TextStyle(fontSize: size, color: color), textDirection: d, textAlign: a);
   }
 
   List<pw.Widget> ordered(List<pw.Widget> cells) => rtl ? cells.reversed.toList() : cells;

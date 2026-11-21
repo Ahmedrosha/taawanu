@@ -13,6 +13,7 @@ import '../../l10n/gen/app_localizations.dart';
 import '../../models/group_models.dart';
 import '../../services/groups_service.dart';
 import '../../widgets/ui.dart';
+import 'report_text.dart';
 
 const _green = PdfColor.fromInt(0xFF22A35A);
 const _red = PdfColor.fromInt(0xFFE5484D);
@@ -332,7 +333,7 @@ Future<Uint8List> buildGroupSummary(
   pw.Widget txt(String s, {double size = 11, PdfColor color = PdfColors.black, pw.TextAlign? align, bool ltr = false}) {
     final d = ltr || !arabic.hasMatch(s) ? pw.TextDirection.ltr : dir;
     final a = align ?? (rtl && d == pw.TextDirection.ltr ? pw.TextAlign.right : null);
-    return pw.Text(d == pw.TextDirection.rtl ? _mirrorBrackets(s) : s, style: pw.TextStyle(fontSize: size, color: color), textDirection: d, textAlign: a);
+    return pw.Text(rtl ? arDigits(d == pw.TextDirection.rtl ? _mirrorBrackets(s) : s) : s, style: pw.TextStyle(fontSize: size, color: color), textDirection: d, textAlign: a);
   }
 
   List<pw.Widget> ordered(List<pw.Widget> cells) => rtl ? cells.reversed.toList() : cells;
