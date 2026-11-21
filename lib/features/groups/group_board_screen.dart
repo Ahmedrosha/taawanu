@@ -657,6 +657,15 @@ class _KhatmaMapState extends State<_KhatmaMap> {
                     Text(segmentStatusLabel(t, st), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                   ],
                 ),
+              if (_n != _current)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.volunteer_activism, size: 14, color: AppColors.accent),
+                    const SizedBox(width: 4),
+                    Text(t.legendVolunteered, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                  ],
+                ),
             ],
           ),
                 ],
@@ -701,15 +710,20 @@ class _KhatmaMapState extends State<_KhatmaMap> {
             final parts = _partsOf(juz);
             final startsWard = big && (juz * 8) % group.wardQuarters == 0;
             final bar = <Widget>[];
+            // ورد متأخر من دورة فاتت وحد اتطوع بيه: بيبان بعلامة، واللي قراه المتطوع بيتحسب.
+            var taken = false;
             var q = juz * 8;
             for (var k = 0; k < parts.length; k++) {
               final (seg, len, starts) = parts[k];
               final s = bySeg[seg];
               final st = s == null ? 'open' : _shownStatus(s, warn);
-              // الجزء ده من الورد: الأرباع اللي اتقرت منه (الورد بيتقري بالترتيب).
+              final left = s != null && s.status == 'late' && _n != _current ? _leftoverOf(s) : null;
+              if (left?.assignee != null) taken = true;
+              // الجزء ده من الورد: الأرباع اللي اتقرت منه (الورد بيتقري بالترتيب، والمتطوع بيكمّل من مكان ما وقف).
               final offset = q - seg * group.wardQuarters;
               q += len;
-              final fill = s?.read == null ? 1.0 : ((s!.read! - offset).clamp(0, len) / len);
+              final read = s?.read == null ? null : s!.read! + (left?.quartersRead ?? 0);
+              final fill = read == null ? 1.0 : ((read - offset).clamp(0, len) / len);
               if (big && starts) {
                 bar.add(Container(width: 2, height: 12, margin: const EdgeInsetsDirectional.only(end: 1.5), color: AppColors.text));
               } else if (k > 0) {
@@ -733,6 +747,8 @@ class _KhatmaMapState extends State<_KhatmaMap> {
                   children: [
                     if (startsWard)
                       PositionedDirectional(start: 0, top: 0, bottom: 0, child: Container(width: 3, color: AppColors.accent)),
+                    if (taken)
+                      PositionedDirectional(top: 3, end: 3, child: Icon(Icons.volunteer_activism, size: 12, color: AppColors.accent)),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(5, 4, 5, 6),
                       child: Column(
@@ -796,7 +812,8 @@ class _KhatmaMapState extends State<_KhatmaMap> {
                       if (s.uid != null) names[s.uid] ?? t.formerMember,
                       segmentStatusLabel(t, st),
                       if (s.read != null && s.status == 'late') t.quartersProgress(s.read!, group.wardQuarters),
-                      if (left != null && left.assignee != null) t.assignedTo(names[left.assignee] ?? t.formerMember),
+                      if (left != null && left.assignee != null) t.volunteeredBy(names[left.assignee] ?? t.formerMember),
+                      if (left != null && left.assignee != null) t.quartersProgress(left.quartersRead, left.quarterCount),
                       if (left != null && left.assignee == null) t.noneTookIt,
                     ].join(' · ')),
                     trailing: left != null && left.isOpen

@@ -1281,5 +1281,8 @@
   "reminderTooSoonNoTime": "A reminder was sent to this group recently. You can send another 3 hours after the last one.",
   "tooManyMessages": "You sent many messages this hour. Please wait a bit and try again.",
   "tooManyGroups": "You created many groups. Please wait a bit and try again.",
-  "inviteUsedUp": "This invite link has been used up. Ask for a new one."
+  "inviteUsedUp": "This invite link has been used up. Ask for a new one.",
+  "legendVolunteered": "Taken by a volunteer",
+  "volunteeredBy": "Taken by {name}",
+  "@volunteeredBy": {"placeholders": {"name": {"type": "String"}}}
 }
