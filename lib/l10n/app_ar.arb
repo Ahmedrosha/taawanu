@@ -804,5 +804,9 @@
   "notReadClosingPast": "ربنا يتقبل منا ومنكم 🤍",
   "notReadNone": "الكل خلص ورده في الدورة دي 🎉",
   "notReadShare": "اللي ما قرؤش: {name}",
-  "playbackSpeed": "سرعة الاستماع"
+  "playbackSpeed": "سرعة الاستماع",
+  "reciterMurattal": "مرتّل",
+  "reciterMujawwad": "مجوّد",
+  "reciterTeaching": "تعليم (الشيخ بيقرا والأطفال بيردّدوا)",
+  "reciterLowQuality": "جودة صوت أقل"
 }

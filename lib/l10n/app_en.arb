@@ -1350,5 +1350,9 @@
   "notReadNone": "Everyone finished their portion in this cycle 🎉",
   "notReadShare": "Not read yet: {name}",
   "@notReadShare": {"placeholders": {"name": {"type": "String"}}},
-  "playbackSpeed": "Playback speed"
+  "playbackSpeed": "Playback speed",
+  "reciterMurattal": "Murattal",
+  "reciterMujawwad": "Mujawwad",
+  "reciterTeaching": "Teaching (with children repeating)",
+  "reciterLowQuality": "Lower audio quality"
 }

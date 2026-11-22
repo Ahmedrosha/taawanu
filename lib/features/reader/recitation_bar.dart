@@ -45,7 +45,7 @@ class RecitationBar extends StatelessWidget {
                     Icon(Icons.record_voice_over_outlined, size: 18, color: AppColors.accent),
                     const SizedBox(width: 6),
                     Flexible(
-                      child: Text(ar ? r.nameAr : r.nameEn,
+                      child: Text(reciterName(t, r, ar),
                           overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.text)),
                     ),
                     if (audio.repeat != 1) ...[
@@ -133,6 +133,26 @@ class RecitationBar extends StatelessWidget {
     final t = AppLocalizations.of(context);
     final ar = Localizations.localeOf(context).languageCode != 'en';
     final audio = RecitationPlayer.instance;
+    final current = audio.reciter.id;
+    Widget tile(Reciter r) => Builder(
+          builder: (context) => ListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            leading: Icon(
+              current == r.id ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+              color: current == r.id ? AppColors.navy : AppColors.textMuted,
+            ),
+            title: Text(
+              reciterName(t, r, ar),
+              style: const TextStyle(fontSize: 15),
+            ),
+            subtitle: r.lowQuality ? Text(t.reciterLowQuality, style: TextStyle(fontSize: 12, color: AppColors.textMuted)) : null,
+            onTap: () async {
+              await Prefs.instance.setReciterId(r.id);
+              if (context.mounted) Navigator.pop(context, true);
+            },
+          ),
+        );
     final changed = await showModalBottomSheet<bool>(
       context: context,
       showDragHandle: true,
@@ -144,19 +164,20 @@ class RecitationBar extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
             children: [
               Text(t.reciter, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-              for (final r in RecitationPlayer.reciters)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    Prefs.instance.reciterId == r.id ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                    color: Prefs.instance.reciterId == r.id ? AppColors.navy : AppColors.textMuted,
-                  ),
-                  title: Text(ar ? r.nameAr : r.nameEn),
-                  onTap: () async {
-                    await Prefs.instance.setReciterId(r.id);
-                    if (context.mounted) Navigator.pop(context, true);
-                  },
+              // القارئ الحالي فوق، وبعده القرّاء مقسمين: مرتّل، مجوّد، تعليم.
+              tile(audio.reciter),
+              for (final (style, label) in [
+                (ReciterStyle.murattal, t.reciterMurattal),
+                (ReciterStyle.mujawwad, t.reciterMujawwad),
+                (ReciterStyle.teaching, t.reciterTeaching),
+              ]) ...[
+                Padding(
+                  padding: const EdgeInsets.only(top: 12, bottom: 2),
+                  child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.accent)),
                 ),
+                for (final r in RecitationPlayer.reciters)
+                  if (r.style == style && r.id != audio.reciter.id) tile(r),
+              ],
               const SizedBox(height: 8),
               Text(t.repeatAyah, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
               const SizedBox(height: 8),
@@ -184,4 +205,10 @@ class RecitationBar extends StatelessWidget {
     );
     if (changed == true) await onRestart(from: audio.current);
   }
+}
+
+/// اسم القارئ، و"مجوّد" جنبه عشان ما يتلخبطش مع تلاوته المرتّلة.
+String reciterName(AppLocalizations t, Reciter r, bool ar) {
+  final n = ar ? r.nameAr : r.nameEn;
+  return r.style == ReciterStyle.mujawwad ? '$n · ${t.reciterMujawwad}' : n;
 }

@@ -166,7 +166,7 @@ const guideAr = <GuideSection>[
   GuideSection(Icons.record_voice_over_outlined, 'التلاوة', [
     GBullets([
       'دوس {i:play} فوق، أو دوس على آية واختار "استمع من هنا".',
-      '**٧ قراء:** العفاسي، الحصري، المنشاوي، عبد الباسط، السديس، الشريم، المعيقلي. اختار من اسم القارئ في الشريط.',
+      '**أكتر من ٢٥ قارئ:** مرتّل ومجوّد والحصري المعلّم، منهم العفاسي والحصري والمنشاوي وعبد الباسط والسديس والحذيفي والدوسري. اختار من اسم القارئ في الشريط، وغيّر سرعة الاستماع من زرار السرعة (١× لحد ٢×).',
       '**تكرار كل آية:** مرة، أو ٣، أو ٥، أو على طول.',
       '**تحميل الورد {i:download}:** عشان تسمع من غير نت.',
       '**التلاوة بتقف في آخر الربع** لحد ما تسجّله، وبعدها بتكمّل اللي بعده.',
@@ -332,7 +332,7 @@ const guideEn = <GuideSection>[
   GuideSection(Icons.record_voice_over_outlined, 'Recitation', [
     GBullets([
       'Tap {i:play} at the top, or tap an ayah and choose "Listen from here".',
-      '**7 reciters:** Alafasy, Al-Husary, Al-Minshawi, Abdul Basit, As-Sudais, Ash-Shuraym, Al-Muaiqly. Tap the reciter name in the bar to change.',
+      '**25+ reciters:** murattal, mujawwad and Al-Husary teaching, including Alafasy, Al-Husary, Al-Minshawi, Abdul Basit, As-Sudais, Al-Hudhaify and Ad-Dussary. Tap the reciter name in the bar to change, and the speed button for 1×–2×.',
       '**Repeat each ayah:** once, 3 times, 5 times, or continuously.',
       '**Download the portion {i:download}:** to listen offline.',
       '**Recitation pauses at the end of the quarter** until you record it, then carries on with the next.',

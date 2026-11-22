@@ -44,8 +44,8 @@ const tourTexts = <String, (String, String)>{
     'The same pages as the Madinah Mushaf; anything outside your portion is dimmed. Tap any ayah to listen to it or read its tafsir: Al-Muyassar, As-Saadi and Ibn Kathir.',
   ),
   'reader.play': (
-    'اسمع وردك بصوت ٧ قراء. التلاوة بتقف في آخر الربع لحد ما تسجّله.',
-    'Listen to your portion with 7 reciters. Recitation pauses at the end of the quarter until you record it.',
+    'اسمع وردك بصوت أكتر من ٢٥ قارئ. التلاوة بتقف في آخر الربع لحد ما تسجّله.',
+    'Listen to your portion with 25+ reciters. Recitation pauses at the end of the quarter until you record it.',
   ),
   'reader.auto': (
     'قراءة تلقائية من غير صوت بسرعة ثابتة: تنوّر آية آية أو كلمة كلمة أو من غير تنوير. وبتقف في آخر الربع زي التلاوة.',

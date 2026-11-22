@@ -9,7 +9,7 @@ import 'prefs.dart';
 
 /// قارئ: تلاوة آية بآية من EveryAyah.
 class Reciter {
-  const Reciter(this.id, this.nameAr, this.nameEn, this.folder);
+  const Reciter(this.id, this.nameAr, this.nameEn, this.folder, {this.style = ReciterStyle.murattal, this.lowQuality = false});
 
   final String id;
   final String nameAr;
@@ -17,7 +17,14 @@ class Reciter {
 
   /// اسم المجلد على everyayah.com/data/
   final String folder;
+
+  final ReciterStyle style;
+
+  /// تسجيل بجودة أقل (أقل من 64kbps).
+  final bool lowQuality;
 }
+
+enum ReciterStyle { murattal, mujawwad, teaching }
 
 /// تشغيل التلاوة آية آية: الآية الحالية، والتكرار، وتحميل الورد للتشغيل من غير نت.
 class RecitationPlayer extends ChangeNotifier {
@@ -48,6 +55,29 @@ class RecitationPlayer extends ChangeNotifier {
     Reciter('shuraym', 'سعود الشريم', 'Saud Ash-Shuraym', 'Saood_ash-Shuraym_128kbps'),
     Reciter('muaiqly', 'ماهر المعيقلي', 'Maher Al-Muaiqly', 'MaherAlMuaiqly128kbps'),
     Reciter('hudhaify', 'علي الحذيفي', 'Ali Al-Hudhaify', 'Hudhaify_128kbps'),
+    // اتأكدنا إن أول وآخر آية في كل سورة موجودين لكل واحد (tools/check_reciters.py).
+    Reciter('dussary', 'ياسر الدوسري', 'Yasser Ad-Dussary', 'Yasser_Ad-Dussary_128kbps'),
+    Reciter('qatami', 'ناصر القطامي', 'Nasser Al-Qatami', 'Nasser_Alqatami_128kbps'),
+    Reciter('shatri', 'أبو بكر الشاطري', 'Abu Bakr Ash-Shatri', 'Abu_Bakr_Ash-Shaatree_128kbps'),
+    Reciter('ayyoub', 'محمد أيوب', 'Muhammad Ayyoub', 'Muhammad_Ayyoub_128kbps'),
+    Reciter('jibreel', 'محمد جبريل', 'Muhammad Jibreel', 'Muhammad_Jibreel_128kbps'),
+    Reciter('ajamy', 'أحمد العجمي', 'Ahmed Al-Ajamy', 'Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net'),
+    Reciter('basfar', 'عبدالله بصفر', 'Abdullah Basfar', 'Abdullah_Basfar_192kbps'),
+    Reciter('rifai', 'هاني الرفاعي', 'Hani Ar-Rifai', 'Hani_Rifai_192kbps'),
+    Reciter('bukhatir', 'صلاح بوخاطر', 'Salah Bukhatir', 'Salaah_AbdulRahman_Bukhatir_128kbps'),
+    Reciter('juhany', 'عبدالله الجهني', 'Abdullah Al-Juhany', 'Abdullaah_3awwaad_Al-Juhaynee_128kbps'),
+    Reciter('qahtani', 'خالد القحطاني', 'Khalid Al-Qahtani', 'Khaalid_Abdullaah_al-Qahtaanee_192kbps'),
+    Reciter('qasim', 'محسن القاسم', 'Muhsin Al-Qasim', 'Muhsin_Al_Qasim_192kbps'),
+    Reciter('tablawi', 'محمد محمود الطبلاوي', 'Mohammad At-Tablawi', 'Mohammad_al_Tablaway_128kbps'),
+    Reciter('ghamdi', 'سعد الغامدي', 'Saad Al-Ghamdi', 'Ghamadi_40kbps', lowQuality: true),
+    Reciter('abbad', 'فارس عباد', 'Fares Abbad', 'Fares_Abbad_64kbps'),
+    Reciter('alijaber', 'علي جابر', 'Ali Jaber', 'Ali_Jaber_64kbps'),
+    Reciter('banna', 'محمود علي البنا', 'Mahmoud Ali Al-Banna', 'mahmoud_ali_al_banna_32kbps', lowQuality: true),
+    Reciter('akhdar', 'إبراهيم الأخضر', 'Ibrahim Al-Akhdar', 'Ibrahim_Akhdar_32kbps', lowQuality: true),
+    Reciter('husary_mujawwad', 'محمود خليل الحصري', 'Mahmoud Al-Husary', 'Husary_128kbps_Mujawwad', style: ReciterStyle.mujawwad),
+    Reciter('minshawi_mujawwad', 'محمد صديق المنشاوي', 'Mohamed Al-Minshawi', 'Minshawy_Mujawwad_192kbps', style: ReciterStyle.mujawwad),
+    Reciter('abdulbasit_mujawwad', 'عبد الباسط عبد الصمد', 'Abdul Basit', 'Abdul_Basit_Mujawwad_128kbps', style: ReciterStyle.mujawwad),
+    Reciter('husary_muallim', 'الحصري المعلّم', 'Al-Husary (teaching)', 'Husary_Muallim_128kbps', style: ReciterStyle.teaching),
   ];
 
   static Reciter reciterById(String id) => reciters.firstWhere((r) => r.id == id, orElse: () => reciters.first);
