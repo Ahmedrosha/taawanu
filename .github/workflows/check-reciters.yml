@@ -1,0 +1,15 @@
+name: Check reciters
+# يدوي: بيتأكد إن تلاوات القرّاء كاملة على everyayah قبل إضافتهم.
+on:
+  workflow_dispatch:
+    inputs:
+      folders:
+        description: "أسماء المجلدات مفصولة بمسافة"
+        required: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/check_reciters.py ${{ inputs.folders }}
