@@ -803,5 +803,6 @@
   "notReadClosing": "ربنا يعينكم ويتقبل منا ومنكم 🤍",
   "notReadClosingPast": "ربنا يتقبل منا ومنكم 🤍",
   "notReadNone": "الكل خلص ورده في الدورة دي 🎉",
-  "notReadShare": "اللي ما قرؤش: {name}"
+  "notReadShare": "اللي ما قرؤش: {name}",
+  "playbackSpeed": "سرعة الاستماع"
 }

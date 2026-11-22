@@ -313,4 +313,8 @@ class Prefs {
 
   int get recitationRepeat => _p.getInt('recitationRepeat') ?? 1;
   Future<void> setRecitationRepeat(int v) => _p.setInt('recitationRepeat', v);
+
+  /// سرعة الاستماع (١ = عادي).
+  double get recitationSpeed => _p.getDouble('recitationSpeed') ?? 1.0;
+  Future<void> setRecitationSpeed(double v) => _p.setDouble('recitationSpeed', v);
 }

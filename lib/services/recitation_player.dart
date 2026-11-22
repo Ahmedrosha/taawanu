@@ -47,6 +47,7 @@ class RecitationPlayer extends ChangeNotifier {
     Reciter('sudais', 'عبد الرحمن السديس', 'Abdurrahman As-Sudais', 'Abdurrahmaan_As-Sudais_64kbps'),
     Reciter('shuraym', 'سعود الشريم', 'Saud Ash-Shuraym', 'Saood_ash-Shuraym_128kbps'),
     Reciter('muaiqly', 'ماهر المعيقلي', 'Maher Al-Muaiqly', 'MaherAlMuaiqly128kbps'),
+    Reciter('hudhaify', 'علي الحذيفي', 'Ali Al-Hudhaify', 'Hudhaify_128kbps'),
   ];
 
   static Reciter reciterById(String id) => reciters.firstWhere((r) => r.id == id, orElse: () => reciters.first);
@@ -63,6 +64,18 @@ class RecitationPlayer extends ChangeNotifier {
   int get repeat => Prefs.instance.recitationRepeat;
 
   bool get active => _active;
+
+  /// سرعات الاستماع: كل ضغطة على الزرار بتنقل للي بعدها، وبعد ٢ ترجع لعادي.
+  static const speeds = [1.0, 1.25, 1.5, 1.75, 2.0];
+  double get speed => Prefs.instance.recitationSpeed;
+
+  Future<void> cycleSpeed() async {
+    final i = speeds.indexOf(speed);
+    final next = speeds[(i + 1) % speeds.length];
+    await Prefs.instance.setRecitationSpeed(next);
+    await _player.setSpeed(next);
+    notifyListeners();
+  }
 
   /// التلاوة وصلت آخر الربع ومستنية تسجيله عشان تكمّل.
   bool get waiting => _waiting;
@@ -86,7 +99,7 @@ class RecitationPlayer extends ChangeNotifier {
   Duration? get remaining {
     final d = _player.duration;
     if (!_active || d == null) return null;
-    final left = d - _player.position;
+    final left = (d - _player.position) * (1 / speed);
     return left.isNegative ? Duration.zero : left;
   }
 
@@ -111,6 +124,7 @@ class RecitationPlayer extends ChangeNotifier {
     _active = true;
     _waiting = false;
     await _player.setLoopMode(repeat == 0 ? LoopMode.one : LoopMode.off);
+    await _player.setSpeed(speed);
     await _player.setAudioSources(sources, initialIndex: 0, initialPosition: Duration.zero);
     notifyListeners();
     unawaited(_player.play());

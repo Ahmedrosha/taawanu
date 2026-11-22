@@ -57,6 +57,27 @@ class RecitationBar extends StatelessWidget {
               ),
             ),
           ),
+          // سرعة الاستماع: كل ضغطة السرعة اللي بعدها (١ ← ١٫٢٥ ← … ← ٢ ← ١).
+          Tooltip(
+            message: t.playbackSpeed,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: audio.cycleSpeed,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  _speedLabel(audio.speed, ar),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: audio.speed == 1 ? AppColors.textMuted : AppColors.accent,
+                  ),
+                ),
+              ),
+            ),
+          ),
           IconButton(tooltip: t.previousAyah, onPressed: audio.previous, icon: const Icon(Icons.skip_previous), visualDensity: VisualDensity.compact),
           IconButton.filled(
             tooltip: audio.playing ? t.pause : t.listen,
@@ -99,6 +120,12 @@ class RecitationBar extends StatelessWidget {
         shown,
       ],
     );
+  }
+
+  static String _speedLabel(double s, bool ar) {
+    final n = s == s.roundToDouble() ? s.toInt().toString() : s.toString();
+    if (!ar) return '$n×';
+    return '${n.replaceAll('.', '٫').split('').map((c) => '0123456789'.contains(c) ? '٠١٢٣٤٥٦٧٨٩'[int.parse(c)] : c).join()}×';
   }
 
   /// اختيار القارئ وعدد التكرار.

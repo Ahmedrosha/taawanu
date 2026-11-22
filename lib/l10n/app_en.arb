@@ -1349,5 +1349,6 @@
   "notReadClosingPast": "May Allah accept from us all 🤍",
   "notReadNone": "Everyone finished their portion in this cycle 🎉",
   "notReadShare": "Not read yet: {name}",
-  "@notReadShare": {"placeholders": {"name": {"type": "String"}}}
+  "@notReadShare": {"placeholders": {"name": {"type": "String"}}},
+  "playbackSpeed": "Playback speed"
 }
