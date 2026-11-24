@@ -194,15 +194,17 @@ for name, get_t in (('madinah.json', lambda s, a: M['surahs'][s - 1][a - 1]),
         bad('sajdah', f'{name}: {mine}')
 say('  done')
 
-# ٦) صفحات المصحف وسطوره (pages.json) مقابل quran.com: الصفحة والسطر وشكل كل كلمة
-say('\n## 6. Mushaf pages (pages.json): page, line and glyph of every word')
-ref_words = {}
+# ٦) صفحات المصحف وسطوره (pages.json) مقابل quran.com: الصفحة والسطر وشكل كل كلمة وعلامة آية
+say('\n## 6. Mushaf pages (pages.json): page, line and glyph of every word and ayah marker')
+ref_glyphs = {}
 for s in REF:
     for v in REF[s]:
+        a = int(v['verse_key'].split(':')[1])
         for w in v['words']:
-            if w.get('char_type_name') == 'word':
-                ref_words.setdefault((s, int(v['verse_key'].split(':')[1])), []).append(w)
+            for g in w['code_v2'].split():
+                ref_glyphs.setdefault((s, a), []).append((w['page_number'], w['line_number'], g, w.get('char_type_name')))
 app_words = {}
+app_glyphs = {}
 for pi, page in enumerate(P['pages'], 1):
     li = 0
     for line in page:
@@ -212,32 +214,19 @@ for pi, page in enumerate(P['pages'], 1):
         for w in line[1]:
             s, a, hafs, code = w
             app_words.setdefault((s, a), []).append((pi, li, hafs, code))
-pg_bad = ln_bad = code_bad = cnt_bad = 0
-for key, rws in ref_words.items():
-    aws = app_words.get(key, [])
-    # الكلمة الأخيرة عندنا بتاخد رقم الآية معاها (كود الكلمة + كود علامة الآية)
-    if len(aws) != len(rws):
-        cnt_bad += 1
-        if cnt_bad <= 10:
-            bad('pages', f'{key[0]}:{key[1]} words: app {len(aws)}, reference {len(rws)}')
-        continue
-    for (pi, li, hafs, code), rw in zip(aws, rws):
-        if pi != rw['page_number']:
-            pg_bad += 1
-            if pg_bad <= 10:
-                bad('pages', f'{key[0]}:{key[1]} word on page {pi}, reference {rw["page_number"]}')
-        if li != rw['line_number']:
-            ln_bad += 1
-            if ln_bad <= 10:
-                bad('pages', f'{key[0]}:{key[1]} word on line {li}, reference {rw["line_number"]}')
-        if code.split(' ')[0] != rw['code_v2'].split(' ')[0]:
-            code_bad += 1
-            if code_bad <= 10:
-                bad('pages', f'{key[0]}:{key[1]} glyph {code!r}, reference {rw["code_v2"]!r}')
-missing = set(ref_words) - set(app_words)
+            for g in code.split():
+                app_glyphs.setdefault((s, a), []).append((pi, li, g))
+gb = 0
+for key, rg in ref_glyphs.items():
+    ag = app_glyphs.get(key, [])
+    if [(x[0], x[1], x[2]) for x in rg] != ag:
+        gb += 1
+        if gb <= 15:
+            bad('pages', f'{key[0]}:{key[1]} app {[(x[1], x[2]) for x in ag]} reference {[(x[1], x[2], x[3]) for x in rg]}')
+missing = set(ref_glyphs) - set(app_glyphs)
 if missing:
     bad('pages', f'{len(missing)} ayahs missing from pages: {sorted(missing)[:10]}')
-say(f'  word-count mismatches {cnt_bad}, page mismatches {pg_bad}, line mismatches {ln_bad}, glyph mismatches {code_bad}')
+say(f'  ayahs whose glyph sequence (page, line, glyph) differs: {gb}')
 # نص حفص بتاع الكلمات (اللي بيظهر في وضع خط حفص) = نص المجمع؟
 hb = 0
 for key, aws in app_words.items():
