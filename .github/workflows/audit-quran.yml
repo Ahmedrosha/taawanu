@@ -1,0 +1,13 @@
+name: Audit Quran data
+# يدوي: بيقارن بيانات القرآن في التطبيق بمصحف المدينة (quran.com + Tanzil). مش بيعدّل حاجة.
+on:
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/audit_quran.py
+      - run: cat audit-report.md >> "$GITHUB_STEP_SUMMARY"
+        if: always()
