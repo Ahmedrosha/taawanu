@@ -87,7 +87,7 @@ def ws(t):
 
 
 # الهيكل: من غير تشكيل ولا علامات مصحف، وتوحيد أشكال الحروف — عشان نقارن الكلمات بين رسمين مختلفين.
-MARKS = re.compile('[ؐ-ًؚ-ٰٟۖ-ۭ࣓-ࣿـ۞۩]')
+MARKS = re.compile('[\u0610-\u061a\u064b-\u065f\u0670\u06d6-\u06ed\u08d3-\u08ff\u0640\u200b-\u200f\u2060-\u2064\ufeff]')
 
 
 def skel(t):
@@ -154,12 +154,10 @@ for name, get_t in (('quran.json', lambda s, a: Q['surahs'][s - 1][a - 1]),
     for s in range(1, 115):
         for a in range(1, len(REF[s]) + 1):
             mine = get_t(s, a)
-            if s != 1 and a == 1 and s != 9:
-                pass
             if skel(mine) == skel(ref(s, a)['text_qpc_hafs']):
                 same += 1
             else:
-                bad(name, f'{s}:{a} {diff_words(skel(mine), skel(ref(s, a)["text_qpc_hafs"]))}')
+                bad(name, f'{s}:{a} {diff_words(skel(mine), skel(ref(s, a)["text_qpc_hafs"]))}  | app: {mine}')
     say(f'  {name}: same words in {same} / 6236')
 
 # ٤) الأرباع (والأجزاء والأحزاب المحسوبة منها)
