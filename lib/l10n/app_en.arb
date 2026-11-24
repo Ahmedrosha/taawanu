@@ -1354,5 +1354,7 @@
   "reciterMurattal": "Murattal",
   "reciterMujawwad": "Mujawwad",
   "reciterTeaching": "Teaching (with children repeating)",
-  "reciterLowQuality": "Lower audio quality"
+  "reciterLowQuality": "Lower audio quality",
+  "groupGone": "This group no longer exists, or you're no longer a member.",
+  "backToGroups": "Back to groups"
 }

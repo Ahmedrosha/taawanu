@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -75,6 +76,11 @@ class _GroupBoardScreenState extends State<GroupBoardScreen> {
     return StreamBuilder<Group?>(
       stream: _group,
       builder: (context, gSnap) {
+        // المجموعة اتحذفت أو العضو اتشال منها (السيرفر بيرفض القراءة): رسالة واضحة ورجوع للمجموعات.
+        final e = gSnap.error;
+        final gone = (e is FirebaseException && e.code == 'permission-denied') ||
+            (gSnap.connectionState == ConnectionState.active && !gSnap.hasError && gSnap.data == null);
+        if (gone) return const _GroupGone();
         if (gSnap.hasError) return ErrorScaffold(message: t.actionFailed);
         final g = gSnap.data;
         if (g == null) return const LoadingScaffold();
@@ -1547,13 +1553,16 @@ class _BoardMenu extends StatelessWidget {
             await shareGroupSummary(context, group);
           case 'leave':
             if (await confirmDialog(context, title: t.leaveGroup, body: t.leaveConfirm, destructive: true) && context.mounted) {
+              final router = GoRouter.of(context);
               final ok = await runAction(context, () => svc.leave(group.id));
-              if (ok && context.mounted) context.go('/groups');
+              if (ok) router.go('/groups');
             }
           case 'delete':
             if (await confirmDialog(context, title: t.deleteGroup, body: t.deleteConfirm, destructive: true) && context.mounted) {
+              // الراوتر قبل الحذف: الشاشة ممكن تتغير وإحنا مستنيين، فالقايمة دي تختفي.
+              final router = GoRouter.of(context);
               final ok = await runAction(context, () => svc.deleteGroup(group.id));
-              if (ok && context.mounted) context.go('/groups');
+              if (ok) router.go('/groups');
             }
         }
       },
@@ -1565,6 +1574,31 @@ class _BoardMenu extends StatelessWidget {
         if (me?.isAdmin ?? false)
           PopupMenuItem(value: 'delete', child: Text(t.deleteGroup, style: TextStyle(color: AppColors.statusLate))),
       ],
+    );
+  }
+}
+
+/// المجموعة مبقتش موجودة أو المستخدم مبقاش فيها.
+class _GroupGone extends StatelessWidget {
+  const _GroupGone();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.group_off_outlined, size: 48, color: AppColors.textMuted),
+            const SizedBox(height: 12),
+            Text(t.groupGone, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: () => context.go('/groups'), child: Text(t.backToGroups)),
+          ]),
+        ),
+      ),
     );
   }
 }

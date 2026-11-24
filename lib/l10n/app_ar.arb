@@ -808,5 +808,7 @@
   "reciterMurattal": "مرتّل",
   "reciterMujawwad": "مجوّد",
   "reciterTeaching": "تعليم (الشيخ بيقرا والأطفال بيردّدوا)",
-  "reciterLowQuality": "جودة صوت أقل"
+  "reciterLowQuality": "جودة صوت أقل",
+  "groupGone": "المجموعة دي مش موجودة أو مبقتش عضو فيها.",
+  "backToGroups": "رجوع للمجموعات"
 }
