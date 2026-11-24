@@ -47,7 +47,7 @@ ADHKAR = {f: json.load(open(f'assets/adhkar/{f}.json')) for f in ('daily', 'ruqy
 say('# Quran data audit vs the Madinah mushaf')
 chapters = jget(f'{API}/chapters?language=ar')['chapters']
 assert len(chapters) == 114
-FIELDS = 'text_qpc_hafs,text_uthmani,juz_number,hizb_number,rub_el_hizb_number,page_number,sajdah_number,verse_key'
+FIELDS = 'text_qpc_hafs,text_uthmani,text_imlaei,juz_number,hizb_number,rub_el_hizb_number,page_number,sajdah_number,verse_key'
 WFIELDS = 'code_v2,line_number,page_number,text_qpc_hafs'
 
 
@@ -334,6 +334,48 @@ for f, data in ADHKAR.items():
         first = strip_num(ref(s, a1)['text_qpc_hafs']).split(' ')[:3]
         last = strip_num(ref(s, a2)['text_qpc_hafs']).split(' ')[-3:]
         say(f'  {f}:{it.get("id")} {s}:{a1}-{a2} [{it.get("source", "")}] «{" ".join(first)} … {" ".join(last)}»')
+
+# ١٠) الآيات المكتوبة بإيد في حصن المسلم بين { } — مكانها في القرآن، وهل الكلام مطابق؟
+say('\n## 10. Verses quoted inside Hisn al-Muslim {…}: located and checked against the imlaei text')
+def iskel(t):
+    t = skel(t)
+    return t.replace('ا', '').replace('و', '').replace('ي', '')
+full, index = '', []
+for s_ in range(1, 115):
+    for a_ in range(1, len(REF[s_]) + 1):
+        k = iskel(ref(s_, a_)['text_imlaei'])
+        index.append((len(full), s_, a_))
+        full += k
+import bisect
+starts_ = [x[0] for x in index]
+def where(pos):
+    i = bisect.bisect_right(starts_, pos) - 1
+    return index[i][1], index[i][2]
+quotes = []
+def walk_txt(x):
+    if isinstance(x, str):
+        quotes.extend(re.findall(r'\{([^}]*)\}', x))
+    elif isinstance(x, dict):
+        for v in x.values():
+            walk_txt(v)
+    elif isinstance(x, list):
+        for v in x:
+            walk_txt(v)
+walk_txt(ADHKAR['hisn'])
+found = notfound = 0
+for qt in quotes:
+    k = iskel(qt)
+    if len(k) < 6:
+        continue
+    p_ = full.find(k)
+    if p_ >= 0:
+        found += 1
+        a1, a2 = where(p_), where(p_ + len(k) - 1)
+        say(f'  ✓ {a1[0]}:{a1[1]}–{a2[0]}:{a2[1]}  {ws(qt)[:70]}')
+    else:
+        notfound += 1
+        bad('hisn', f'not found as-is in the Quran: {ws(qt)[:160]}')
+say(f'  quotes located {found}, not located {notfound}')
 
 say(f'\n# TOTAL PROBLEMS: {problems}')
 open('audit-report.md', 'w').write('\n'.join(report))
