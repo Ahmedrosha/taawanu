@@ -86,7 +86,24 @@ if cancel_review:
                 break
             time.sleep(10)
     else:
-        print('nothing in review to cancel')
+        # نسخة بدأت مراجعتها فعلًا: نشيلها بالطريقة القديمة (appStoreVersionSubmission)
+        vs = call('GET', f'/v1/apps/{app_id}/appStoreVersions?filter[platform]=IOS&limit=20')['data']
+        rev = [v for v in vs if v['attributes'].get('appStoreState') in ('WAITING_FOR_REVIEW', 'IN_REVIEW')]
+        for v in rev:
+            sub = call('GET', f"/v1/appStoreVersions/{v['id']}/appStoreVersionSubmission").get('data')
+            if sub:
+                call('DELETE', f"/v1/appStoreVersionSubmissions/{sub['id']}")
+                print(f"removed {v['attributes']['versionString']} from review")
+        if not rev:
+            print('nothing in review to cancel')
+        else:
+            import time
+            for _ in range(30):
+                states = [v['attributes'].get('appStoreState') for v in
+                          call('GET', f'/v1/apps/{app_id}/appStoreVersions?filter[platform]=IOS&limit=20')['data']]
+                if not any(x in ('WAITING_FOR_REVIEW', 'IN_REVIEW') for x in states):
+                    break
+                time.sleep(10)
 
 # ١) النسخة: موجودة بالرقم ده، أو نسخة لسه قابلة للتعديل، أو نعمل واحدة جديدة.
 EDITABLE = {'PREPARE_FOR_SUBMISSION', 'DEVELOPER_REJECTED', 'REJECTED', 'METADATA_REJECTED', 'INVALID_BINARY'}
