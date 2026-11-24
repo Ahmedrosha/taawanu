@@ -1,9 +1,0 @@
-name: Hisn verses (Madinah text)
-on:
-  workflow_dispatch:
-jobs:
-  run:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: python3 tools/hisn_madinah.py > hisn-out.jsonl && sed 's/^/OUT /' hisn-out.jsonl
