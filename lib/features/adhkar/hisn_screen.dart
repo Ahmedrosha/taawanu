@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../l10n/gen/app_localizations.dart';
+import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/quran_style.dart';
 import 'adhkar_data.dart';
 
 /// حصن المسلم كله: الأبواب مع بحث.
@@ -89,11 +91,10 @@ class HisnChapterScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: AppColors.border),
               ),
-              child: SelectableText(
-                text,
+              child: SelectableText.rich(
+                _withVerses(text, GoogleFonts.amiri(fontSize: 19, height: 1.9, color: AppColors.text)),
                 textDirection: TextDirection.rtl,
                 textAlign: TextAlign.justify,
-                style: GoogleFonts.amiri(fontSize: 19, height: 1.9, color: AppColors.text),
               ),
             ),
           if (chapter.footnotes.isNotEmpty)
@@ -117,4 +118,20 @@ class HisnChapterScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+/// الآيات المقتبسة ﴿…﴾ بنص مصحف المدينة وخطه، وباقي الكلام بخط الكتاب.
+TextSpan _withVerses(String text, TextStyle base) {
+  final spans = <InlineSpan>[];
+  final re = RegExp(r'﴿([^﴾]*)﴾');
+  var last = 0;
+  for (final m in re.allMatches(text)) {
+    if (m.start > last) spans.add(TextSpan(text: text.substring(last, m.start)));
+    spans.add(const TextSpan(text: '﴿'));
+    spans.add(TextSpan(text: m.group(1), style: base.merge(quranTextStyle(madinahFont, fontSize: 21, color: base.color ?? AppColors.text)).copyWith(height: 1.9)));
+    spans.add(const TextSpan(text: '﴾'));
+    last = m.end;
+  }
+  if (last < text.length) spans.add(TextSpan(text: text.substring(last)));
+  return TextSpan(style: base, children: spans);
 }

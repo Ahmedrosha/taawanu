@@ -355,9 +355,11 @@ def where(pos):
     i = bisect.bisect_right(starts_, pos) - 1
     return index[i][1], index[i][2]
 quotes = []
+madq = []
 def walk_txt(x):
     if isinstance(x, str):
         quotes.extend(re.findall(r'\{([^}]*)\}', x))
+        madq.extend(re.findall(r'﴿([^﴾]*)﴾', x))
     elif isinstance(x, dict):
         for v in x.values():
             walk_txt(v)
@@ -379,6 +381,14 @@ for qt in quotes:
         notfound += 1
         bad('hisn', f'not found as-is in the Quran: {ws(qt)[:160]}')
 say(f'  quotes located {found}, not located {notfound}')
+qfull = skel(''.join(ref(s_, a_)['text_qpc_hafs'] for s_ in range(1, 115) for a_ in range(1, len(REF[s_]) + 1)))
+ok_ = 0
+for qt in madq:
+    if skel(qt) in qfull:
+        ok_ += 1
+    else:
+        bad('hisn-madinah', f'not exact Madinah text: {qt[:120]}')
+say(f'  ﴿…﴾ quotes in Madinah text: {ok_} / {len(madq)} match the KFGQPC text')
 
 say(f'\n# TOTAL PROBLEMS: {problems}')
 open('audit-report.md', 'w').write('\n'.join(report))
