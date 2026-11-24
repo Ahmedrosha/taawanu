@@ -66,9 +66,12 @@ app_id = app[0]['id']
 
 # ٠) اختياري: نسحب النسخة اللي في المراجعة، فتبقى قابلة للتعديل ونقدّم مكانها.
 if cancel_review:
-    allsubs = call('GET', f'/v1/apps/{app_id}/reviewSubmissions?filter[platform]=IOS&limit=20')['data']
-    for x in allsubs:
-        print(f"review submission: {x['attributes'].get('state')}")
+    allsubs, nxt = [], f'/v1/apps/{app_id}/reviewSubmissions?filter[platform]=IOS&limit=200'
+    while nxt:
+        page = call('GET', nxt)
+        allsubs += page['data']
+        nxt = page.get('links', {}).get('next')
+    print('review submissions: ' + ', '.join(sorted({x['attributes'].get('state') or '?' for x in allsubs})))
     pending = [x for x in allsubs if x['attributes'].get('state') in ('WAITING_FOR_REVIEW', 'IN_REVIEW', 'UNRESOLVED_ISSUES')]
     for s in pending:
         call('PATCH', f"/v1/reviewSubmissions/{s['id']}", {'data': {
