@@ -339,7 +339,7 @@ for f, data in ADHKAR.items():
 say('\n## 10. Verses quoted inside Hisn al-Muslim {…}: located and checked against the imlaei text')
 def iskel(t):
     t = skel(t)
-    return t.replace('ا', '').replace('و', '').replace('ي', '')
+    return re.sub(r'[^\u0621-\u064a]', '', t).replace('ا', '').replace('و', '').replace('ي', '')
 full, index = '', []
 for s_ in range(1, 115):
     for a_ in range(1, len(REF[s_]) + 1):
