@@ -16,6 +16,10 @@ on:
         description: "قدّم للمراجعة؟"
         type: boolean
         default: false
+      cancel_review:
+        description: "اسحب النسخة اللي في المراجعة الأول وقدّم دي مكانها؟"
+        type: boolean
+        default: false
 
 jobs:
   prepare:
@@ -30,6 +34,7 @@ jobs:
           VERSION: ${{ inputs.version }}
           BUILD: ${{ inputs.build }}
           SUBMIT: ${{ inputs.submit }}
+          CANCEL_REVIEW: ${{ inputs.cancel_review }}
         run: |
           for v in KEY_ID ISSUER_ID PRIVATE_KEY; do
             if [ -z "${!v}" ]; then echo "::error::Missing secret for $v"; exit 1; fi

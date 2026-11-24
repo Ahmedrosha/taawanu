@@ -57,11 +57,32 @@ def read(path):
 version = os.environ['VERSION'].strip()
 build_no = os.environ.get('BUILD', '').strip()
 submit = os.environ.get('SUBMIT', 'false').strip().lower() == 'true'
+cancel_review = os.environ.get('CANCEL_REVIEW', 'false').strip().lower() == 'true'
 
 app = call('GET', '/v1/apps?' + urllib.parse.urlencode({'filter[bundleId]': BUNDLE}))['data']
 if not app:
     print('::error::App not found for the bundle id'); sys.exit(1)
 app_id = app[0]['id']
+
+# ٠) اختياري: نسحب النسخة اللي في المراجعة، فتبقى قابلة للتعديل ونقدّم مكانها.
+if cancel_review:
+    pending = []
+    for st in ('WAITING_FOR_REVIEW', 'IN_REVIEW', 'UNRESOLVED_ISSUES'):
+        pending += call('GET', f'/v1/apps/{app_id}/reviewSubmissions?filter[platform]=IOS&filter[state]={st}')['data']
+    for s in pending:
+        call('PATCH', f"/v1/reviewSubmissions/{s['id']}", {'data': {
+            'type': 'reviewSubmissions', 'id': s['id'], 'attributes': {'canceled': True}}})
+        print(f"canceled review submission ({s['attributes'].get('state')})")
+    if pending:
+        import time
+        for _ in range(30):
+            states = [v['attributes'].get('appStoreState') for v in
+                      call('GET', f'/v1/apps/{app_id}/appStoreVersions?filter[platform]=IOS&limit=20')['data']]
+            if not any(s in ('WAITING_FOR_REVIEW', 'IN_REVIEW') for s in states):
+                break
+            time.sleep(10)
+    else:
+        print('nothing in review to cancel')
 
 # ١) النسخة: موجودة بالرقم ده، أو نسخة لسه قابلة للتعديل، أو نعمل واحدة جديدة.
 EDITABLE = {'PREPARE_FOR_SUBMISSION', 'DEVELOPER_REJECTED', 'REJECTED', 'METADATA_REJECTED', 'INVALID_BINARY'}
