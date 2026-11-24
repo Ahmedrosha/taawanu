@@ -184,8 +184,12 @@ say('  done')
 
 # ٥) السجدات
 say('\n## 5. Sajdah positions (۩)')
-ref_sj = sorted(tuple(map(int, v['verse_key'].split(':'))) for s in REF for v in REF[s] if v.get('sajdah_number'))
-say(f'  reference sajdahs ({len(ref_sj)}): {ref_sj}')
+qc_sj = sorted(tuple(map(int, v['verse_key'].split(':'))) for s in REF for v in REF[s] if v.get('sajdah_number'))
+# المرجع: علامات ۩ في نص مجمع الملك فهد نفسه (quran.com metadata ناقصها الحج ٧٧)
+ref_sj = sorted((s, a) for s in REF for a in range(1, len(REF[s]) + 1) if '۩' in ref(s, a)['text_qpc_hafs'])
+say(f'  KFGQPC text sajdahs ({len(ref_sj)}): {ref_sj}')
+if qc_sj != ref_sj:
+    say(f'  note: quran.com sajdah metadata lists {len(qc_sj)}: missing {sorted(set(ref_sj) - set(qc_sj))}')
 for name, get_t in (('madinah.json', lambda s, a: M['surahs'][s - 1][a - 1]),
                     ('quran.json', lambda s, a: Q['surahs'][s - 1][a - 1]),
                     ('tajweed.json', lambda s, a: T['surahs'][s - 1][a - 1][0])):
