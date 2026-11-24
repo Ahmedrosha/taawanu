@@ -219,6 +219,9 @@ for pi, page in enumerate(P['pages'], 1):
 gb = 0
 for key, rg in ref_glyphs.items():
     ag = app_glyphs.get(key, [])
+    if key == (84, 21):
+        # quran.com نفسه حاطط علامة الآية على سطر ١٣ (بعد قرئ)؛ المطبوع بعد يسجدون على سطر ١٤ — اتصلحت عندنا.
+        rg = [x for x in rg if x[3] != 'end'] + [(589, 14, 'ﳁ', 'end')]
     if [(x[0], x[1], x[2]) for x in rg] != ag:
         gb += 1
         if gb <= 15:
