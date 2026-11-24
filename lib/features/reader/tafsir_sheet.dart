@@ -104,7 +104,7 @@ class _TafsirBodyState extends State<_TafsirBody> {
       builder: (context, qSnap) {
         final q = qSnap.data;
         if (q == null) return const Center(child: CircularProgressIndicator());
-        final name = q.surahName(_surah, ar ? 'ar' : 'en').replaceFirst(RegExp(r'^سُوْرَةُ\s*'), '');
+        final name = q.surahName(_surah, ar ? 'ar' : 'en').replaceFirst(RegExp(r'^(سُوْرَةُ|سورة)\s*'), '');
         return ListView(
           controller: widget.scroll,
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),

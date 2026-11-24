@@ -181,6 +181,6 @@ String rangeLabel(AppLocalizations t, int from, int to) {
 String rangeAyahs(AppLocalizations t, QuranData q, String locale, int from, int to) {
   final (s1, a1) = q.quarterStart(from);
   final (s2, a2) = q.quarterEnd(to);
-  String clean(String name) => name.replaceFirst(RegExp(r'^سُوْرَةُ\s*'), '');
+  String clean(String name) => name.replaceFirst(RegExp(r'^(سُوْرَةُ|سورة)\s*'), '');
   return t.fromTo('${clean(q.surahName(s1, locale))} $a1', '${clean(q.surahName(s2, locale))} $a2');
 }

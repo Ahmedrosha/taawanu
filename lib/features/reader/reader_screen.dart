@@ -528,7 +528,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   String _ayahTitle(int s, int a) {
     final q = _pages ? _pageQuran : _textQuran;
-    final name = q?.surahName(s, 'ar').replaceFirst(RegExp(r'^سُوْرَةُ\s*'), '') ?? '';
+    final name = q?.surahName(s, 'ar').replaceFirst(RegExp(r'^(سُوْرَةُ|سورة)\s*'), '') ?? '';
     return '$name $a';
   }
 

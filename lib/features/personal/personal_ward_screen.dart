@@ -533,7 +533,7 @@ class _KhatmaTile extends StatelessWidget {
     final next = ward.khatmaNext(item);
     final eta = ward.khatmaEta(item);
     final q = quran;
-    String where(int surah, int ayah) => '${q == null ? surah : (en ? q.surahNamesEn[surah - 1] : q.surahNamesAr[surah - 1].replaceFirst(RegExp(r'^سُوْرَةُ\s*'), ''))} $ayah';
+    String where(int surah, int ayah) => '${q == null ? surah : (en ? q.surahNamesEn[surah - 1] : q.surahNamesAr[surah - 1].replaceFirst(RegExp(r'^(سُوْرَةُ|سورة)\s*'), ''))} $ayah';
     String? span;
     if (today != null && q != null) {
       final (s1, a1) = q.quarterStart(today.$1);

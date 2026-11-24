@@ -149,7 +149,7 @@ class _PageBody extends StatelessWidget {
     final juz = (quran.quarterOf(s0, a0) - 1) ~/ 8 + 1;
     final surahNames = layout
         .surahsOn(page)
-        .map((s) => ar ? quran.surahNamesAr[s - 1].replaceFirst(RegExp(r'^سُوْرَةُ\s*'), '') : quran.surahNamesEn[s - 1])
+        .map((s) => ar ? quran.surahNamesAr[s - 1].replaceFirst(RegExp(r'^(سُوْرَةُ|سورة)\s*'), '') : quran.surahNamesEn[s - 1])
         .join(ar ? '، ' : ', ');
     final labelStyle = TextStyle(fontSize: 12, color: AppColors.paperLabel, fontWeight: FontWeight.w600);
 

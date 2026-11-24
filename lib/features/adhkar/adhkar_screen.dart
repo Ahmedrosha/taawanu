@@ -7,6 +7,7 @@ import '../../services/personal_ward.dart';
 import '../../services/prefs.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/quran_style.dart';
 import '../../widgets/tour.dart';
 import '../../widgets/tour_texts.dart';
 import '../../widgets/ui.dart';
@@ -215,7 +216,8 @@ class DhikrListScreen extends StatefulWidget {
 class _DhikrListScreenState extends State<DhikrListScreen> {
   late final String _today = _dayKey();
   late final Map<String, int> _counts = Prefs.instance.adhkarCounts(_today);
-  late final Future<QuranData> _quran = QuranRepository.instance.load();
+  // آيات الرقية بنص مصحف المدينة وخطه (رقم الآية جزء من النص).
+  late final Future<QuranData> _quran = QuranRepository.instance.loadMadinah();
 
   void _tap(Dhikr d) {
     final c = _counts[d.id] ?? 0;
@@ -337,7 +339,7 @@ class _DhikrCard extends StatelessWidget {
                 textDirection: TextDirection.rtl,
                 textAlign: TextAlign.justify,
                 style: isQuran
-                    ? GoogleFonts.getFont('Amiri Quran', fontSize: 20, height: 2.0, color: AppColors.text)
+                    ? quranTextStyle(madinahFont, fontSize: 21, color: AppColors.text).copyWith(height: 2.0)
                     : GoogleFonts.amiri(fontSize: 19, height: 1.9, color: AppColors.text),
               ),
               const SizedBox(height: 10),
