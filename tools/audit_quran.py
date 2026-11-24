@@ -292,7 +292,7 @@ try:
         TREF = dict(zip(range(1, 115), ex.map(fetch_tafsir, range(1, 115))))
     def tnorm(t):
         t = re.sub(r'<[^>]+>', '', t)
-        return skel(t)
+        return re.sub(r'[^\u0621-\u064a]', '', skel(t))
     same = differ = 0
     for s in range(1, 115):
         for a in range(1, len(REF[s]) + 1):
@@ -304,8 +304,8 @@ try:
                 same += 1
             else:
                 differ += 1
-                if differ <= 15:
-                    bad('tafsir', f'{s}:{a} {diff_words(tnorm(mine), tnorm(theirs))}')
+                if differ <= 8:
+                    bad('tafsir', f'{s}:{a}\n      app: {mine[:300]}\n      ref: {re.sub(r"<[^>]+>", "", theirs)[:300]}')
     say(f'  same {same}, different {differ}')
 except Exception as e:
     say(f'  (tafsir reference not reachable: {e})')
