@@ -317,4 +317,8 @@ class Prefs {
   /// سرعة الاستماع (١ = عادي).
   double get recitationSpeed => _p.getDouble('recitationSpeed') ?? 1.0;
   Future<void> setRecitationSpeed(double v) => _p.setDouble('recitationSpeed', v);
+
+  /// تقدم الورد الجماعي اللي اتسجل من غير نت ولسه ما اتبعتش (JSON).
+  String get pendingProgress => _p.getString('pendingProgress') ?? '{}';
+  Future<void> setPendingProgress(String v) => _p.setString('pendingProgress', v);
 }

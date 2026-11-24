@@ -24,6 +24,9 @@ Future<void> setAppLocale(Locale locale) async {
 /// المظهر: تلقائي (زي الموبايل) أو فاتح أو غامق. محفوظ على الجهاز.
 final themeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.system);
 
+/// للرسايل اللي بتظهر من برا الشاشات (زي إرسال قراءة اتسجلت من غير نت).
+final rootMessenger = GlobalKey<ScaffoldMessengerState>();
+
 Future<void> setAppThemeMode(ThemeMode mode) async {
   themeModeNotifier.value = mode;
   await Prefs.instance.setThemeMode(mode.name);
@@ -76,6 +79,7 @@ class TaawanuApp extends StatelessWidget {
             GlobalCupertinoLocalizations.delegate,
           ],
           routerConfig: appRouter,
+          scaffoldMessengerKey: rootMessenger,
         );
       },
     );

@@ -201,6 +201,17 @@ class Assignment {
   bool get isDone => status == 'done';
   double get progress => quarterCount == 0 ? 0 : quartersRead / quarterCount;
 
+  /// نفس الورد بقراءة اتسجلت على الموبايل ولسه ما اتبعتتش (من غير نت).
+  Assignment withRead(int q) => Assignment(
+        fromQuarter: fromQuarter,
+        toQuarter: toQuarter,
+        quarterCount: quarterCount,
+        quartersRead: q,
+        status: q >= quarterCount ? 'done' : (q > 0 ? 'in_progress' : 'pending'),
+        closed: closed,
+        recordedBy: recordedBy,
+      );
+
   factory Assignment.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
     return Assignment(
@@ -245,6 +256,21 @@ class Portion {
 
   bool get isOpen => status == 'open';
   bool get isDone => status == 'done';
+
+  /// نفس الورد بقراءة اتسجلت على الموبايل ولسه ما اتبعتتش (من غير نت).
+  Portion withRead(int q) => Portion(
+        id: id,
+        cycle: cycle,
+        fromQuarter: fromQuarter,
+        toQuarter: toQuarter,
+        quarterCount: quarterCount,
+        assignee: assignee,
+        status: q >= quarterCount ? 'done' : status,
+        origin: origin,
+        quartersRead: q,
+        recordedBy: recordedBy,
+        doneCycle: doneCycle,
+      );
   double get progress => quarterCount == 0 ? 0 : (isDone ? 1 : quartersRead / quarterCount);
 
   factory Portion.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {

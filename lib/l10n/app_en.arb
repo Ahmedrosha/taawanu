@@ -1356,5 +1356,16 @@
   "reciterTeaching": "Teaching (with children repeating)",
   "reciterLowQuality": "Lower audio quality",
   "groupGone": "This group no longer exists, or you're no longer a member.",
-  "backToGroups": "Back to groups"
+  "backToGroups": "Back to groups",
+  "offlineSaved": "Saved on your phone. It will be sent automatically when you're back online.",
+  "offlineSynced": "What you read offline was sent ✓",
+  "offlineSyncedPoints": "What you read offline was sent ✓ +{n} points.",
+  "@offlineSyncedPoints": {"placeholders": {"n": {"type": "int"}}},
+  "offlineSyncedLate": "What you read offline was sent and counted toward your late portion, since the cycle had ended.",
+  "offlineTaken": "What you read offline arrived after the cycle ended, and someone else had taken the rest of your portion.",
+  "offlineFailed": "We couldn't record what you read offline. Open your portion and record it again.",
+  "prepareOffline": "Prepare for offline reading",
+  "prepareOfflineBody": "Downloads the Madinah font pages (if selected) and the recitation of your upcoming portions with your reciter.",
+  "prepareOfflineDone": "Ready for offline reading ✓",
+  "prepareOfflineNothing": "No group portions right now, and the mushaf pages are ready."
 }

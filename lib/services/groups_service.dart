@@ -1,9 +1,15 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/widgets.dart';
 
 import '../models/group_models.dart';
 import '../models/group_options.dart';
+import 'prefs.dart';
 
 /// مجموعة في قايمة "مجموعاتي".
 class MyGroup {
@@ -39,8 +45,11 @@ class MyGroup {
   }
 }
 
+/// نتيجة مزامنة قراءة اتسجلت من غير نت.
+enum SyncNotice { synced, late, taken, failed }
+
 /// كل التعامل مع المجموعات: القراءة من Firestore، والتعديل عن طريق السيرفر.
-class GroupsService {
+class GroupsService with WidgetsBindingObserver {
   GroupsService._();
   static final GroupsService instance = GroupsService._();
 
@@ -95,21 +104,35 @@ class GroupsService {
   Stream<Assignment?> myAssignment(String groupId, int cycle) {
     final id = uid;
     if (id == null || cycle < 1) return Stream.value(null);
-    return _group(groupId)
+    final src = _group(groupId)
         .collection('cycles')
         .doc('$cycle')
         .collection('assignments')
         .doc(id)
         .snapshots()
         .map((d) => d.exists ? Assignment.fromDoc(d) : null);
+    // اللي اتسجل من غير نت بيبان على طول، لحد ما يتبعت.
+    return _overlay(src, (a) {
+      final q = pendingRead(groupId, cycle: cycle);
+      return a == null || q == null ? a : a.withRead(q);
+    });
   }
 
   /// الأوراد الإضافية اللي لسه مخلصتش (متاحة أو متحددة لحد).
-  Stream<List<Portion>> activePortions(String groupId) => _group(groupId)
-      .collection('portions')
-      .where('status', whereIn: ['open', 'assigned'])
-      .snapshots()
-      .map((s) => s.docs.map(Portion.fromDoc).toList()..sort((a, b) => a.fromQuarter.compareTo(b.fromQuarter)));
+  Stream<List<Portion>> activePortions(String groupId) => _overlay(
+        _group(groupId)
+            .collection('portions')
+            .where('status', whereIn: ['open', 'assigned'])
+            .snapshots()
+            .map((s) => s.docs.map(Portion.fromDoc).toList()..sort((a, b) => a.fromQuarter.compareTo(b.fromQuarter))),
+        (list) => [
+          for (final p in list)
+            if (p.assignee != null && p.assignee == uid && pendingRead(groupId, portionId: p.id) != null)
+              p.withRead(pendingRead(groupId, portionId: p.id)!)
+            else
+              p,
+        ],
+      );
 
   /// الأوراد الإضافية اللي خلصت في الدورة دي (بتفضل ظاهرة لحد آخرها).
   Stream<List<Portion>> donePortions(String groupId, int cycle) => _group(groupId)
@@ -215,10 +238,8 @@ class GroupsService {
       _call('recordProgress', {'groupId': groupId, 'portionId': portionId, 'quartersRead': quartersRead});
 
   /// تقدم ورد إضافي ربع ربع. بيرجّع النقاط (بالسالب لو تراجع عن ورد كان خلص).
-  Future<int> updatePortionProgress(String groupId, String portionId, int quartersRead) async {
-    final data = await _call('updatePortionProgress', {'groupId': groupId, 'portionId': portionId, 'quartersRead': quartersRead});
-    return (data['points'] as num?)?.toInt() ?? 0;
-  }
+  Future<int> updatePortionProgress(String groupId, String portionId, int quartersRead) =>
+      _progress(groupId, portionId, quartersRead);
 
   /// تغيير جزء عضو، وبيتطبّق على طول. لو الجزء مع حد، أو حد فيهم كان قرا،
   /// السيرفر بيرجّع تفاصيل عشان نسأل الأدمن، وبعدها بنبعت [confirm].
@@ -254,10 +275,183 @@ class GroupsService {
 
   // ---------- القراءة والتقدم ----------
 
-  /// بيرجّع النقاط اللي اتكسبت (لو الورد خلص).
-  Future<int> updateProgress(String groupId, int quartersRead) async {
-    final data = await _call('updateProgress', {'groupId': groupId, 'quartersRead': quartersRead});
-    return (data['points'] as num?)?.toInt() ?? 0;
+  /// بيرجّع النقاط اللي اتكسبت (لو الورد خلص)، أو [savedOffline] لو اتسجل على الموبايل من غير نت.
+  Future<int> updateProgress(String groupId, int quartersRead) => _progress(groupId, null, quartersRead);
+
+  // ---------- القراءة من غير نت ----------
+
+  /// القراءة اتسجلت على الموبايل وهتتبعت لما النت يرجع.
+  static const savedOffline = -1 << 30;
+
+  /// بيتغير مع كل تسجيل أو إرسال، عشان الشاشات تعرض القراءة اللي مستنية.
+  final pendingChanges = ValueNotifier<int>(0);
+
+  /// بيتنادي بعد ما قراءة من غير نت توصل للسيرفر (للرسالة اللي بتظهر للمستخدم).
+  void Function(SyncNotice notice, int points)? onSyncNotice;
+
+  Timer? _syncTimer;
+  bool _flushing = false;
+
+  Map<String, Map<String, dynamic>> _pending() {
+    try {
+      final m = jsonDecode(Prefs.instance.pendingProgress) as Map<String, dynamic>;
+      return {for (final e in m.entries) e.key: Map<String, dynamic>.from(e.value as Map)};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> _savePending(Map<String, Map<String, dynamic>> m) async {
+    await Prefs.instance.setPendingProgress(jsonEncode(m));
+    pendingChanges.value++;
+  }
+
+  String _key(String groupId, {int? cycle, String? portionId}) => '$uid|$groupId|${portionId == null ? 'a$cycle' : 'p$portionId'}';
+
+  /// القراءة اللي مستنية لورد معين (لو فيه).
+  int? pendingRead(String groupId, {int? cycle, String? portionId}) =>
+      (_pending()[_key(groupId, cycle: cycle, portionId: portionId)]?['q'] as num?)?.toInt();
+
+  bool get hasPending => _pending().keys.any((k) => k.startsWith('$uid|'));
+
+  /// بيبدأ يبعت القراءات اللي مستنية: كل دقيقة، ولما التطبيق يرجع قدام المستخدم.
+  void startSync() {
+    WidgetsBinding.instance.addObserver(this);
+    _syncTimer ??= Timer.periodic(const Duration(minutes: 1), (_) {
+      if (hasPending) flushPending();
+    });
+    flushPending();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) flushPending();
+  }
+
+  Future<bool> _online() async {
+    try {
+      final r = await InternetAddress.lookup('firestore.googleapis.com').timeout(const Duration(seconds: 4));
+      return r.isNotEmpty && r.first.rawAddress.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool _isNetwork(Object e) {
+    if (e is SocketException || e is TimeoutException) return true;
+    if (e is FirebaseFunctionsException) {
+      if (e.code == 'unavailable' || e.code == 'deadline-exceeded') return true;
+      final m = '${e.message}'.toLowerCase();
+      return e.code == 'internal' && (m.contains('network') || m.contains('offline') || m.contains('connection'));
+    }
+    return false;
+  }
+
+  /// الدورة الحالية من النسخة اللي على الموبايل (من غير نت).
+  Future<int?> _cachedCycle(String groupId) async {
+    try {
+      final g = await _group(groupId).get(const GetOptions(source: Source.cache));
+      return (g.data()?['currentCycle'] as num?)?.toInt();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<int> _progress(String groupId, String? portionId, int q) async {
+    final cycle = portionId == null ? await _cachedCycle(groupId) : null;
+    final key = _key(groupId, cycle: cycle, portionId: portionId);
+    Future<int> queue() async {
+      final m = _pending();
+      m[key] = {
+        'g': groupId,
+        if (portionId != null) 'p': portionId,
+        if (cycle != null) 'c': cycle,
+        'q': q,
+        // وقت القراءة: السيرفر بيحسب الميعاد عليه (لو في آخر ٤٨ ساعة).
+        'at': DateTime.now().millisecondsSinceEpoch,
+      };
+      await _savePending(m);
+      return savedOffline;
+    }
+
+    if (!await _online()) return queue();
+    try {
+      final data = portionId == null
+          ? await _call('updateProgress', {'groupId': groupId, 'quartersRead': q})
+          : await _call('updatePortionProgress', {'groupId': groupId, 'portionId': portionId, 'quartersRead': q});
+      final m = _pending();
+      if (m.remove(key) != null) await _savePending(m);
+      return (data['points'] as num?)?.toInt() ?? 0;
+    } catch (e) {
+      if (_isNetwork(e)) return queue();
+      rethrow;
+    }
+  }
+
+  /// بيبعت القراءات اللي اتسجلت من غير نت، بالترتيب.
+  Future<void> flushPending() async {
+    if (_flushing || uid == null || !hasPending) return;
+    _flushing = true;
+    try {
+      if (!await _online()) return;
+      final mine = _pending().entries.where((e) => e.key.startsWith('$uid|')).toList()
+        ..sort((a, b) => ((a.value['at'] as num?) ?? 0).compareTo((b.value['at'] as num?) ?? 0));
+      for (final e in mine) {
+        final d = e.value;
+        try {
+          final res = d['p'] == null
+              ? await _call('updateProgress', {
+                  'groupId': d['g'], 'quartersRead': d['q'], 'readAt': d['at'], 'cycle': d['c'],
+                })
+              : await _call('updatePortionProgress', {
+                  'groupId': d['g'], 'portionId': d['p'], 'quartersRead': d['q'], 'readAt': d['at'],
+                });
+          final m = _pending()..remove(e.key);
+          await _savePending(m);
+          final points = (res['points'] as num?)?.toInt() ?? 0;
+          final synced = res['synced'] as String?;
+          onSyncNotice?.call(
+            synced == 'taken' ? SyncNotice.taken : (synced == 'carry' ? SyncNotice.late : SyncNotice.synced),
+            points,
+          );
+        } catch (err) {
+          if (_isNetwork(err)) break;
+          // السيرفر رفضها (الورد اتغير أو اتقفل): مش هنفضل نبعتها.
+          final m = _pending()..remove(e.key);
+          await _savePending(m);
+          onSyncNotice?.call(SyncNotice.failed, 0);
+        }
+      }
+    } finally {
+      _flushing = false;
+    }
+  }
+
+  /// بيضيف القراءة اللي مستنية على بيانات السيرفر، وبيعيد العرض لما حاجة تتسجل أو تتبعت.
+  Stream<T> _overlay<T>(Stream<T> src, T Function(T) apply) {
+    late StreamController<T> c;
+    StreamSubscription<T>? sub;
+    T? last;
+    var has = false;
+    void emit() {
+      if (has && !c.isClosed) c.add(apply(last as T));
+    }
+
+    c = StreamController<T>(
+      onListen: () {
+        sub = src.listen((v) {
+          last = v;
+          has = true;
+          emit();
+        }, onError: c.addError, onDone: c.close);
+        pendingChanges.addListener(emit);
+      },
+      onCancel: () async {
+        pendingChanges.removeListener(emit);
+        await sub?.cancel();
+      },
+    );
+    return c.stream;
   }
 
   /// رسالة جوه المجموعة: [to] = uid أو قايمة uids، أو 'late' لتذكير المتأخرين. بيرجع عدد اللي وصلهم.

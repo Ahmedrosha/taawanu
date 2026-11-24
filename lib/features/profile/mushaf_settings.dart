@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/gen/app_localizations.dart';
+import '../../services/groups_service.dart';
 import '../../services/mushaf_fonts.dart';
 import '../reader/mushaf_page.dart';
 import '../../services/prefs.dart';
 import '../../services/quran_repository.dart';
+import '../../services/recitation_player.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/highlight_colors.dart';
 import '../../widgets/quran_style.dart';
@@ -248,8 +250,91 @@ class _MushafSettingsState extends State<MushafSettings> {
             ),
             textDirection: TextDirection.rtl,
           ),
+          const SizedBox(height: 20),
+          const _PrepareOffline(),
         ],
       ),
+    );
+  }
+}
+
+/// "جهّز للقراءة من غير نت": صفحات خط المجمع (لو مختاره) وتلاوة الأوراد الجماعية الجاية.
+class _PrepareOffline extends StatefulWidget {
+  const _PrepareOffline();
+
+  @override
+  State<_PrepareOffline> createState() => _PrepareOfflineState();
+}
+
+class _PrepareOfflineState extends State<_PrepareOffline> {
+  bool _busy = false;
+
+  Future<void> _run() async {
+    final t = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    var ok = true;
+    try {
+      if (Prefs.instance.pageStyle != 'hafs') ok = await MushafFonts.instance.downloadAll() && ok;
+      final svc = GroupsService.instance;
+      final quarters = <int>{};
+      for (final g in await svc.myGroups().first) {
+        final grp = await svc.group(g.id).first;
+        if (grp == null || !grp.isActive) continue;
+        final a = await svc.myAssignment(g.id, grp.currentCycle).first;
+        if (a != null && !a.isDone && !a.closed) {
+          for (var q = a.fromQuarter + a.quartersRead; q <= a.toQuarter; q++) {
+            quarters.add(q);
+          }
+        }
+        for (final p in await svc.activePortions(g.id).first) {
+          if (p.assignee != svc.uid || p.isDone) continue;
+          for (var q = p.fromQuarter + p.quartersRead; q <= p.toQuarter; q++) {
+            quarters.add(q);
+          }
+        }
+      }
+      if (quarters.isNotEmpty) {
+        final quran = await QuranRepository.instance.load();
+        final ayahs = [
+          for (final q in quarters.toList()..sort())
+            for (final a in quran.ayahsOfQuarter(q)) (a.surah, a.number),
+        ];
+        ok = await RecitationPlayer.instance.download(ayahs) && ok;
+      }
+      messenger.showSnackBar(SnackBar(
+        content: Text(!ok ? t.downloadFailed : (quarters.isEmpty ? t.prepareOfflineNothing : t.prepareOfflineDone)),
+      ));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(t.downloadFailed)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        OutlinedButton.icon(
+          onPressed: _busy ? null : _run,
+          icon: _busy
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.download_for_offline_outlined),
+          label: Text(t.prepareOffline),
+        ),
+        const SizedBox(height: 4),
+        Text(t.prepareOfflineBody, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+        if (_busy)
+          ValueListenableBuilder<double?>(
+            valueListenable: RecitationPlayer.instance.downloadProgress,
+            builder: (context, p, _) => p == null
+                ? const SizedBox.shrink()
+                : Padding(padding: const EdgeInsets.only(top: 6), child: LinearProgressIndicator(value: p)),
+          ),
+      ],
     );
   }
 }

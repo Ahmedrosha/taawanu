@@ -1650,7 +1650,10 @@ class _FinishAllButtonState extends State<FinishAllButton> {
     });
     if (!mounted) return;
     setState(() => _busy = false);
-    if (ok) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.earnedPoints(points))));
+    if (ok) {
+      final offline = points == GroupsService.savedOffline;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(offline ? t.offlineSaved : t.earnedPoints(points))));
+    }
   }
 
   @override

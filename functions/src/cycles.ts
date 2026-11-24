@@ -380,7 +380,9 @@ type AssignmentOutcome =
   | { kind: 'doneSelf'; points: number; bonus: number; first: boolean; personal: boolean }
   | { kind: 'undone'; refund: number; personal: boolean; selfCounted: boolean };
 
-export async function applyAssignmentProgress(groupId: string, target: string, quartersRead: number, actor: Actor) {
+export async function applyAssignmentProgress(
+  groupId: string, target: string, quartersRead: number, actor: Actor, opts: { readAt?: Date } = {},
+) {
   const g = groupData(await groupRef(groupId).get());
   if (g.status !== 'active') throw new HttpsError('failed-precondition', 'Khatma not started.');
   const member = await requireMember(groupId, target);
@@ -413,13 +415,15 @@ export async function applyAssignmentProgress(groupId: string, target: string, q
         tx.update(cRef, { segments, remainingQuarters: FieldValue.increment(-a.quarterCount) });
         return { kind: 'doneByManager' };
       }
-      const now = new Date();
+      // قراءة من غير نت: الوقت اللي قرا فيه فعلًا (متأكدين منه في readOfflineTime).
+      const now = opts.readAt ?? new Date();
       const points = regularPoints(a.quarterCount, now <= c.endsAt.toDate(), now <= c.midAt.toDate());
+      const completedAt = opts.readAt ? Timestamp.fromDate(opts.readAt) : FieldValue.serverTimestamp();
       const personal = ((member.readCount ?? 0) + 1) % g.slots === 0;
       const bonus = personal ? PERSONAL_KHATMA_BONUS : 0;
       const first = !c.firstFinisher;
       tx.update(aRef, {
-        quartersRead, status, recordedBy: null, completedAt: FieldValue.serverTimestamp(),
+        quartersRead, status, recordedBy: null, completedAt,
         pointsAwarded: points + bonus, personalAwarded: personal,
       });
       tx.update(cRef, {
@@ -572,13 +576,104 @@ function readQuarters(raw: unknown): number {
   return raw;
 }
 
+/** أقصى مدة بين القراءة من غير نت ووصولها للسيرفر. */
+const OFFLINE_MAX_MS = 48 * 3600 * 1000;
+
+/** وقت القراءة اللي الموبايل بعته (من غير نت): بنقبله بس لو في آخر ٤٨ ساعة ومش في المستقبل. */
+function readOfflineTime(raw: unknown): Date | undefined {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return undefined;
+  const now = Date.now();
+  if (raw > now + 2 * 60 * 1000 || raw < now - OFFLINE_MAX_MS) return undefined;
+  return new Date(Math.min(raw, now));
+}
+
 /** العضو بيسجّل (أو بيتراجع عن) ورده في الدورة الحالية. */
 export const updateProgress = onCall(async (request) => {
   const uid = requireUid(request);
   const groupId = requireString(request.data?.groupId, 'groupId');
   const quartersRead = readQuarters(request.data?.quartersRead);
-  return await applyAssignmentProgress(groupId, uid, quartersRead, { uid, manager: false });
+  const readAt = readOfflineTime(request.data?.readAt);
+  const cycle = request.data?.cycle;
+  // اتسجّل من غير نت والدورة قفلت قبل ما يوصل.
+  if (readAt && typeof cycle === 'number') {
+    const g = groupData(await groupRef(groupId).get());
+    if (cycle < g.currentCycle) return await applyClosedCycleProgress(groupId, uid, cycle, quartersRead, readAt);
+  }
+  return await applyAssignmentProgress(groupId, uid, quartersRead, { uid, manager: false }, { readAt });
 });
+
+/**
+ * قراءة من غير نت وصلت بعد ما الدورة قفلت.
+ * لو كان خلّص قبل نهاية الدورة وباقي ورده لسه محدش بدأ فيه: بنرجّعه "خلص في الميعاد" وبنلغي الأوراد المتأخرة.
+ * غير كده: اللي قراه بيتحسب على وردُه المتأخر لو لسه معاه، أو بنقوله إن حد تاني خده.
+ */
+async function applyClosedCycleProgress(groupId: string, uid: string, n: number, quartersRead: number, readAt: Date) {
+  const member = await requireMember(groupId, uid);
+  const g = groupData(await groupRef(groupId).get());
+  const aRef = assignmentRef(groupId, n, uid);
+  const cRef = cycleRef(groupId, n);
+  const restQuery = portionsCol(groupId).where('cycle', '==', n).where('originalUid', '==', uid);
+
+  const out = await db.runTransaction(async (tx: Transaction) => {
+    const [aSnap, cSnap, rest] = await Promise.all([tx.get(aRef), tx.get(cRef), tx.get(restQuery)]);
+    if (!aSnap.exists || !cSnap.exists) return { status: 'gone' as const };
+    const a = aSnap.data() as AssignmentDoc & Awarded;
+    const c = cSnap.data() as CycleDoc;
+    if (a.status === 'done') return { status: 'already' as const };
+    const finished = quartersRead >= a.quarterCount;
+    const untouched = rest.docs.every((d) => {
+      const p = d.data() as PortionState;
+      return p.status !== 'done' && !(p.quartersRead ?? 0);
+    });
+    if (!finished || readAt > c.endsAt.toDate() || !untouched) {
+      return { status: 'late' as const, rest: rest.docs.map((d) => ({ id: d.id, ...(d.data() as PortionState) })) };
+    }
+    const points = regularPoints(a.quarterCount, true, readAt <= c.midAt.toDate());
+    const personal = ((member.readCount ?? 0) + 1) % g.slots === 0;
+    const bonus = personal ? PERSONAL_KHATMA_BONUS : 0;
+    rest.docs.forEach((d) => tx.delete(d.ref));
+    tx.update(aRef, {
+      quartersRead: a.quarterCount, status: 'done', recordedBy: null, completedAt: Timestamp.fromDate(readAt),
+      pointsAwarded: points + bonus, personalAwarded: personal, lateSynced: true,
+    });
+    tx.update(cRef, {
+      segments: c.segments.map((s) => (s.seg === a.segment ? { ...s, status: 'done', read: a.quarterCount } : s)),
+      remainingQuarters: FieldValue.increment(-(a.quarterCount - a.quartersRead)),
+    });
+    return { status: 'onTime' as const, total: points + bonus, personal };
+  });
+
+  if (out.status === 'onTime') {
+    await memberRef(groupId, uid).update({ points: FieldValue.increment(out.total), readCount: FieldValue.increment(1) });
+    const u = (await db.collection('users').doc(uid).get()).data() ?? {};
+    // الدورة اتقفلت عليه متأخر وصفّرت السلسلة؛ بنحسبها له في الميعاد.
+    const streak = (Number(u.streak) || 0) + 1;
+    await db.collection('users').doc(uid).set({
+      points: FieldValue.increment(out.total),
+      quartersRead: FieldValue.increment(g.wardQuarters),
+      onTimeCycles: FieldValue.increment(1),
+      streak,
+      longestStreak: Math.max(streak, Number(u.longestStreak) || 0),
+      ...(out.personal ? { khatmasPersonal: FieldValue.increment(1), badges: FieldValue.arrayUnion(BADGES.personalKhatma) } : {}),
+    }, { merge: true });
+    await maybeCompleteKhatma(groupId, n);
+    return { done: true, points: out.total, synced: 'onTime' };
+  }
+  if (out.status === 'late') {
+    // اللي قراه بعد ما الدورة قفلت: بيتحسب على باقي ورده لو لسه معاه (ترحيل).
+    const own = out.rest.find((p) => p.assignee === uid && p.status !== 'done');
+    const a = (await aRef.get()).data() as AssignmentDoc | undefined;
+    if (own && a) {
+      const extra = Math.min(own.quarterCount, Math.max(0, quartersRead - a.quartersRead - (own.fromQuarter - (a.fromQuarter + a.quartersRead))));
+      if (extra > (own.quartersRead ?? 0)) {
+        const r = await applyPortionProgress(groupId, own.id, extra, { uid, manager: false });
+        return { done: r.done, points: r.points, synced: 'carry' };
+      }
+    }
+    return { done: false, points: 0, synced: 'taken' };
+  }
+  return { done: false, points: 0, synced: out.status };
+}
 
 /** العضو بيسجّل (أو بيتراجع عن) تقدمه في ورد إضافي ربع ربع. */
 export const updatePortionProgress = onCall(async (request) => {

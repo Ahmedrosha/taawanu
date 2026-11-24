@@ -48,6 +48,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   late int _read = widget.request.quartersRead;
   late double _fontSize = Prefs.instance.readerFontSize;
   bool _busy = false;
+
+  /// آخر تسجيل اتحفظ على الموبايل من غير نت (هيتبعت لما النت يرجع).
+  bool _offline = false;
   final _keys = <int, GlobalKey>{};
   bool _scrolled = false;
   final _scroll = ScrollController();
@@ -1118,10 +1121,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           : await svc.updateProgress(r.groupId, value);
     });
     if (!mounted) return null;
+    _offline = points == GroupsService.savedOffline;
+    if (_offline) points = 0;
     setState(() {
       _busy = false;
       if (ok) _read = value;
     });
+    // أول تسجيل من غير نت: نعرّفه إنه اتحفظ وهيتبعت بعدين.
+    if (ok && _offline && value < r.quarterCount) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).offlineSaved)));
+    }
     return ok ? points : null;
   }
 
@@ -1148,7 +1157,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       if (_auto.active) _auto.stop();
       await ReadPositions.instance.clear(docId: _posDoc, key: _posKey);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.earnedPoints(points))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_offline ? t.offlineSaved : t.earnedPoints(points))));
       context.pop();
     }
   }
@@ -1220,7 +1229,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (_auto.active) _auto.stop();
     await ReadPositions.instance.clear(docId: _posDoc, key: _posKey);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.earnedPoints(points))));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_offline ? t.offlineSaved : t.earnedPoints(points))));
     context.pop();
   }
 
@@ -1236,7 +1245,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (_audio.active) unawaited(_audio.stop());
     if (_auto.active) _auto.stop();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(points < 0 ? t.undoneWithPoints(-points) : t.undone),
+      content: Text(_offline ? t.offlineSaved : (points < 0 ? t.undoneWithPoints(-points) : t.undone)),
     ));
   }
 
