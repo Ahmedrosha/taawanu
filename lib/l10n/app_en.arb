@@ -1367,5 +1367,17 @@
   "prepareOffline": "Prepare for offline reading",
   "prepareOfflineBody": "Downloads the Madinah font pages (if selected) and the recitation of your upcoming portions with your reciter.",
   "prepareOfflineDone": "Ready for offline reading ✓",
-  "prepareOfflineNothing": "No group portions right now, and the mushaf pages are ready."
+  "prepareOfflineNothing": "No group portions right now, and the mushaf pages are ready.",
+  "offlineSection": "Offline reading",
+  "sizeMb": "{n} MB",
+  "@sizeMb": {"placeholders": {"n": {"type": "String"}}},
+  "downloadedAudio": "Downloaded recitations",
+  "downloadedTafsir": "Downloaded tafsirs",
+  "otherTafsirs": "As-Saadi and Ibn Kathir",
+  "nothingDownloaded": "Nothing downloaded.",
+  "delete": "Delete",
+  "deleteDownloads": "Delete downloads",
+  "deleteAudioConfirm": "Delete the downloaded recitations of {name}? You'll need internet to listen again.",
+  "@deleteAudioConfirm": {"placeholders": {"name": {"type": "String"}}},
+  "deleteTafsirConfirm": "Delete downloaded tafsirs? Al-Muyassar is built in and stays."
 }

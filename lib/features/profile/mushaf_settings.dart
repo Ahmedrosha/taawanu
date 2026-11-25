@@ -8,6 +8,8 @@ import '../reader/mushaf_page.dart';
 import '../../services/prefs.dart';
 import '../../services/quran_repository.dart';
 import '../../services/recitation_player.dart';
+import '../../services/tafsir_repository.dart';
+import '../reader/recitation_bar.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/highlight_colors.dart';
 import '../../widgets/quran_style.dart';
@@ -269,6 +271,46 @@ class _PrepareOffline extends StatefulWidget {
 
 class _PrepareOfflineState extends State<_PrepareOffline> {
   bool _busy = false;
+  Map<Reciter, int> _audio = const {};
+  int _tafsir = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final a = await RecitationPlayer.instance.downloadedSizes();
+    final tf = await TafsirRepository.instance.downloadedSize();
+    if (!mounted) return;
+    setState(() {
+      _audio = a;
+      _tafsir = tf;
+    });
+  }
+
+  String _mb(BuildContext context, int bytes) {
+    final t = AppLocalizations.of(context);
+    final mb = bytes / (1024 * 1024);
+    final v = mb < 10 ? mb.toStringAsFixed(1) : mb.round().toString();
+    return t.sizeMb(Localizations.localeOf(context).languageCode == 'ar' ? arDigits(v) : v);
+  }
+
+  Future<void> _deleteAudio(Reciter r) async {
+    final t = AppLocalizations.of(context);
+    final ar = Localizations.localeOf(context).languageCode == 'ar';
+    if (!await confirmDialog(context, title: t.deleteDownloads, body: t.deleteAudioConfirm(reciterName(t, r, ar)))) return;
+    await RecitationPlayer.instance.deleteDownloads(r);
+    await _refresh();
+  }
+
+  Future<void> _deleteTafsir() async {
+    final t = AppLocalizations.of(context);
+    if (!await confirmDialog(context, title: t.deleteDownloads, body: t.deleteTafsirConfirm)) return;
+    await TafsirRepository.instance.deleteDownloads();
+    await _refresh();
+  }
 
   Future<void> _run() async {
     final t = AppLocalizations.of(context);
@@ -310,15 +352,26 @@ class _PrepareOfflineState extends State<_PrepareOffline> {
       messenger.showSnackBar(SnackBar(content: Text(t.downloadFailed)));
     } finally {
       if (mounted) setState(() => _busy = false);
+      await _refresh();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final ar = Localizations.localeOf(context).languageCode == 'ar';
+    final muted = TextStyle(fontSize: 12, color: AppColors.textMuted);
+    Widget row(String label, String size, VoidCallback onDelete) => Row(children: [
+          Expanded(child: Text(label, style: const TextStyle(fontSize: 14))),
+          Text(size, style: muted),
+          TextButton(onPressed: _busy ? null : onDelete, child: Text(t.delete)),
+        ]);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const Divider(height: 24),
+        Text(t.offlineSection, style: const TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
         OutlinedButton.icon(
           onPressed: _busy ? null : _run,
           icon: _busy
@@ -327,7 +380,7 @@ class _PrepareOfflineState extends State<_PrepareOffline> {
           label: Text(t.prepareOffline),
         ),
         const SizedBox(height: 4),
-        Text(t.prepareOfflineBody, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+        Text(t.prepareOfflineBody, style: muted),
         if (_busy)
           ValueListenableBuilder<double?>(
             valueListenable: RecitationPlayer.instance.downloadProgress,
@@ -335,6 +388,17 @@ class _PrepareOfflineState extends State<_PrepareOffline> {
                 ? const SizedBox.shrink()
                 : Padding(padding: const EdgeInsets.only(top: 6), child: LinearProgressIndicator(value: p)),
           ),
+        const SizedBox(height: 14),
+        // الملفات اللي اتحمّلت: مساحتها ومسحها.
+        Text(t.downloadedAudio, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+        if (_audio.isEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(t.nothingDownloaded, style: muted)),
+        for (final e in _audio.entries) row(reciterName(t, e.key, ar), _mb(context, e.value), () => _deleteAudio(e.key)),
+        const SizedBox(height: 10),
+        Text(t.downloadedTafsir, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+        if (_tafsir == 0)
+          Padding(padding: const EdgeInsets.only(top: 4), child: Text(t.nothingDownloaded, style: muted))
+        else
+          row(t.otherTafsirs, _mb(context, _tafsir), _deleteTafsir),
       ],
     );
   }

@@ -143,6 +143,28 @@ class RecitationPlayer extends ChangeNotifier {
 
   String _file(int s, int a) => '${s.toString().padLeft(3, '0')}${a.toString().padLeft(3, '0')}.mp3';
 
+  /// مساحة التلاوات المتحمّلة لكل قارئ (بالبايت)، للقرّاء اللي ليهم ملفات بس.
+  Future<Map<Reciter, int>> downloadedSizes() async {
+    final out = <Reciter, int>{};
+    for (final r in reciters) {
+      final d = await _dir(r);
+      if (!await d.exists()) continue;
+      var n = 0;
+      await for (final f in d.list(recursive: true)) {
+        if (f is File) n += await f.length();
+      }
+      if (n > 0) out[r] = n;
+    }
+    return out;
+  }
+
+  /// مسح تلاوات قارئ (لو بيتسمع دلوقتي، بيقف الأول).
+  Future<void> deleteDownloads(Reciter r) async {
+    if (_active && reciter.id == r.id) await stop();
+    final d = await _dir(r);
+    if (await d.exists()) await d.delete(recursive: true);
+  }
+
   Future<Directory> _dir(Reciter r) async =>
       Directory('${(await getApplicationSupportDirectory()).path}/audio/${r.folder}');
 

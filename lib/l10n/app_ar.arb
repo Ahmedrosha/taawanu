@@ -820,5 +820,15 @@
   "prepareOffline": "جهّز للقراءة من غير نت",
   "prepareOfflineBody": "بيحمّل صفحات خط المجمع (لو مختاره) وتلاوة أورادك الجاية بالقارئ اللي مختاره.",
   "prepareOfflineDone": "جاهز للقراءة من غير نت ✓",
-  "prepareOfflineNothing": "مفيش أوراد جماعية دلوقتي، وصفحات المصحف جاهزة."
+  "prepareOfflineNothing": "مفيش أوراد جماعية دلوقتي، وصفحات المصحف جاهزة.",
+  "offlineSection": "القراءة من غير نت",
+  "sizeMb": "{n} ميجا",
+  "downloadedAudio": "التلاوات المتحمّلة",
+  "downloadedTafsir": "التفاسير المتحمّلة",
+  "otherTafsirs": "السعدي وابن كثير",
+  "nothingDownloaded": "مفيش حاجة متحمّلة.",
+  "delete": "مسح",
+  "deleteDownloads": "مسح الملفات المتحمّلة",
+  "deleteAudioConfirm": "تمسح تلاوات {name} المتحمّلة؟ هتحتاج نت عشان تسمعها تاني.",
+  "deleteTafsirConfirm": "تمسح التفاسير المتحمّلة؟ الميسّر جوه التطبيق ومش هيتمسح."
 }

@@ -108,6 +108,24 @@ class TafsirRepository {
     });
   }
 
+  /// مساحة التفاسير المتحمّلة (بالبايت).
+  Future<int> downloadedSize() async {
+    final dir = Directory('${(await getApplicationSupportDirectory()).path}/tafsir');
+    if (!await dir.exists()) return 0;
+    var n = 0;
+    await for (final f in dir.list(recursive: true)) {
+      if (f is File) n += await f.length();
+    }
+    return n;
+  }
+
+  /// مسح التفاسير المتحمّلة (الميسّر جوه التطبيق ومش بيتمسح).
+  Future<void> deleteDownloads() async {
+    final dir = Directory('${(await getApplicationSupportDirectory()).path}/tafsir');
+    if (await dir.exists()) await dir.delete(recursive: true);
+    _surahs.clear();
+  }
+
   Future<String> _download(String url) async {
     final client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
     try {
