@@ -624,7 +624,7 @@
   "@pagesDownloaded": {
     "placeholders": {
       "n": {
-        "type": "int"
+        "type": "String"
       }
     }
   },

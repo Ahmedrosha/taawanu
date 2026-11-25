@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/gen/app_localizations.dart';
 import '../../services/groups_service.dart';
+import '../groups/report_text.dart';
 import '../../services/mushaf_fonts.dart';
 import '../reader/mushaf_page.dart';
 import '../../services/prefs.dart';
@@ -408,7 +409,7 @@ class _QpcDownloadsState extends State<_QpcDownloads> {
             crossAxisAlignment: WrapCrossAlignment.center,
             spacing: 8,
             children: [
-              Text(t.pagesDownloaded(n), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+              Text(t.pagesDownloaded(Localizations.localeOf(context).languageCode == 'ar' ? arDigits('$n') : '$n'), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
               if (n < 604)
                 TextButton.icon(onPressed: _downloadAll, icon: const Icon(Icons.download, size: 18), label: Text(t.downloadAllPages)),
               if (n > 0)
