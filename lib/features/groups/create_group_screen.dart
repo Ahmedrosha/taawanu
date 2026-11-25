@@ -8,6 +8,7 @@ import '../../models/group_options.dart';
 import '../../services/groups_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/segment_picker.dart';
+import '../../widgets/digits.dart';
 
 class CreateGroupScreen extends StatefulWidget {
   const CreateGroupScreen({super.key});
@@ -216,7 +217,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               DropdownButtonFormField<int>(
                 initialValue: _startDayOfMonth,
                 items: [
-                  for (var d = 1; d <= 28; d++) DropdownMenuItem(value: d, child: Text('$d')),
+                  for (var d = 1; d <= 28; d++) DropdownMenuItem(value: d, child: Text(context.digits(d))),
                 ],
                 onChanged: (v) => setState(() => _startDayOfMonth = v ?? _startDayOfMonth),
               ),
@@ -276,7 +277,7 @@ class _Stepper extends StatelessWidget {
           ),
           SizedBox(
             width: 28,
-            child: Text('$value', textAlign: TextAlign.center, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            child: Text(context.digits(value), textAlign: TextAlign.center, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
           ),
           IconButton(
             tooltip: '+',

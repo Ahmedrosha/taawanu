@@ -6,6 +6,7 @@ import '../../services/groups_service.dart';
 import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/ui.dart';
+import '../../widgets/digits.dart';
 
 /// الأدمن أو المساعد بيسجّل ورد عضو في الدورة الحالية (من غير نقاط للعضو).
 Future<void> showRecordProgress(
@@ -119,7 +120,7 @@ class _RecordSheetState extends State<_RecordSheet> {
               min: 0,
               max: _count.toDouble(),
               divisions: _count,
-              label: '$_value',
+              label: context.digits(_value),
               onChanged: (v) => setState(() => _value = v.round()),
             ),
             const SizedBox(height: 8),

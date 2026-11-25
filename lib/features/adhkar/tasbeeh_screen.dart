@@ -6,6 +6,7 @@ import '../../services/prefs.dart';
 import '../../theme/app_colors.dart';
 import 'adhkar_data.dart';
 import 'adhkar_screen.dart';
+import '../../widgets/digits.dart';
 
 /// ذكر في السبحة: النص والعدد المطلوب في الدورة.
 class _Tasbeeh {
@@ -259,8 +260,8 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text('$shown', style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w700)),
-                                  Text('/ ${x.target}', style: TextStyle(fontSize: 16, color: AppColors.textMuted)),
+                                  Text(context.digits(shown), style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w700)),
+                                  Text('/ ${context.digits(x.target)}', style: TextStyle(fontSize: 16, color: AppColors.textMuted)),
                                 ],
                               ),
                             ),

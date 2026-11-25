@@ -24,6 +24,8 @@ jobs:
             echo "::notice title=$p::$p $v"
           done
       - run: flutter gen-l10n
+      - name: Arabic digits wrapper up to date
+        run: python3 tools/gen_ar_digits.py --check
       - name: Analyze
         run: |
           set +e

@@ -7,6 +7,7 @@ import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/ui.dart';
 import 'personal_ward_screen.dart' show personalItemTitle;
+import '../../widgets/digits.dart';
 
 /// يوم في التقرير: المطلوب واللي اتعمل.
 class _Day {
@@ -226,7 +227,7 @@ class _Stat extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         child: Column(
           children: [
-            Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: color ?? AppColors.text)),
+            Text(context.digits(value), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: color ?? AppColors.text)),
             const SizedBox(height: 2),
             Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
           ],

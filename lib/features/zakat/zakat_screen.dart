@@ -10,6 +10,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/ui.dart';
 import '../prayer/prayer_alerts.dart';
 import 'zakat_calc.dart';
+import '../../widgets/digits.dart';
 
 /// حاسبة الزكاة: فلوس، دهب وفضة، أسهم، تجارة، وتاريخ الحول. كل البيانات على الموبايل بس.
 class ZakatScreen extends StatefulWidget {
@@ -66,7 +67,7 @@ class _ZakatScreenState extends State<ZakatScreen> {
   double get _silver => _d.silverOverride ?? _prices?.silver[_d.currency] ?? 0;
 
   NumberFormat get _fmt => NumberFormat.decimalPatternDigits(locale: 'en', decimalDigits: 0);
-  String _money(double v) => '${_fmt.format(v)} ${_d.currency == 'EGP' ? AppLocalizations.of(context).egp : r'$'}';
+  String _money(double v) => '${context.digits(_fmt.format(v))} ${_d.currency == 'EGP' ? AppLocalizations.of(context).egp : r'$'}';
 
   TextEditingController _c(String key) => _controllers.putIfAbsent(key, () {
         final v = _d.values[key];
@@ -254,7 +255,7 @@ class _ZakatScreenState extends State<ZakatScreen> {
                   dense: true,
                   title: Text(t.zakatGoldPrice),
                   subtitle: _d.goldOverride != null ? Text(t.zakatManualPrice) : null,
-                  trailing: Text('${_fmt.format(_gold)} $cur'),
+                  trailing: Text('${context.digits(_fmt.format(_gold))} $cur'),
                   onTap: () => _editPrice(true),
                 ),
                 ListTile(
@@ -262,7 +263,7 @@ class _ZakatScreenState extends State<ZakatScreen> {
                   dense: true,
                   title: Text(t.zakatSilverPrice),
                   subtitle: _d.silverOverride != null ? Text(t.zakatManualPrice) : null,
-                  trailing: Text('${NumberFormat.decimalPatternDigits(locale: 'en', decimalDigits: 1).format(_silver)} $cur'),
+                  trailing: Text('${context.digits(NumberFormat.decimalPatternDigits(locale: 'en', decimalDigits: 1).format(_silver))} $cur'),
                   onTap: () => _editPrice(false),
                 ),
                 Text(

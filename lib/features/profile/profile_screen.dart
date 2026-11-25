@@ -15,6 +15,7 @@ import '../../widgets/tour.dart';
 import '../../widgets/tour_texts.dart';
 import '../../widgets/ui.dart';
 import 'mushaf_settings.dart';
+import '../../widgets/digits.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -285,7 +286,7 @@ class _Kpi extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-          Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.accent)),
+          Text(context.digits(value), style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.accent)),
           Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
         ],
       ),

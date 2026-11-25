@@ -6,6 +6,7 @@ import '../../services/quran_repository.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/quran_style.dart';
 import 'adhkar_data.dart';
+import '../../widgets/digits.dart';
 
 /// حصن المسلم كله: الأبواب مع بحث.
 class HisnScreen extends StatefulWidget {
@@ -55,7 +56,7 @@ class _HisnScreenState extends State<HisnScreen> {
                           return ListTile(
                             contentPadding: const EdgeInsets.symmetric(horizontal: 4),
                             title: Text(c.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-                            trailing: Text('${c.texts.length}', style: TextStyle(color: AppColors.textMuted)),
+                            trailing: Text(context.digits(c.texts.length), style: TextStyle(color: AppColors.textMuted)),
                             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => HisnChapterScreen(chapter: c))),
                           );
                         },

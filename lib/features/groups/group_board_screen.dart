@@ -23,6 +23,7 @@ import 'group_summary_report.dart';
 import '../../widgets/tour.dart';
 import '../../widgets/tour_texts.dart';
 import '../../widgets/ui.dart';
+import '../../widgets/digits.dart';
 
 /// لوحة المجموعة: الدورة الحالية، وخريطة الختمة، ووردي، والأوراد الإضافية، والأعضاء.
 class GroupBoardScreen extends StatefulWidget {
@@ -784,7 +785,7 @@ class _KhatmaMapState extends State<_KhatmaMap> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('${juz + 1}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.text)),
+                          Text(context.digits(juz + 1), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.text)),
                           Row(crossAxisAlignment: CrossAxisAlignment.center, children: bar),
                         ],
                       ),
@@ -910,7 +911,7 @@ class _MessageButtons extends StatelessWidget {
             FilledButton.tonalIcon(
               onPressed: lateCount == 0 ? null : () => showLateReminder(context, group: group, lateCount: lateCount, endsAt: cycle.endsAt),
               icon: const Icon(Icons.notifications_active_outlined),
-              label: Text('${t.remindLate} ($lateCount)'),
+              label: Text('${t.remindLate} (${context.digits(lateCount)})'),
             ),
           if (otherManagers) ...[
             if (manager) const SizedBox(height: 8),

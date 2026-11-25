@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../l10n/gen/app_localizations.dart';
 import '../services/quran_repository.dart';
 import '../theme/app_colors.dart';
+import 'digits.dart';
 
 /// عناصر واجهة مشتركة بين الشاشات.
 
@@ -53,7 +54,7 @@ class StatTile extends StatelessWidget {
         FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
-            value,
+            context.digits(value),
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: onDark ? Colors.white : AppColors.accent),
           ),
         ),

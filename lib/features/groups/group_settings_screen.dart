@@ -7,6 +7,7 @@ import '../../models/group_models.dart';
 import '../../models/group_options.dart';
 import '../../services/groups_service.dart';
 import '../../widgets/ui.dart';
+import '../../widgets/digits.dart';
 
 /// إعدادات المجموعة للأدمن والمساعد. الورد والنوع مبيتغيروش، وتغيير الدورة بيتطبق من الدورة الجاية.
 class GroupSettingsScreen extends StatefulWidget {
@@ -78,7 +79,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
           Row(
             children: [
               IconButton.outlined(onPressed: _cycleCount > 1 ? () => setState(() => _cycleCount--) : null, icon: const Icon(Icons.remove)),
-              SizedBox(width: 36, child: Text('$_cycleCount', textAlign: TextAlign.center, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
+              SizedBox(width: 36, child: Text(context.digits(_cycleCount), textAlign: TextAlign.center, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
               IconButton.outlined(onPressed: _cycleCount < 30 ? () => setState(() => _cycleCount++) : null, icon: const Icon(Icons.add)),
               const SizedBox(width: 12),
               Expanded(
@@ -121,7 +122,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
             const SizedBox(height: 8),
             DropdownButtonFormField<int>(
               initialValue: _startDayOfMonth,
-              items: [for (var d = 1; d <= 28; d++) DropdownMenuItem(value: d, child: Text('$d'))],
+              items: [for (var d = 1; d <= 28; d++) DropdownMenuItem(value: d, child: Text(context.digits(d)))],
               onChanged: (v) => setState(() => _startDayOfMonth = v ?? _startDayOfMonth),
             ),
           ],

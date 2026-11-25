@@ -9,6 +9,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/ui.dart';
 import '../groups/group_messages.dart' show maxMessageLength;
 import '../notifications/notifications_screen.dart' show relativeTime;
+import '../../widgets/digits.dart';
 
 /// اسم المحادثة: الشخص، أو "إدارة المجموعة" للعضو العادي.
 String conversationTitle(AppLocalizations t, ChatMessage m) =>
@@ -121,7 +122,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         ),
                         if (c.unread > 0) ...[
                           const SizedBox(width: 8),
-                          Badge(label: Text('${c.unread}')),
+                          Badge(label: Text(context.digits(c.unread))),
                         ],
                       ],
                     ),

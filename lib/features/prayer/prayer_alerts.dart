@@ -7,6 +7,7 @@ import 'package:timezone/timezone.dart' as tz;
 import '../../services/prefs.dart';
 import 'prayer_controller.dart';
 import 'prayer_times.dart';
+import '../../l10n/ar_digits.dart';
 import '../../l10n/gen/app_localizations.dart';
 import '../../services/personal_ward.dart';
 import '../../services/quran_repository.dart';
@@ -199,7 +200,7 @@ class PrayerAlerts {
     if (ward.items.isEmpty) return;
     await ward.ensureAdhkar();
     final quran = await QuranRepository.instance.load();
-    final t = lookupAppLocalizations(Locale(ar ? 'ar' : 'en'));
+    final t = lookupLocalized(Locale(ar ? 'ar' : 'en'));
     String name(PersonalItem i) => personalItemTitle(t, i, quran, ward.adhkarCategories, !ar);
     final prefs = Prefs.instance;
 

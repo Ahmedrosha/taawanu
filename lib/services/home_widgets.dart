@@ -7,6 +7,7 @@ import '../features/adhkar/adhkar_data.dart';
 import '../features/prayer/prayer_controller.dart';
 import '../features/prayer/prayer_screen.dart' show prayerName;
 import '../features/prayer/prayer_times.dart';
+import '../l10n/ar_digits.dart';
 import '../l10n/gen/app_localizations.dart';
 import '../models/group_models.dart';
 import 'prefs.dart';
@@ -23,7 +24,7 @@ class HomeWidgets {
 
   bool get _supported =>
       !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
-  AppLocalizations get _t => lookupAppLocalizations(Prefs.instance.locale);
+  AppLocalizations get _t => lookupLocalized(Prefs.instance.locale);
 
   final _wards = <String, Map<String, dynamic>>{};
   final _last = <String, String>{};

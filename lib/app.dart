@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'l10n/ar_digits.dart';
 import 'l10n/gen/app_localizations.dart';
 import 'router.dart';
 import 'services/prefs.dart';
@@ -75,7 +76,8 @@ class TaawanuApp extends StatelessWidget {
           locale: locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: const [
-            AppLocalizations.delegate,
+            // العربي بأرقام عربي في كل الجمل.
+            LocalizedDigitsDelegate(),
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,

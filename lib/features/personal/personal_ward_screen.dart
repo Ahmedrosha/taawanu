@@ -13,6 +13,7 @@ import '../adhkar/adhkar_screen.dart' show DhikrListScreen;
 import '../groups/group_board_screen.dart' show ReadRequest;
 import '../prayer/prayer_alerts.dart';
 import 'personal_report_screen.dart';
+import '../../widgets/digits.dart';
 
 /// كمية ورد الختمة بالكلام: ربع، حزب، جزء، جزئين، أو عدد أرباع.
 String khatmaAmount(AppLocalizations t, int quarters) => switch (quarters) {
@@ -729,9 +730,9 @@ class _GoToSheetState extends State<_GoToSheet> {
                       Builder(builder: (context) {
                         final (s, a) = q.quarterStart((j - 1) * 8 + 1);
                         return ListTile(
-                          leading: Text('$j', style: TextStyle(color: AppColors.textMuted)),
+                          leading: Text(context.digits(j), style: TextStyle(color: AppColors.textMuted)),
                           title: Text(t.juzLabel(j)),
-                          subtitle: Text('${names[s - 1]} · $a'),
+                          subtitle: Text('${names[s - 1]} · ${context.digits(a)}'),
                           onTap: () => Navigator.pop(context, (s, a)),
                         );
                       }),
@@ -744,7 +745,7 @@ class _GoToSheetState extends State<_GoToSheet> {
                   children: [
                     for (final s in shown)
                       ListTile(
-                        leading: Text('$s', style: TextStyle(color: AppColors.textMuted)),
+                        leading: Text(context.digits(s), style: TextStyle(color: AppColors.textMuted)),
                         title: Text(names[s - 1]),
                         trailing: _mode == 'ayah' ? const Icon(Icons.chevron_right) : null,
                         onTap: () => _mode == 'surah' ? Navigator.pop(context, (s, 1)) : setState(() => _surah = s),
@@ -1037,7 +1038,7 @@ class _AddSheetState extends State<_AddSheet> {
                   else
                     for (var i = 0; i < names.length; i++)
                       if (key.isEmpty || normalizeArabic(names[i].toLowerCase()).contains(key) || '${i + 1}' == key)
-                        _option('${i + 1}', Text(names[i]), leading: Text('${i + 1}', style: TextStyle(color: AppColors.textMuted))),
+                        _option('${i + 1}', Text(names[i]), leading: Text(context.digits(i + 1), style: TextStyle(color: AppColors.textMuted))),
                 ],
               ),
             ),
