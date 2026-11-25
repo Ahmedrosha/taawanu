@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taawanu/l10n/ar_digits.dart';
 import 'package:taawanu/l10n/digits.dart';
-import 'package:taawanu/l10n/gen/app_localizations.dart';
 import 'package:flutter/widgets.dart';
 
 void main() {

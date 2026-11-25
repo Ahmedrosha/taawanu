@@ -8,7 +8,6 @@ import '../../services/prefs.dart';
 import 'prayer_controller.dart';
 import 'prayer_times.dart';
 import '../../l10n/ar_digits.dart';
-import '../../l10n/gen/app_localizations.dart';
 import '../../services/personal_ward.dart';
 import '../../services/quran_repository.dart';
 import '../personal/personal_ward_screen.dart' show personalItemTitle;
