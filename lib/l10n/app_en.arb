@@ -1379,5 +1379,6 @@
   "deleteDownloads": "Delete downloads",
   "deleteAudioConfirm": "Delete the downloaded recitations of {name}? You'll need internet to listen again.",
   "@deleteAudioConfirm": {"placeholders": {"name": {"type": "String"}}},
-  "deleteTafsirConfirm": "Delete downloaded tafsirs? Al-Muyassar is built in and stays."
+  "deleteTafsirConfirm": "Delete downloaded tafsirs? Al-Muyassar is built in and stays.",
+  "pendingSyncNote": "Will be sent when you're back online"
 }

@@ -1666,6 +1666,8 @@ class ArDigitsLocalizations extends AppLocalizations {
   String deleteAudioConfirm(String name) => arDigits(_b.deleteAudioConfirm(name));
   @override
   String get deleteTafsirConfirm => _b.deleteTafsirConfirm;
+  @override
+  String get pendingSyncNote => _b.pendingSyncNote;
 }
 
 /// بيستخدم الترجمة العادية، وفي العربي بيلفّها بالأرقام العربي.

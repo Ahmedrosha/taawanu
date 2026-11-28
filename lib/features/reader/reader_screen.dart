@@ -31,6 +31,7 @@ import '../../services/auto_reader.dart';
 import 'tafsir_sheet.dart';
 import '../../widgets/tour.dart';
 import '../../widgets/tour_texts.dart';
+import '../../widgets/pending_sync_note.dart';
 
 
 /// قراءة الورد ربع ربع، وتسجيل كل ربع لما يخلص.
@@ -1589,6 +1590,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                     ProgressLine(value: _read / r.quarterCount),
                     const SizedBox(height: 6),
                     Text(t.quartersProgress(_read, r.quarterCount), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    PendingSyncNote(groupId: r.groupId, portionId: r.portionId),
                   ],
                 ),
               ),

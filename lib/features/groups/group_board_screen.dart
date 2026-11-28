@@ -24,6 +24,7 @@ import '../../widgets/tour.dart';
 import '../../widgets/tour_texts.dart';
 import '../../widgets/ui.dart';
 import '../../widgets/digits.dart';
+import '../../widgets/pending_sync_note.dart';
 
 /// لوحة المجموعة: الدورة الحالية، وخريطة الختمة، ووردي، والأوراد الإضافية، والأعضاء.
 class GroupBoardScreen extends StatefulWidget {
@@ -349,6 +350,7 @@ class _MyPortionCard extends StatelessWidget {
           ProgressLine(value: a.progress),
           const SizedBox(height: 6),
           Text(t.quartersProgress(a.quartersRead, a.quarterCount), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          PendingSyncNote(groupId: group.id),
           if (!a.isDone && !a.closed) ...[
             const SizedBox(height: 14),
             FilledButton.icon(
@@ -1069,6 +1071,7 @@ class _PortionTile extends StatelessWidget {
               const SizedBox(height: 4),
               Text(t.quartersProgress(p.quartersRead, p.quarterCount), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
             ],
+            if (p.assignee != null && p.assignee == GroupsService.instance.uid) PendingSyncNote(groupId: group.id, portionId: p.id),
           ],
         ),
       ),

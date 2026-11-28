@@ -319,6 +319,12 @@ class GroupsService with WidgetsBindingObserver {
   int? pendingRead(String groupId, {int? cycle, String? portionId}) =>
       (_pending()[_key(groupId, cycle: cycle, portionId: portionId)]?['q'] as num?)?.toInt();
 
+  /// فيه قراءة اتسجلت من غير نت ولسه ما اتبعتتش للورد ده (الورد العادي في أي دورة، أو ورد إضافي).
+  bool hasPendingFor(String groupId, {String? portionId}) {
+    final prefix = '$uid|$groupId|${portionId == null ? 'a' : 'p$portionId'}';
+    return _pending().keys.any((k) => portionId == null ? k.startsWith(prefix) : k == prefix);
+  }
+
   bool get hasPending => _pending().keys.any((k) => k.startsWith('$uid|'));
 
   /// بيبدأ يبعت القراءات اللي مستنية: كل دقيقة، ولما التطبيق يرجع قدام المستخدم.

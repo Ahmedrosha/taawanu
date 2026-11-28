@@ -23,6 +23,7 @@ import '../prayer/next_prayer_tile.dart';
 import '../shell/home_shell.dart' show shellNavKey;
 import '../../widgets/tour.dart';
 import '../../widgets/tour_texts.dart';
+import '../../widgets/pending_sync_note.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -343,6 +344,7 @@ class _HomeGroupCardState extends State<_HomeGroupCard> {
                           ProgressLine(value: a.progress),
                           const SizedBox(height: 6),
                           Text(t.quartersProgress(a.quartersRead, a.quarterCount), style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                          PendingSyncNote(groupId: g.id),
                           if (!a.isDone && !a.closed) ...[
                             const SizedBox(height: 12),
                             FilledButton.icon(
