@@ -16,7 +16,7 @@ class PendingSyncNote extends StatelessWidget {
     final svc = GroupsService.instance;
     return ValueListenableBuilder<int>(
       valueListenable: svc.pendingChanges,
-      builder: (context, _, _) {
+      builder: (context, v, child) {
         if (!svc.hasPendingFor(groupId, portionId: portionId)) return const SizedBox.shrink();
         return Padding(
           padding: const EdgeInsets.only(top: 6),
