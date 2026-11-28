@@ -521,6 +521,10 @@ class _KhatmaMapState extends State<_KhatmaMap> {
   final _cache = <int, Cycle>{};
   final _subs = <int, StreamSubscription<Cycle?>>{};
 
+  /// الأوراد الإضافية لكل دورة فاتت (بما فيها اللي خلصت)، عشان الخريطة تبيّن التطوع والتقدم فيه.
+  final _pcache = <int, List<Portion>>{};
+  final _psubs = <int, StreamSubscription<List<Portion>>>{};
+
   /// آخر خريطة اتعرضت: بتفضل باهتة مكانها لحد ما الدورة الجديدة توصل.
   Cycle? _lastShown;
 
@@ -528,6 +532,9 @@ class _KhatmaMapState extends State<_KhatmaMap> {
     if (n < 1 || n >= _current || _subs.containsKey(n)) return;
     _subs[n] = GroupsService.instance.cycle(group.id, n).listen((c) {
       if (c != null && mounted) setState(() => _cache[n] = c);
+    }, onError: (_) {});
+    _psubs[n] = GroupsService.instance.cyclePortionsLive(group.id, n).listen((p) {
+      if (mounted) setState(() => _pcache[n] = p);
     }, onError: (_) {});
   }
 
@@ -546,6 +553,9 @@ class _KhatmaMapState extends State<_KhatmaMap> {
   @override
   void dispose() {
     for (final s in _subs.values) {
+      s.cancel();
+    }
+    for (final s in _psubs.values) {
       s.cancel();
     }
     super.dispose();
@@ -747,13 +757,16 @@ class _KhatmaMapState extends State<_KhatmaMap> {
               final (seg, len, starts) = parts[k];
               final s = bySeg[seg];
               final st = s == null ? 'open' : _shownStatus(s, warn);
-              final left = s != null && s.status == 'late' && _n != _current ? _leftoverOf(s) : null;
+              final late = s != null && (s.status == 'late' || s.status == 'late_done') && _n != _current;
+              final left = late ? _leftoverOf(s) : null;
+              final leftRead = late ? _leftoverRead(s) : 0;
               // صاحب الورد لو خده هو بعدين مش تطوع.
               if (left != null && left.assignee != null && left.assignee != s?.uid) taken = true;
               // الجزء ده من الورد: الأرباع اللي اتقرت منه (الورد بيتقري بالترتيب، والمتطوع بيكمّل من مكان ما وقف).
               final offset = q - seg * group.wardQuarters;
               q += len;
-              final read = s?.read == null ? null : s!.read! + (left?.quartersRead ?? 0);
+              // ورد متأخر ما اتقراش منه حاجة في ميعاده (read = null) بس حد كمّل منه بعدين: نحسب اللي اتقرى.
+              final read = s == null || (s.read == null && leftRead == 0) ? null : (s.read ?? 0) + leftRead;
               final fill = read == null ? 1.0 : ((read - offset).clamp(0, len) / len);
               if (big && starts) {
                 bar.add(Container(width: 2, height: 12, margin: const EdgeInsetsDirectional.only(end: 1.5), color: AppColors.text));
@@ -800,14 +813,26 @@ class _KhatmaMapState extends State<_KhatmaMap> {
   }
 
   /// الورد الإضافي اللي اتعمل من باقي ورد متأخر في الدورة دي (لو لسه موجود).
-  Portion? _leftoverOf(Segment s) {
+  /// الأوراد الإضافية اللي اتعملت من ورد متأخر (ممكن أكتر من واحد لو اتقسم).
+  List<Portion> _leftovers(Segment s) {
     final w = group.wardQuarters;
     final from = s.seg * w + 1, to = (s.seg + 1) * w;
-    for (final p in widget.portions) {
-      if (p.cycle == _n && p.fromQuarter >= from && p.fromQuarter <= to) return p;
-    }
-    return null;
+    return [
+      for (final p in _pcache[_n] ?? widget.portions)
+        if (p.cycle == _n && p.fromQuarter >= from && p.fromQuarter <= to) p,
+    ];
   }
+
+  /// الورد الإضافي اللي يتعرض: اللي خده حد غير صاحبه الأول، وإلا اللي لسه متاح، وإلا أول واحد.
+  Portion? _leftoverOf(Segment s) {
+    final all = _leftovers(s);
+    if (all.isEmpty) return null;
+    return all.firstWhere((p) => p.assignee != null && p.assignee != s.uid,
+        orElse: () => all.firstWhere((p) => p.isOpen, orElse: () => all.first));
+  }
+
+  /// الأرباع اللي اتقرت من الورد المتأخر بعد ما الدورة قفلت (من كل أجزاؤه).
+  int _leftoverRead(Segment s) => _leftovers(s).fold(0, (n, p) => n + (p.isDone ? p.quarterCount : p.quartersRead));
 
   /// أوراد الجزء: مين معاه كل ورد وحالته. الأدمن يدوس على ورد يسجّله. في الدورات اللي فاتت:
   /// الورد المتأخر بيبيّن راح فين، ولو محدش خده فيه "خده".
@@ -833,7 +858,9 @@ class _KhatmaMapState extends State<_KhatmaMap> {
               if (bySeg[seg] case final s?)
                 Builder(builder: (context) {
                   final st = _shownStatus(s, warn);
-                  final left = s.status == 'late' && _n != _current ? _leftoverOf(s) : null;
+                  final late = (s.status == 'late' || s.status == 'late_done') && _n != _current;
+                  final left = late ? _leftoverOf(s) : null;
+                  final leftRead = late ? _leftoverRead(s) : 0;
                   final recordable = _canRecord && s.uid != null && s.status != 'late';
                   return ListTile(
                     leading: segmentSwatch(st, width: 14, height: 14, radius: 4,
@@ -844,7 +871,8 @@ class _KhatmaMapState extends State<_KhatmaMap> {
                       segmentStatusLabel(t, st),
                       if (s.read != null && s.status == 'late') t.quartersProgress(s.read!, group.wardQuarters),
                       if (left != null && left.assignee != null && left.assignee != s.uid) t.volunteeredBy(names[left.assignee] ?? t.formerMember),
-                      if (left != null && left.assignee != null) t.quartersProgress(left.quartersRead, left.quarterCount),
+                      if (left != null && left.assignee != null)
+                        t.quartersProgress(leftRead, group.wardQuarters - (s.read ?? 0)),
                       if (left != null && left.assignee == null) t.noneTookIt,
                     ].join(' · ')),
                     trailing: left != null && left.isOpen

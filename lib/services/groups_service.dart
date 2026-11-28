@@ -148,6 +148,13 @@ class GroupsService with WidgetsBindingObserver {
     return s.docs.map(Portion.fromDoc).toList();
   }
 
+  /// كل الأوراد الإضافية من دورة معينة، بكل حالاتها (للخريطة: مين اتطوع وقرا قد إيه، حتى بعد ما يخلص).
+  Stream<List<Portion>> cyclePortionsLive(String groupId, int cycle) => _group(groupId)
+      .collection('portions')
+      .where('cycle', isEqualTo: cycle)
+      .snapshots()
+      .map((s) => s.docs.map(Portion.fromDoc).toList()..sort((a, b) => a.fromQuarter.compareTo(b.fromQuarter)));
+
   /// كل الدورات (للتقرير الشامل).
   Future<List<Cycle>> allCycles(String groupId) async {
     final s = await _group(groupId).collection('cycles').get();
